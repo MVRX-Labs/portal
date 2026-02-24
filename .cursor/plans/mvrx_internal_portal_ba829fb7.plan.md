@@ -119,7 +119,9 @@ import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
 export const users = pgTable("users", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(), // plaintext
@@ -128,13 +130,17 @@ export const users = pgTable("users", {
 });
 
 export const toolRuns = pgTable("tool_runs", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  tool: text("tool").notNull(),        // e.g. "linkedin-audit"
-  status: text("status").notNull(),    // "pending" | "running" | "completed" | "failed"
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  tool: text("tool").notNull(), // e.g. "linkedin-audit"
+  status: text("status").notNull(), // "pending" | "running" | "completed" | "failed"
   inputs: jsonb("inputs").notNull(),
   outputUrl: text("output_url"),
   error: text("error"),
-  userId: text("user_id").notNull().references(() => users.id),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -295,7 +301,7 @@ mvrx/
 ## Environment Variables
 
 ```
-DATABASE_URL=<postgres connection string from Vercel Postgres or Neon>
+STORAGE_URL=<postgres connection string from Vercel Postgres or Neon>
 GOOGLE_SERVICE_ACCOUNT_EMAIL=<service account email>
 GOOGLE_PRIVATE_KEY=<service account private key>
 GOOGLE_DRIVE_FOLDER_ID=0AKKJC-_KENtdUk9PVA

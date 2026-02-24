@@ -301,7 +301,7 @@ mvrx/
 ## Environment Variables
 
 ```
-STORAGE_URL=<postgres connection string from Vercel Postgres or Neon>
+DATABASE_STORAGE_URL=<postgres connection string from Vercel Postgres or Neon>
 GOOGLE_SERVICE_ACCOUNT_EMAIL=<service account email>
 GOOGLE_PRIVATE_KEY=<service account private key>
 GOOGLE_DRIVE_FOLDER_ID=0AKKJC-_KENtdUk9PVA

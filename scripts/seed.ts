@@ -5,7 +5,7 @@ import { users } from "../src/lib/schema";
 
 config({ path: ".env.local" });
 
-const client = postgres(process.env.STORAGE_URL!);
+const client = postgres(process.env.DATABASE_STORAGE_URL!);
 const db = drizzle(client);
 
 async function seed() {

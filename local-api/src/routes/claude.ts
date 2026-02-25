@@ -9,12 +9,13 @@ const router = Router();
 
 interface ClaudeRequest {
   prompt: string;
-  files?: Record<string, string>; // filename -> content
+  files?: Record<string, string>;       // filename -> text content
+  binaryFiles?: Record<string, string>; // filename -> base64-encoded content
   maxTurns?: number;
 }
 
 router.post("/", async (req, res) => {
-  const { prompt, files, maxTurns } = req.body as ClaudeRequest;
+  const { prompt, files, binaryFiles, maxTurns } = req.body as ClaudeRequest;
 
   if (!prompt) {
     res.status(400).json({ error: "prompt is required" });
@@ -34,6 +35,17 @@ router.post("/", async (req, res) => {
           await mkdir(fileDir, { recursive: true });
         }
         await writeFile(filePath, content, "utf-8");
+      }
+    }
+
+    if (binaryFiles && Object.keys(binaryFiles).length > 0) {
+      for (const [filename, base64Content] of Object.entries(binaryFiles)) {
+        const filePath = join(sessionDir, filename);
+        const fileDir = join(sessionDir, filename.split("/").slice(0, -1).join("/"));
+        if (fileDir !== sessionDir) {
+          await mkdir(fileDir, { recursive: true });
+        }
+        await writeFile(filePath, Buffer.from(base64Content, "base64"));
       }
     }
 

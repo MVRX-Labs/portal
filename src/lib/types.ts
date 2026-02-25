@@ -45,7 +45,7 @@ export const TOOLS: ToolConfig[] = [
     href: "/tools/linkedin-audit",
     fields: [
       {
-        name: "profileUrl",
+        name: "linkedinUrl",
         label: "LinkedIn Profile URL",
         type: "text",
         placeholder: "https://linkedin.com/in/username",

@@ -18,6 +18,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  const isPrefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("purpose") === "prefetch";
+  if (isPrefetch) {
+    return NextResponse.next();
+  }
+
   const session = await verifyToken(token);
   if (!session) {
     const response = pathname.startsWith("/api/")

@@ -26,7 +26,7 @@ async function getAccessToken(): Promise<string> {
     pemToArrayBuffer(privateKey),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const now = Math.floor(Date.now() / 1000);
@@ -38,15 +38,11 @@ async function getAccessToken(): Promise<string> {
       aud: "https://oauth2.googleapis.com/token",
       exp: now + 3600,
       iat: now,
-    })
+    }),
   );
 
   const signInput = new TextEncoder().encode(`${header}.${payload}`);
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    signInput
-  );
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, signInput);
   const sig = btoa(String.fromCharCode(...new Uint8Array(signature)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -78,11 +74,8 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-export async function listFiles(
-  folderId?: string
-): Promise<DriveFile[]> {
-  const targetFolder =
-    folderId || process.env.GOOGLE_DRIVE_FOLDER_ID || "";
+export async function listFiles(folderId?: string): Promise<DriveFile[]> {
+  const targetFolder = folderId || process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID || "";
   const token = await getAccessToken();
 
   const query = `'${targetFolder}' in parents and trashed = false`;

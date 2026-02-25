@@ -61,6 +61,21 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+async function throwIfNotOk(
+  resp: Response,
+  prefix = "Drive API"
+): Promise<never> {
+  const body = await resp.text();
+  let detail = "";
+  try {
+    const err = JSON.parse(body);
+    detail = err?.error?.message ? `: ${err.error.message}` : "";
+  } catch {
+    /* ignore */
+  }
+  throw new Error(`${prefix} error: ${resp.status}${detail}`);
+}
+
 function pemToArrayBuffer(pem: string): ArrayBuffer {
   const b64 = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, "")
@@ -76,18 +91,31 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 
 export async function listFiles(folderId?: string): Promise<DriveFile[]> {
   const targetFolder = folderId || process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID || "";
+
+  if (!targetFolder) {
+    throw new Error(
+      "GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID is not configured. Set it in your environment variables."
+    );
+  }
+
   const token = await getAccessToken();
 
   const query = `'${targetFolder}' in parents and trashed = false`;
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,parents)&orderBy=modifiedTime desc&pageSize=100`;
+  const params = new URLSearchParams({
+    q: query,
+    fields: "files(id,name,mimeType,modifiedTime,webViewLink,parents)",
+    orderBy: "modifiedTime desc",
+    pageSize: "100",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+  });
+  const url = `https://www.googleapis.com/drive/v3/files?${params}`;
 
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!resp.ok) {
-    throw new Error(`Drive API error: ${resp.status}`);
-  }
+  if (!resp.ok) await throwIfNotOk(resp);
 
   const data: DriveListResponse = await resp.json();
   return data.files;
@@ -95,30 +123,26 @@ export async function listFiles(folderId?: string): Promise<DriveFile[]> {
 
 export async function getFile(fileId: string): Promise<DriveFile> {
   const token = await getAccessToken();
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,modifiedTime,webViewLink,parents`;
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,modifiedTime,webViewLink,parents&supportsAllDrives=true`;
 
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!resp.ok) {
-    throw new Error(`Drive API error: ${resp.status}`);
-  }
+  if (!resp.ok) await throwIfNotOk(resp);
 
   return resp.json();
 }
 
 export async function exportFileContent(fileId: string): Promise<string> {
   const token = await getAccessToken();
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`;
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain&supportsAllDrives=true`;
 
   const resp = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!resp.ok) {
-    throw new Error(`Drive API export error: ${resp.status}`);
-  }
+  if (!resp.ok) await throwIfNotOk(resp, "Drive API export");
 
   return resp.text();
 }

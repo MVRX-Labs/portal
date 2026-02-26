@@ -40,7 +40,11 @@ export function ToolForm({ tool }: ToolFormProps) {
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch(`/api/history?tool=${tool.id}&limit=10`);
+      const stored = localStorage.getItem("mvrx-user");
+      const userId = stored ? JSON.parse(stored).id : "";
+      const params = new URLSearchParams({ tool: tool.id, limit: "10" });
+      if (userId) params.set("user", userId);
+      const res = await fetch(`/api/history?${params}`);
       const data = await res.json();
       setHistory(data.runs || []);
       setHistoryLoaded(true);
@@ -259,7 +263,7 @@ export function ToolForm({ tool }: ToolFormProps) {
         </form>
 
         <div className="card">
-          <h2 className="text-sm font-semibold mb-3">Recent Runs</h2>
+          <h2 className="text-sm font-semibold mb-3">Your Recent Runs</h2>
           {!historyLoaded ? (
             <p className="text-xs text-[var(--muted)]">Loading...</p>
           ) : history.length === 0 ? (

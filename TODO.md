@@ -5,6 +5,9 @@ may need to switch to Neon's serverless driver (@neondatabase/serverless). Cross
 To consider:
 Using an external service for email address -> linkedin profile + company lookup
 
+extruct.ai looks a bit interesting
+so does https://getlate.dev/
+
 # External Service Setup
 
 ## Google Drive (required for /resources)

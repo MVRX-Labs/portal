@@ -68,6 +68,7 @@ export async function runLinkedInAudit(linkedinUrl: string): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
+      "ngrok-skip-browser-warning": "true",
     },
     body: JSON.stringify({
       prompt: `Create a linkedin profile audit for https://www.linkedin.com/in/${slug}. Attached is data scraped from their LinkedIn page and a couple of example reports for different accounts so you can match the formatting.`,

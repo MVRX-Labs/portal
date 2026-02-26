@@ -95,6 +95,13 @@ export const TOOLS: ToolConfig[] = [
           { label: "Storytelling", value: "storytelling" },
         ],
       },
+      {
+        name: "writingExamples",
+        label: "Writing Style Examples (Optional)",
+        type: "textarea",
+        placeholder:
+          "Paste 3-5 examples of your writing style (e.g., past LinkedIn posts, emails, blog excerpts). The AI will analyze and match your voice.",
+      },
     ],
   },
   {

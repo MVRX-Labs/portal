@@ -17,7 +17,7 @@ const navItems = [
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", dev: true },
   { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", dev: true },
   { href: "/tools/outbound-sequence", label: "Outbound Sequence", icon: "📨", dev: true },
-  { href: "/history", label: "Run History", icon: "📋", dev: true },
+  { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
 ];
 
@@ -73,7 +73,7 @@ export function Sidebar() {
               <span className="text-base">{item.icon}</span>
               {item.label}
             </Link>
-          )
+          ),
         )}
 
         {user?.isAdmin && (

@@ -9,18 +9,20 @@ const router = Router();
 
 interface ClaudeRequest {
   prompt: string;
-  files?: Record<string, string>;       // filename -> text content
+  files?: Record<string, string>; // filename -> text content
   binaryFiles?: Record<string, string>; // filename -> base64-encoded content
   maxTurns?: number;
 }
 
 router.post("/", async (req, res) => {
-  const { prompt, files, binaryFiles, maxTurns } = req.body as ClaudeRequest;
+  const { prompt, files, binaryFiles, maxTurns: inputMaxTurns } = req.body as ClaudeRequest;
 
   if (!prompt) {
     res.status(400).json({ error: "prompt is required" });
     return;
   }
+
+  const maxTurns = inputMaxTurns ?? 0 + 100; // for resting
 
   const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
 
@@ -49,11 +51,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const args = [
-      "--print",
-      "--output-format", "text",
-      "--verbose",
-    ];
+    const args = ["--print", "--output-format", "text", "--verbose"];
 
     if (maxTurns) {
       args.push("--max-turns", String(maxTurns));

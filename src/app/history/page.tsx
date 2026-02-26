@@ -5,6 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { ToolRun } from "@/lib/types";
 import { TOOLS } from "@/lib/types";
 
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function HistoryContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -81,7 +86,8 @@ function HistoryContent() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-              <th className="pb-2 pr-4 font-medium">Time</th>
+              <th className="pb-2 pr-4 font-medium">Started</th>
+              <th className="pb-2 pr-4 font-medium">Ended</th>
               <th className="pb-2 pr-4 font-medium">User</th>
               <th className="pb-2 pr-4 font-medium">Tool</th>
               <th className="pb-2 pr-4 font-medium">Status</th>
@@ -92,13 +98,13 @@ function HistoryContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
                   Loading...
                 </td>
               </tr>
             ) : runs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
                   No runs found
                 </td>
               </tr>
@@ -109,7 +115,12 @@ function HistoryContent() {
                   className="border-b border-[var(--border)] last:border-0"
                 >
                   <td className="py-2 pr-4 whitespace-nowrap">
-                    {new Date(run.createdAt).toLocaleString()}
+                    {formatTimestamp(run.createdAt)}
+                  </td>
+                  <td className="py-2 pr-4 whitespace-nowrap">
+                    {(run.status === "completed" || run.status === "failed") && run.updatedAt
+                      ? formatTimestamp(run.updatedAt)
+                      : "—"}
                   </td>
                   <td className="py-2 pr-4">{run.userName || "—"}</td>
                   <td className="py-2 pr-4">

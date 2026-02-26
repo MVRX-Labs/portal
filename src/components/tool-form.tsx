@@ -6,6 +6,11 @@ import type { ToolConfig, ToolRun } from "@/lib/types";
 const POLL_INTERVAL_MS = 5000;
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 interface ToolFormProps {
   tool: ToolConfig;
 }
@@ -19,6 +24,7 @@ export function ToolForm({ tool }: ToolFormProps) {
     output?: string | null;
     error?: string | null;
     createdAt?: string;
+    updatedAt?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
@@ -203,6 +209,11 @@ export function ToolForm({ tool }: ToolFormProps) {
               <p className="text-[var(--muted)] mt-1">
                 Run ID: {activeRun.id}
               </p>
+              {activeRun.createdAt && (
+                <p className="text-[var(--muted)] mt-1">
+                  Started: {formatTimestamp(activeRun.createdAt)}
+                </p>
+              )}
             </div>
           )}
 
@@ -214,6 +225,10 @@ export function ToolForm({ tool }: ToolFormProps) {
               <p className="text-[var(--muted)] mt-1">
                 Run ID: {activeRun.id}
               </p>
+              <div className="text-[var(--muted)] mt-1">
+                {activeRun.createdAt && <p>Started: {formatTimestamp(activeRun.createdAt)}</p>}
+                {activeRun.updatedAt && <p>Ended: {formatTimestamp(activeRun.updatedAt)}</p>}
+              </div>
               {activeRun.output && (
                 <pre className="mt-3 p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
                   {activeRun.output}
@@ -229,6 +244,10 @@ export function ToolForm({ tool }: ToolFormProps) {
               <p className="text-[var(--muted)] mt-1">
                 Run ID: {activeRun.id}
               </p>
+              <div className="text-[var(--muted)] mt-1">
+                {activeRun.createdAt && <p>Started: {formatTimestamp(activeRun.createdAt)}</p>}
+                {activeRun.updatedAt && <p>Ended: {formatTimestamp(activeRun.updatedAt)}</p>}
+              </div>
             </div>
           )}
 
@@ -256,9 +275,12 @@ export function ToolForm({ tool }: ToolFormProps) {
                     <span className={`badge badge-${run.status}`}>
                       {run.status}
                     </span>
-                    <span className="text-[var(--muted)]">
-                      {new Date(run.createdAt).toLocaleDateString()}
-                    </span>
+                  </div>
+                  <div className="text-[var(--muted)] space-y-0.5 mb-1">
+                    <div>Started: {formatTimestamp(run.createdAt)}</div>
+                    {(run.status === "completed" || run.status === "failed") && run.updatedAt && (
+                      <div>Ended: {formatTimestamp(run.updatedAt)}</div>
+                    )}
                   </div>
                   {run.outputUrl && (
                     <a

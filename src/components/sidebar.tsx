@@ -10,13 +10,22 @@ interface UserInfo {
   isAdmin: boolean;
 }
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  adminOnly?: boolean;
+  dev?: boolean;
+  beta?: boolean;
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/tools/system-test", label: "System Test", icon: "🧪" },
+  { href: "/tools/system-test", label: "System Test", icon: "🧪", adminOnly: true },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
-  { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍" },
-  { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯" },
-  { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊" },
+  { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
+  { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
+  { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true },
   { href: "/tools/outbound-sequence", label: "Outbound Sequence", icon: "📨", dev: true },
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
@@ -48,34 +57,41 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 py-2">
-        {navItems.map((item) =>
-          item.dev ? (
-            <span
-              key={item.href}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--muted)] opacity-50 cursor-not-allowed select-none"
-              title="Under development"
-            >
-              <span className="text-base">{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none whitespace-nowrap">
-                DEV
+        {navItems
+          .filter((item) => !item.adminOnly || user?.isAdmin)
+          .map((item) =>
+            item.dev ? (
+              <span
+                key={item.href}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--muted)] opacity-50 cursor-not-allowed select-none"
+                title="Under development"
+              >
+                <span className="text-base">{item.icon}</span>
+                <span className="flex-1">{item.label}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none whitespace-nowrap">
+                  DEV
+                </span>
               </span>
-            </span>
-          ) : (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
-                pathname.startsWith(item.href)
-                  ? "bg-[var(--input)] text-white"
-                  : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              {item.label}
-            </Link>
-          ),
-        )}
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                  pathname.startsWith(item.href)
+                    ? "bg-[var(--input)] text-white"
+                    : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+                }`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.beta && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none whitespace-nowrap">
+                    BETA
+                  </span>
+                )}
+              </Link>
+            ),
+          )}
 
         {user?.isAdmin && (
           <Link

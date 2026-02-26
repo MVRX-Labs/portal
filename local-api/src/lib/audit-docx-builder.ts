@@ -181,8 +181,10 @@ function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPc
 }
 
 function overallScoreTable(score: number): Table {
+  const cols = [70, 30];
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
@@ -218,8 +220,10 @@ function overallScoreTable(score: number): Table {
 }
 
 function scorecardTable(entries: LinkedInAuditContent["scorecard"]): Table {
+  const cols = [25, 15, 60];
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
@@ -245,8 +249,10 @@ function scorecardTable(entries: LinkedInAuditContent["scorecard"]): Table {
 
 function dataTable(headers: string[], rows: string[][]): Table {
   const colPct = 100 / headers.length;
+  const colTwips = Math.round(CONTENT_WIDTH / headers.length);
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: headers.map(() => colTwips),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({ children: headers.map((h) => headerCell(h, colPct)) }),

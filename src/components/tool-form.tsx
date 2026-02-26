@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { ToolConfig, ToolRun } from "@/lib/types";
+
+const POLL_INTERVAL_MS = 5000;
+const STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
 interface ToolFormProps {
   tool: ToolConfig;
@@ -10,39 +13,76 @@ interface ToolFormProps {
 export function ToolForm({ tool }: ToolFormProps) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{
+  const [activeRun, setActiveRun] = useState<{
     id: string;
     status: string;
-    message: string;
+    output?: string | null;
+    error?: string | null;
+    createdAt?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadHistory = async () => {
-    if (historyLoaded) return;
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/history?tool=${tool.id}&limit=10`
-      );
+      const res = await fetch(`/api/history?tool=${tool.id}&limit=10`);
       const data = await res.json();
       setHistory(data.runs || []);
       setHistoryLoaded(true);
     } catch {
       // ignore
     }
-  };
+  }, [tool.id]);
 
-  // Load history on mount
-  useState(() => {
+  const pollRunStatus = useCallback(
+    async (runId: string) => {
+      try {
+        const res = await fetch(`/api/runs/${runId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        setActiveRun(data);
+
+        if (data.status === "completed" || data.status === "failed") {
+          stopPolling();
+          setHistoryLoaded(false);
+          loadHistory();
+        }
+      } catch {
+        // Network error, keep polling
+      }
+    },
+    [stopPolling, loadHistory]
+  );
+
+  const startPolling = useCallback(
+    (runId: string) => {
+      stopPolling();
+      pollRef.current = setInterval(() => pollRunStatus(runId), POLL_INTERVAL_MS);
+    },
+    [stopPolling, pollRunStatus]
+  );
+
+  useEffect(() => {
     loadHistory();
-  });
+    return stopPolling;
+  }, [loadHistory, stopPolling]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    setResult(null);
+    setActiveRun(null);
+    stopPolling();
 
     try {
       const res = await fetch(`/api/tools/${tool.id}`, {
@@ -51,23 +91,38 @@ export function ToolForm({ tool }: ToolFormProps) {
         body: JSON.stringify(values),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to start tool");
       }
 
-      const data = await res.json();
-      setResult(data);
       setValues({});
-      // Refresh history
-      setHistoryLoaded(false);
-      loadHistory();
+      setActiveRun({
+        id: data.id,
+        status: data.status,
+        createdAt: new Date().toISOString(),
+      });
+
+      if (data.status === "running" || data.status === "pending") {
+        startPolling(data.id);
+      } else {
+        setHistoryLoaded(false);
+        loadHistory();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const isRunning =
+    activeRun?.status === "running" || activeRun?.status === "pending";
+  const isStale =
+    isRunning &&
+    activeRun?.createdAt &&
+    Date.now() - new Date(activeRun.createdAt).getTime() > STALE_THRESHOLD_MS;
 
   return (
     <div>
@@ -126,20 +181,58 @@ export function ToolForm({ tool }: ToolFormProps) {
             </div>
           ))}
 
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? "Starting..." : "Run Tool"}
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={submitting || isRunning}
+          >
+            {submitting
+              ? "Starting..."
+              : isRunning
+                ? "Running..."
+                : "Run Tool"}
           </button>
 
-          {result && (
-            <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
-              <p className="font-medium text-[var(--success)]">
-                {result.message}
+          {isRunning && (
+            <div className="p-3 rounded-md bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)] text-sm">
+              <p className="font-medium text-[var(--accent)]">
+                {isStale
+                  ? "This is taking longer than expected..."
+                  : "Job in progress..."}
               </p>
-              <p className="text-[var(--muted)] mt-1">Run ID: {result.id}</p>
+              <p className="text-[var(--muted)] mt-1">
+                Run ID: {activeRun.id}
+              </p>
             </div>
           )}
 
-          {error && (
+          {activeRun?.status === "completed" && (
+            <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
+              <p className="font-medium text-[var(--success)]">
+                Job completed successfully
+              </p>
+              <p className="text-[var(--muted)] mt-1">
+                Run ID: {activeRun.id}
+              </p>
+              {activeRun.output && (
+                <pre className="mt-3 p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                  {activeRun.output}
+                </pre>
+              )}
+            </div>
+          )}
+
+          {activeRun?.status === "failed" && (
+            <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+              <p className="font-medium">Job failed</p>
+              <p className="mt-1">{activeRun.error}</p>
+              <p className="text-[var(--muted)] mt-1">
+                Run ID: {activeRun.id}
+              </p>
+            </div>
+          )}
+
+          {error && !activeRun && (
             <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
               {error}
             </div>
@@ -148,7 +241,9 @@ export function ToolForm({ tool }: ToolFormProps) {
 
         <div className="card">
           <h2 className="text-sm font-semibold mb-3">Recent Runs</h2>
-          {history.length === 0 ? (
+          {!historyLoaded ? (
+            <p className="text-xs text-[var(--muted)]">Loading...</p>
+          ) : history.length === 0 ? (
             <p className="text-xs text-[var(--muted)]">No runs yet</p>
           ) : (
             <div className="space-y-2">

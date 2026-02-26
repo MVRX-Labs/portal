@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
+import { withTimeoutGuard } from "@/lib/timeout-guard";
 
 export function createToolHandler(toolId: string) {
   return async function POST(request: NextRequest) {
@@ -20,18 +21,24 @@ export function createToolHandler(toolId: string) {
     }
 
     try {
-      const [run] = await db
-        .insert(toolRuns)
-        .values({
-          tool: toolId,
-          status: "pending",
-          inputs,
-          userId,
-        })
-        .returning();
-
-      // TODO: Integrate with Apify / AI agents / HeyReach / Google Drive
-      // For now, return the run ID so the frontend can poll for status
+      const [run] = await withTimeoutGuard(
+        async () => {
+          return db
+            .insert(toolRuns)
+            .values({
+              tool: toolId,
+              status: "pending",
+              inputs,
+              userId,
+            })
+            .returning();
+        },
+        {
+          maxDuration: 300,
+          routeName: toolId,
+          userName,
+        }
+      );
 
       return NextResponse.json({
         id: run.id,
@@ -39,7 +46,6 @@ export function createToolHandler(toolId: string) {
         message: `${toolId} job started`,
       });
     } catch (error) {
-      // On failure, attempt to log and notify
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
 

@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { toolRuns, users } from "@/lib/schema";
 import { desc, eq, and, SQL } from "drizzle-orm";
 
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));

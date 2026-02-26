@@ -3,7 +3,14 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
-import { runLinkedInAudit } from "@/lib/linkedin-audit";
+import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
+import { withTimeoutGuard } from "@/lib/timeout-guard";
+
+export const maxDuration = 300;
+
+function log(runId: string, message: string) {
+  console.log(`[linkedin-audit:route][${runId}] ${message}`);
+}
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -37,19 +44,73 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
+  log(run.id, `Run created for "${inputs.linkedinUrl}" (user: ${userName})`);
+
   try {
-    const output = await runLinkedInAudit(inputs.linkedinUrl);
+    await withTimeoutGuard(
+      async (signal) => {
+        log(run.id, "Starting LinkedIn scrape via Apify...");
+        const scrapeStart = Date.now();
 
-    await db
-      .update(toolRuns)
-      .set({ status: "completed", updatedAt: new Date() })
-      .where(eq(toolRuns.id, run.id));
+        const scrapedData = await scrapeLinkedInProfile(
+          inputs.linkedinUrl!,
+          signal
+        );
 
-    return NextResponse.json({
-      id: run.id,
-      status: "completed",
-      output,
-    });
+        const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
+        log(run.id, `Scrape finished in ${scrapeElapsed}s — sending to local-api for Claude processing...`);
+
+        const ngrokBase = process.env.NGROK_BASE_URL;
+        const apiKey = process.env.DANNY_LOCAL_API_KEY;
+
+        if (!ngrokBase || !apiKey) {
+          throw new Error("Missing NGROK_BASE_URL or DANNY_LOCAL_API_KEY");
+        }
+
+        const forwardedHost = request.headers.get("x-forwarded-host");
+        const forwardedProto =
+          request.headers.get("x-forwarded-proto") || "https";
+        const appUrl = forwardedHost
+          ? `${forwardedProto}://${forwardedHost}`
+          : request.nextUrl.origin;
+
+        const callbackUrl = `${appUrl}/api/hooks/job-complete`;
+
+        const jobRes = await fetch(`${ngrokBase}/api/jobs/linkedin-audit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({
+            runId: run.id,
+            slug: scrapedData.slug,
+            profileData: scrapedData.profileData,
+            postsData: scrapedData.postsData,
+            callbackUrl,
+          }),
+          signal,
+        });
+
+        if (!jobRes.ok) {
+          const body = await jobRes.text();
+          throw new Error(
+            `Failed to start background job (${jobRes.status}): ${body.slice(0, 500)}`
+          );
+        }
+
+        log(run.id, "Local-api accepted the job (202) — Claude processing in background");
+      },
+      {
+        maxDuration: 300,
+        routeName: "linkedin-audit",
+        runId: run.id,
+        userName,
+      }
+    );
+
+    return NextResponse.json({ id: run.id, status: "running" });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
@@ -59,6 +120,8 @@ export async function POST(request: NextRequest) {
       .set({ status: "failed", error: errorMessage, updatedAt: new Date() })
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
+
+    log(run.id, `Failed: ${errorMessage}`);
 
     await sendSlackNotification({
       tool: "linkedin-audit",

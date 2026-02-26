@@ -9,6 +9,7 @@
     "tunnel": "ngrok http 3939"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.59",
     "express": "^5.1.0"
   },
   "devDependencies": {

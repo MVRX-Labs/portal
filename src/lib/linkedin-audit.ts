@@ -1,14 +1,10 @@
-import { readFile } from "fs/promises";
-import { join } from "path";
-
 const APIFY_BASE = "https://api.apify.com/v2";
 const POSTS_ACTOR_ID = "Wpp1BZ6yGWjySadk3";
 const PROFILE_ACTOR_ID = "VhxlqQXRwhW8H5hNV";
 
-const EXAMPLE_DOCS_DIR = join(
-  process.cwd(),
-  "src/app/api/tools/linkedin-audit"
-);
+function log(message: string) {
+  console.log(`[linkedin-audit:scrape] ${message}`);
+}
 
 function requiredEnv(name: string): string {
   const val = process.env[name];
@@ -16,14 +12,22 @@ function requiredEnv(name: string): string {
   return val;
 }
 
-async function runApifyActor(actorId: string, input: unknown): Promise<unknown> {
+async function runApifyActor(
+  actorId: string,
+  input: unknown,
+  signal?: AbortSignal
+): Promise<unknown> {
   const token = requiredEnv("APIFY_API_TOKEN");
   const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
+
+  log(`Starting Apify actor ${actorId}...`);
+  const start = Date.now();
 
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+    signal,
   });
 
   if (!res.ok) {
@@ -33,10 +37,13 @@ async function runApifyActor(actorId: string, input: unknown): Promise<unknown> 
     );
   }
 
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  log(`Apify actor ${actorId} completed in ${elapsed}s`);
+
   return res.json();
 }
 
-function extractSlug(linkedinUrl: string): string {
+export function extractSlug(linkedinUrl: string): string {
   const match = linkedinUrl.match(/linkedin\.com\/in\/([^/?#]+)/);
   if (!match) {
     throw new Error(
@@ -46,51 +53,35 @@ function extractSlug(linkedinUrl: string): string {
   return match[1];
 }
 
-export async function runLinkedInAudit(linkedinUrl: string): Promise<string> {
-  const slug = extractSlug(linkedinUrl);
+export interface ScrapedLinkedInData {
+  slug: string;
+  profileData: unknown;
+  postsData: unknown;
+}
 
-  const [profileData, postsData, jonathanDocx, kamilDocx] = await Promise.all([
-    runApifyActor(PROFILE_ACTOR_ID, { username: slug }),
-    runApifyActor(POSTS_ACTOR_ID, {
-      urls: [linkedinUrl],
-      limitPerSource: 20,
-      deepScrape: true,
-    }),
-    readFile(join(EXAMPLE_DOCS_DIR, "jonathan-low-linkedin-audit.docx")),
-    readFile(join(EXAMPLE_DOCS_DIR, "kamil-sidor-linkedin-audit.docx")),
+export async function scrapeLinkedInProfile(
+  linkedinUrl: string,
+  signal?: AbortSignal
+): Promise<ScrapedLinkedInData> {
+  const slug = extractSlug(linkedinUrl);
+  log(`Scraping profile for slug "${slug}" — running profile + posts actors in parallel...`);
+  const start = Date.now();
+
+  const [profileData, postsData] = await Promise.all([
+    runApifyActor(PROFILE_ACTOR_ID, { username: slug }, signal),
+    runApifyActor(
+      POSTS_ACTOR_ID,
+      {
+        urls: [linkedinUrl],
+        limitPerSource: 20,
+        deepScrape: true,
+      },
+      signal
+    ),
   ]);
 
-  const ngrokBase = requiredEnv("NGROK_BASE_URL");
-  const apiKey = requiredEnv("DANNY_LOCAL_API_KEY");
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  log(`Scraping complete for "${slug}" in ${elapsed}s`);
 
-  const claudeRes = await fetch(`${ngrokBase}/api/claude`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "ngrok-skip-browser-warning": "true",
-    },
-    body: JSON.stringify({
-      prompt: `Create a linkedin profile audit for https://www.linkedin.com/in/${slug}. Attached is data scraped from their LinkedIn page and a couple of example reports for different accounts so you can match the formatting.`,
-      files: {
-        "scraped-profile.json": JSON.stringify(profileData, null, 2),
-        "scraped-posts.json": JSON.stringify(postsData, null, 2),
-      },
-      binaryFiles: {
-        "example-jonathan-low-audit.docx": jonathanDocx.toString("base64"),
-        "example-kamil-sidor-audit.docx": kamilDocx.toString("base64"),
-      },
-      maxTurns: 5,
-    }),
-  });
-
-  if (!claudeRes.ok) {
-    const body = await claudeRes.text();
-    throw new Error(
-      `Claude API failed (${claudeRes.status}): ${body.slice(0, 500)}`
-    );
-  }
-
-  const result = (await claudeRes.json()) as { output: string };
-  return result.output;
+  return { slug, profileData, postsData };
 }

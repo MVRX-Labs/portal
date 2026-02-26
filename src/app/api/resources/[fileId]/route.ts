@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFile, exportFileContent, getPreviewUrl } from "@/lib/gdrive";
 
+export const maxDuration = 300;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }

@@ -12,6 +12,7 @@ interface UserInfo {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
+  { href: "/tools/system-test", label: "System Test", icon: "🧪" },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", dev: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", dev: true },

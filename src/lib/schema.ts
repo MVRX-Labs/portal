@@ -19,6 +19,7 @@ export const toolRuns = pgTable("tool_runs", {
   tool: text("tool").notNull(),
   status: text("status").notNull(),
   inputs: jsonb("inputs").notNull(),
+  output: text("output"),
   outputUrl: text("output_url"),
   error: text("error"),
   userId: text("user_id")

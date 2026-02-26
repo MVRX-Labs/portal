@@ -4,6 +4,8 @@ import { users } from "@/lib/schema";
 import { createToken } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
+export const maxDuration = 300;
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { email, password } = body;

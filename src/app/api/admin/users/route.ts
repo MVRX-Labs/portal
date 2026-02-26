@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
+export const maxDuration = 300;
+
 export async function GET() {
   const allUsers = await db
     .select({

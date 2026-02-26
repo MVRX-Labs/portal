@@ -65,5 +65,6 @@ export const config = {
     "/api/history/:path*",
     "/api/admin/:path*",
     "/api/resources/:path*",
+    "/api/runs/:path*",
   ],
 };

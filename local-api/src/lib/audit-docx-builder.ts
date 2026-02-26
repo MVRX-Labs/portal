@@ -13,6 +13,7 @@ import {
   PageBreak,
   LevelFormat,
   VerticalAlign,
+  TableLayoutType,
 } from "docx";
 import type { LinkedInAuditContent, ContentBlock } from "./audit-schema.js";
 
@@ -51,7 +52,9 @@ const S = {
   signoffSmall: 16,
 } as const;
 
+const PAGE_WIDTH = 11906; // twips (A4)
 const PAGE_MARGIN = 1200; // twips (~21 mm, matching reference doc's 762 000 EMU)
+const CONTENT_WIDTH = PAGE_WIDTH - 2 * PAGE_MARGIN; // 9506 twips
 
 const BULLET_REF = "audit-bullets";
 
@@ -144,12 +147,16 @@ function labeledPara(label: string, text: string): Paragraph {
 
 // ─── Table builders ─────────────────────────────────────────────────────────
 
+function colWidth(pct: number): { size: number; type: typeof WidthType.DXA } {
+  return { size: Math.round(CONTENT_WIDTH * pct / 100), type: WidthType.DXA };
+}
+
 function headerCell(text: string, widthPct?: number): TableCell {
   return new TableCell({
     shading: { fill: C.brandBlue, type: ShadingType.CLEAR, color: "auto" },
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
-    ...(widthPct ? { width: { size: widthPct, type: WidthType.PERCENTAGE } } : {}),
+    ...(widthPct ? { width: colWidth(widthPct) } : {}),
     children: [
       new Paragraph({
         spacing: { before: 40, after: 40 },
@@ -163,7 +170,7 @@ function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPc
   return new TableCell({
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
-    ...(opts?.widthPct ? { width: { size: opts.widthPct, type: WidthType.PERCENTAGE } } : {}),
+    ...(opts?.widthPct ? { width: colWidth(opts.widthPct) } : {}),
     children: [
       new Paragraph({
         spacing: { before: 40, after: 40 },
@@ -175,12 +182,13 @@ function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPc
 
 function overallScoreTable(score: number): Table {
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 70, type: WidthType.PERCENTAGE },
+            width: colWidth(70),
             borders: CELL_BORDERS,
             verticalAlign: VerticalAlign.CENTER,
             children: [
@@ -191,7 +199,7 @@ function overallScoreTable(score: number): Table {
             ],
           }),
           new TableCell({
-            width: { size: 30, type: WidthType.PERCENTAGE },
+            width: colWidth(30),
             borders: CELL_BORDERS,
             shading: { fill: overallScoreColor(score), type: ShadingType.CLEAR, color: "auto" },
             verticalAlign: VerticalAlign.CENTER,
@@ -211,7 +219,8 @@ function overallScoreTable(score: number): Table {
 
 function scorecardTable(entries: LinkedInAuditContent["scorecard"]): Table {
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
         children: [
@@ -235,12 +244,14 @@ function scorecardTable(entries: LinkedInAuditContent["scorecard"]): Table {
 }
 
 function dataTable(headers: string[], rows: string[][]): Table {
+  const colPct = 100 / headers.length;
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
     rows: [
-      new TableRow({ children: headers.map((h) => headerCell(h)) }),
+      new TableRow({ children: headers.map((h) => headerCell(h, colPct)) }),
       ...rows.map(
-        (row) => new TableRow({ children: row.map((cell) => bodyCell(cell)) }),
+        (row) => new TableRow({ children: row.map((cell) => bodyCell(cell, { widthPct: colPct })) }),
       ),
     ],
   });

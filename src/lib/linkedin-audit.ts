@@ -63,7 +63,7 @@ export async function runLinkedInAudit(linkedinUrl: string): Promise<string> {
   const ngrokBase = requiredEnv("NGROK_BASE_URL");
   const apiKey = requiredEnv("DANNY_LOCAL_API_KEY");
 
-  const claudeRes = await fetch(`${ngrokBase}/claude`, {
+  const claudeRes = await fetch(`${ngrokBase}/api/claude`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -23,6 +23,7 @@ export interface ClaudeJobConfig {
   maxTurns?: number;
   allowedTools?: string[];
   setupSession?: (dir: string) => Promise<void>;
+  postProcess?: (output: string, sessionDir: string) => Promise<string>;
   vercelBypassSecret?: string;
 }
 
@@ -125,6 +126,12 @@ export async function runClaudeJob(config: ClaudeJobConfig): Promise<void> {
 
     const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
     log(runId, `Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
+
+    if (config.postProcess) {
+      log(runId, "Running post-processing…");
+      output = await config.postProcess(output, sessionDir);
+      log(runId, "Post-processing complete.");
+    }
 
     const durationMs = Date.now() - jobStart;
     await sendCallback(callbackUrl, {

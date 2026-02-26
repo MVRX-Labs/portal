@@ -12,15 +12,15 @@ npm install
 Set your API key in `.env`:
 
 ```
-API_KEY=your-secret-key-here
+DANNY_LOCAL_API_KEY=your-secret-key-here
 PORT=3939
 ```
 
-Set the same `API_KEY` and the ngrok URL as environment variables in your Vercel project:
+Set the same `DANNY_LOCAL_API_KEY` and the ngrok URL as environment variables in your Vercel project:
 
 ```
-LOCAL_API_KEY=your-secret-key-here
-LOCAL_API_URL=https://your-subdomain.ngrok-free.app
+DANNY_LOCAL_API_KEY=your-secret-key-here
+NGROK_BASE_URL=https://your-subdomain.ngrok-free.app
 ```
 
 ## Running
@@ -64,11 +64,11 @@ Run a Claude Code session.
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `prompt` | string | yes | The prompt/instructions for Claude Code |
-| `files` | Record<string, string> | no | Map of filename to file content. Written to a temp directory that becomes the session's working directory. |
-| `maxTurns` | number | no | Max agentic turns for Claude Code |
+| Field      | Type                   | Required | Description                                                                                                |
+| ---------- | ---------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `prompt`   | string                 | yes      | The prompt/instructions for Claude Code                                                                    |
+| `files`    | Record<string, string> | no       | Map of filename to file content. Written to a temp directory that becomes the session's working directory. |
+| `maxTurns` | number                 | no       | Max agentic turns for Claude Code                                                                          |
 
 **Response:**
 

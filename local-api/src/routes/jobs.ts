@@ -34,7 +34,8 @@ router.post("/linkedin-audit", (req, res) => {
   runClaudeJob({
     runId,
     callbackUrl,
-    apiKey: process.env.API_KEY || "",
+    apiKey: process.env.DANNY_LOCAL_API_KEY || "",
+    vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
     model: HAIKU_MODEL, // TODO: change before merge
     maxTurns: 25,
     prompt: [
@@ -80,7 +81,8 @@ router.post("/test", (req, res) => {
   runClaudeJob({
     runId,
     callbackUrl,
-    apiKey: process.env.API_KEY || "",
+    apiKey: process.env.DANNY_LOCAL_API_KEY || "",
+    vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
     model: HAIKU_MODEL,
     maxTurns: 2,
     allowedTools: [],

@@ -2,6 +2,9 @@ This looked a bit scary:
 Note: One thing to watch — your db.ts uses the postgres (pg-native) driver. Vercel's Neon Postgres works with this, but if you hit connection issues in serverless, you
 may need to switch to Neon's serverless driver (@neondatabase/serverless). Cross that bridge if you get there.
 
+To consider:
+Using an external service for email address -> linkedin profile + company lookup
+
 # External Service Setup
 
 ## Google Drive (required for /resources)

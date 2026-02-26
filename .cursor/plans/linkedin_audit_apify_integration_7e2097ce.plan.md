@@ -59,7 +59,7 @@ APIFY_USER_ID=591cOSrwvLkcXuzbb
 NGROK_BASE_URL=https://waterlike-shelby-zebrine.ngrok-free.dev
 ```
 
-`DANNY_LOCAL_API_KEY` already exists in `.env.local` and matches the `API_KEY` in `local-api/.env`.
+`DANNY_LOCAL_API_KEY` already exists in `.env.local` and matches the `DANNY_LOCAL_API_KEY` in `local-api/.env`.
 
 ## Implementation: New Apify + Claude integration module
 

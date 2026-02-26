@@ -23,6 +23,7 @@ export interface ClaudeJobConfig {
   maxTurns?: number;
   allowedTools?: string[];
   setupSession?: (dir: string) => Promise<void>;
+  vercelBypassSecret?: string;
 }
 
 export async function runClaudeJob(config: ClaudeJobConfig): Promise<void> {
@@ -35,6 +36,7 @@ export async function runClaudeJob(config: ClaudeJobConfig): Promise<void> {
     maxTurns = DEFAULT_MAX_TURNS,
     allowedTools = ["Read", "Glob", "Grep"],
     setupSession,
+    vercelBypassSecret,
   } = config;
 
   const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
@@ -131,6 +133,7 @@ export async function runClaudeJob(config: ClaudeJobConfig): Promise<void> {
       output,
       durationMs,
       apiKey,
+      vercelBypassSecret,
     });
 
     log(runId, `Job completed successfully in ${(durationMs / 1000).toFixed(1)}s`);
@@ -145,6 +148,7 @@ export async function runClaudeJob(config: ClaudeJobConfig): Promise<void> {
       error: message,
       durationMs,
       apiKey,
+      vercelBypassSecret,
     });
   } finally {
     await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
@@ -160,16 +164,23 @@ async function sendCallback(
     error?: string;
     durationMs?: number;
     apiKey: string;
+    vercelBypassSecret?: string;
   }
 ) {
   log(payload.runId, `Sending callback to ${callbackUrl} (status: ${payload.status})...`);
+
+  const { vercelBypassSecret, ...body } = payload;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (vercelBypassSecret) {
+    headers["x-vercel-protection-bypass"] = vercelBypassSecret;
+  }
 
   for (let attempt = 1; attempt <= CALLBACK_RETRIES; attempt++) {
     try {
       const res = await fetch(callbackUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers,
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {

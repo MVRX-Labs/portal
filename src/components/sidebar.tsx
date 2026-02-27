@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
   { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true },
+  { href: "/tools/linkedin-post-creation", label: "Post Creation", icon: "📝", dev: true },
   { href: "/tools/outbound-sequence", label: "Outbound Sequence", icon: "📨", dev: true },
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },

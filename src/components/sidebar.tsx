@@ -23,11 +23,11 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/tools/system-test", label: "System Test", icon: "🧪", adminOnly: true },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
+  { href: "/tools/linkedin-post-creation", label: "LinkedIn Post Creation", icon: "📝", dev: true },
+  { href: "/tools/outbound-sequence", label: "LinkedInOutbound Sequence", icon: "📨", dev: true },
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
   { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true },
-  { href: "/tools/linkedin-post-creation", label: "Post Creation", icon: "📝", dev: true },
-  { href: "/tools/outbound-sequence", label: "Outbound Sequence", icon: "📨", dev: true },
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
 ];

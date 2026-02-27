@@ -15,8 +15,11 @@ interface ToolFormProps {
   tool: ToolConfig;
 }
 
+const MODELS = ["haiku", "sonnet", "opus"] as const;
+
 export function ToolForm({ tool }: ToolFormProps) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [model, setModel] = useState("opus");
   const [submitting, setSubmitting] = useState(false);
   const [activeRun, setActiveRun] = useState<{
     id: string;
@@ -98,7 +101,7 @@ export function ToolForm({ tool }: ToolFormProps) {
       const res = await fetch(`/api/tools/${tool.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, model }),
       });
 
       const data = await res.json();
@@ -190,6 +193,21 @@ export function ToolForm({ tool }: ToolFormProps) {
               )}
             </div>
           ))}
+
+          <div className="flex items-center gap-4">
+            {MODELS.map((m) => (
+              <label key={m} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="model"
+                  value={m}
+                  checked={model === m}
+                  onChange={() => setModel(m)}
+                />
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </label>
+            ))}
+          </div>
 
           <button
             type="submit"

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { postContent?: string; tone?: string; writingExamples?: string };
+  let inputs: { postContent?: string; tone?: string; writingExamples?: string; model?: string };
   try {
     inputs = await request.json();
   } catch {
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
               postContent: inputs.postContent,
               tone: inputs.tone,
               writingExamples: inputs.writingExamples,
+              model: inputs.model,
               callbackUrl,
             }),
             signal,

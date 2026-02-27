@@ -11,8 +11,16 @@ const router = Router();
 
 const OUTPUT_DIR = "/Users/danny/Google Drive/Shared drives/Shared Drive - MVRX/Generated materials";
 
-const HAIKU_MODEL = "claude-haiku-4-5-20251001";
-const OPUS_MODEL = "claude-opus-4-6";
+const MODEL_MAP: Record<string, string> = {
+  haiku: "claude-haiku-4-5-20251001",
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-6",
+};
+
+function resolveModel(requested: string | undefined, fallback: string): string {
+  if (requested && MODEL_MAP[requested]) return MODEL_MAP[requested];
+  return fallback;
+}
 
 // ─── LinkedIn Audit ─────────────────────────────────────────────────────────
 
@@ -30,9 +38,7 @@ function extractJSON(raw: string): string {
 
 async function extractJSONFromSessionDir(dir: string): Promise<string> {
   const files = await readdir(dir);
-  const candidates = files.filter(
-    (f) => f.endsWith(".json") && !f.startsWith("scraped-")
-  );
+  const candidates = files.filter((f) => f.endsWith(".json") && !f.startsWith("scraped-"));
 
   for (const file of candidates) {
     const content = await readFile(join(dir, file), "utf-8");
@@ -44,9 +50,7 @@ async function extractJSONFromSessionDir(dir: string): Promise<string> {
     } catch {}
   }
 
-  throw new Error(
-    "No JSON object found in Claude output or session directory files"
-  );
+  throw new Error("No JSON object found in Claude output or session directory files");
 }
 
 const AUDIT_PROMPT = (slug: string, date: string) => `\
@@ -114,11 +118,12 @@ interface LinkedInAuditRequest {
   slug: string;
   profileData: unknown;
   postsData: unknown;
+  model?: string;
   callbackUrl: string;
 }
 
 router.post("/linkedin-audit", (req, res) => {
-  const { runId, slug, profileData, postsData, callbackUrl } = req.body as LinkedInAuditRequest;
+  const { runId, slug, profileData, postsData, model, callbackUrl } = req.body as LinkedInAuditRequest;
 
   if (!runId || !slug || !callbackUrl) {
     res.status(400).json({ error: "runId, slug, and callbackUrl are required" });
@@ -135,7 +140,7 @@ router.post("/linkedin-audit", (req, res) => {
     callbackUrl,
     apiKey: process.env.DANNY_LOCAL_API_KEY || "",
     vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
-    model: OPUS_MODEL,
+    model: resolveModel(model, MODEL_MAP.opus),
     maxTurns: 15,
     allowedTools: ["Read"],
     prompt: AUDIT_PROMPT(slug, preparedDate),
@@ -232,21 +237,22 @@ interface LinkedInHumanizerRequest {
   postContent: string;
   tone: string;
   writingExamples?: string;
+  model?: string;
   callbackUrl: string;
 }
 
 router.post("/linkedin-humanizer", (req, res) => {
-  const { runId, postContent, tone, writingExamples, callbackUrl } =
-    req.body as LinkedInHumanizerRequest;
+  const { runId, postContent, tone, writingExamples, model, callbackUrl } = req.body as LinkedInHumanizerRequest;
 
   if (!runId || !postContent || !callbackUrl) {
-    res
-      .status(400)
-      .json({ error: "runId, postContent, and callbackUrl are required" });
+    res.status(400).json({ error: "runId, postContent, and callbackUrl are required" });
     return;
   }
 
-  log(runId, `Received linkedin-humanizer job (tone: ${tone || "default"}, writing examples: ${writingExamples ? "yes" : "no"})`);
+  log(
+    runId,
+    `Received linkedin-humanizer job (tone: ${tone || "default"}, writing examples: ${writingExamples ? "yes" : "no"})`,
+  );
   res.status(202).json({ status: "accepted" });
 
   runClaudeJob({
@@ -254,7 +260,7 @@ router.post("/linkedin-humanizer", (req, res) => {
     callbackUrl,
     apiKey: process.env.DANNY_LOCAL_API_KEY || "",
     vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
-    model: HAIKU_MODEL,
+    model: resolveModel(model, MODEL_MAP.haiku),
     maxTurns: 3,
     allowedTools: [],
     prompt: buildHumanizerPrompt(postContent, tone || "professional", writingExamples),
@@ -263,7 +269,13 @@ router.post("/linkedin-humanizer", (req, res) => {
 
 // ─── GTM Strategy ───────────────────────────────────────────────────────────
 
-const GTM_PROMPT = (companyName: string, industry: string, targetAudience: string, productDescription: string, date: string) => `\
+const GTM_PROMPT = (
+  companyName: string,
+  industry: string,
+  targetAudience: string,
+  productDescription: string,
+  date: string,
+) => `\
 You are a senior go-to-market strategist at MVRX Labs creating a comprehensive GTM launch strategy for "${companyName}".
 
 PHASE 1 — RESEARCH (do this first):
@@ -393,11 +405,12 @@ interface GTMStrategyRequest {
   industry: string;
   targetAudience: string;
   productDescription: string;
+  model?: string;
   callbackUrl: string;
 }
 
 router.post("/gtm-strategy", (req, res) => {
-  const { runId, companyName, industry, targetAudience, productDescription, callbackUrl } =
+  const { runId, companyName, industry, targetAudience, productDescription, model, callbackUrl } =
     req.body as GTMStrategyRequest;
 
   if (!runId || !companyName || !callbackUrl) {
@@ -415,7 +428,7 @@ router.post("/gtm-strategy", (req, res) => {
     callbackUrl,
     apiKey: process.env.DANNY_LOCAL_API_KEY || "",
     vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
-    model: OPUS_MODEL,
+    model: resolveModel(model, MODEL_MAP.opus),
     maxTurns: 25,
     allowedTools: ["WebSearch", "WebFetch", "Read"],
     prompt: GTM_PROMPT(companyName, industry, targetAudience, productDescription, preparedDate),
@@ -553,11 +566,12 @@ interface SentimentAnalysisRequest {
   companyName: string;
   scrapedSources: ScrapedSource[];
   keywords: string;
+  model?: string;
   callbackUrl: string;
 }
 
 router.post("/sentiment-analysis", (req, res) => {
-  const { runId, productName, companyName, scrapedSources, keywords, callbackUrl } =
+  const { runId, productName, companyName, scrapedSources, keywords, model, callbackUrl } =
     req.body as SentimentAnalysisRequest;
 
   if (!runId || !productName || !companyName || !callbackUrl) {
@@ -565,7 +579,10 @@ router.post("/sentiment-analysis", (req, res) => {
     return;
   }
 
-  log(runId, `Received sentiment-analysis job for "${productName}" (${companyName}), ${scrapedSources?.length || 0} sources`);
+  log(
+    runId,
+    `Received sentiment-analysis job for "${productName}" (${companyName}), ${scrapedSources?.length || 0} sources`,
+  );
   res.status(202).json({ status: "accepted" });
 
   const preparedDate = currentMonth();
@@ -575,28 +592,24 @@ router.post("/sentiment-analysis", (req, res) => {
     callbackUrl,
     apiKey: process.env.DANNY_LOCAL_API_KEY || "",
     vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
-    model: HAIKU_MODEL,
+    model: resolveModel(model, MODEL_MAP.haiku),
     maxTurns: 30,
     allowedTools: ["Read", "Glob"],
     prompt: SENTIMENT_PROMPT(productName, companyName, keywords, preparedDate),
 
     setupSession: async (dir) => {
       const platformFileMap: Record<string, string> = {
-        "reddit": "reddit-data.json",
+        reddit: "reddit-data.json",
         "google-search": "google-search-data.json",
         "google-reviews": "google-reviews-data.json",
-        "web": "web-data.json",
-        "reviews": "reviews-data.json",
+        web: "web-data.json",
+        reviews: "reviews-data.json",
       };
 
       if (scrapedSources && scrapedSources.length > 0) {
         for (const source of scrapedSources) {
           const filename = platformFileMap[source.platform] || `${source.platform}-data.json`;
-          await writeFile(
-            join(dir, filename),
-            JSON.stringify(source.data, null, 2),
-            "utf-8"
-          );
+          await writeFile(join(dir, filename), JSON.stringify(source.data, null, 2), "utf-8");
           log(runId, `Wrote ${filename}`);
         }
       }
@@ -624,11 +637,12 @@ router.post("/sentiment-analysis", (req, res) => {
 
 interface TestJobRequest {
   runId: string;
+  model?: string;
   callbackUrl: string;
 }
 
 router.post("/test", (req, res) => {
-  const { runId, callbackUrl } = req.body as TestJobRequest;
+  const { runId, model, callbackUrl } = req.body as TestJobRequest;
 
   if (!runId || !callbackUrl) {
     res.status(400).json({ error: "runId and callbackUrl are required" });
@@ -643,7 +657,7 @@ router.post("/test", (req, res) => {
     callbackUrl,
     apiKey: process.env.DANNY_LOCAL_API_KEY || "",
     vercelBypassSecret: process.env.VERCEL_BYPASS_SECRET,
-    model: HAIKU_MODEL,
+    model: resolveModel(model, MODEL_MAP.haiku),
     maxTurns: 2,
     allowedTools: [],
     prompt: "Write a short haiku about software testing. Return only the haiku, nothing else.",

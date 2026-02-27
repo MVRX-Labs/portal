@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { linkedinUrl?: string };
+  let inputs: { linkedinUrl?: string; model?: string };
   try {
     inputs = await request.json();
   } catch {
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
             slug: scrapedData.slug,
             profileData: scrapedData.profileData,
             postsData: scrapedData.postsData,
+            model: inputs.model,
             callbackUrl,
           }),
           signal,

@@ -14,12 +14,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let inputs: { model?: string } = {};
+  try {
+    inputs = await request.json();
+  } catch {
+    // no body is fine for system-test
+  }
+
   const [run] = await db
     .insert(toolRuns)
     .values({
       tool: "system-test",
       status: "running",
-      inputs: {},
+      inputs,
       userId,
     })
     .returning();
@@ -45,6 +52,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         runId: run.id,
+        model: inputs.model,
         callbackUrl,
       }),
     });

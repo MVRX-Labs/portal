@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     industry?: string;
     targetAudience?: string;
     productDescription?: string;
+    model?: string;
   };
   try {
     inputs = await request.json();
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
             industry: inputs.industry,
             targetAudience: inputs.targetAudience,
             productDescription: inputs.productDescription,
+            model: inputs.model,
             callbackUrl,
           }),
           signal,

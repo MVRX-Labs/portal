@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     sources?: string;
     urls?: string;
     keywords?: string;
+    model?: string;
   };
   try {
     inputs = await request.json();
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
             companyName: inputs.companyName,
             scrapedSources: scrapedData.sources,
             keywords,
+            model: inputs.model,
             callbackUrl,
           }),
           signal,

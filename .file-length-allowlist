@@ -1,0 +1,10 @@
+# Files allowed to exceed the 300-line limit.
+# One glob pattern per line. Lines starting with # are comments.
+#
+# Examples:
+#   src/generated/schema.ts
+#   migrations/*.sql
+#   *.lock
+
+package-lock.json
+checking-process.md

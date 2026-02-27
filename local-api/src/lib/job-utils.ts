@@ -3,15 +3,20 @@ import { join } from "path";
 
 export const OUTPUT_DIR = "/Users/danny/Google Drive/Shared drives/Shared Drive - MVRX/Generated materials";
 
-export const MODEL_MAP: Record<string, string> = {
+const MODELS = ["haiku", "sonnet", "opus"] as const;
+export type MODEL_IDS = (typeof MODELS)[number];
+
+const MODEL_PROVIDER_MODEL_IDS = ["claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-6"] as const;
+export type MODEL_PROVIDER_MODEL_IDS = (typeof MODEL_PROVIDER_MODEL_IDS)[number];
+
+export const MODEL_MAP: Record<MODEL_IDS, MODEL_PROVIDER_MODEL_IDS> = {
   haiku: "claude-haiku-4-5-20251001",
   sonnet: "claude-sonnet-4-6",
   opus: "claude-opus-4-6",
 };
 
 export function resolveModel(requested: string | undefined, fallback: string): string {
-  if (requested && MODEL_MAP[requested]) return MODEL_MAP[requested];
-  return fallback;
+  return MODEL_MAP[requested as MODEL_IDS] ?? fallback;
 }
 
 export function currentMonth(): string {

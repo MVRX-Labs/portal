@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns } from "@/lib/schema";
+import { toolRuns, accounts, contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
 import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
@@ -20,31 +20,61 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { linkedinUrl?: string; model?: string };
+  let inputs: { contactId?: string; accountId?: string | null; model?: string };
   try {
     inputs = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!inputs.linkedinUrl) {
+  if (!inputs.contactId) {
     return NextResponse.json(
-      { error: "linkedinUrl is required" },
+      { error: "A contact is required" },
       { status: 400 }
     );
   }
+
+  // Resolve contact data
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(eq(contacts.id, inputs.contactId));
+
+  if (!contact) {
+    return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+  }
+
+  if (!contact.linkedinUrl) {
+    return NextResponse.json(
+      { error: "Selected contact has no LinkedIn URL" },
+      { status: 400 }
+    );
+  }
+
+  // Resolve account name
+  let companyName = "Unknown";
+  if (inputs.accountId) {
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.id, inputs.accountId));
+    if (account) companyName = account.name;
+  }
+
+  const linkedinUrl = contact.linkedinUrl;
 
   const [run] = await db
     .insert(toolRuns)
     .values({
       tool: "linkedin-audit",
       status: "running",
-      inputs,
+      inputs: { ...inputs, linkedinUrl, companyName, contactName: contact.name },
       userId,
+      accountId: inputs.accountId || null,
     })
     .returning();
 
-  log(run.id, `Run created for "${inputs.linkedinUrl}" (user: ${userName})`);
+  log(run.id, `Run created for "${linkedinUrl}" (contact: ${contact.name}, account: ${companyName}, user: ${userName})`);
 
   try {
     await withTimeoutGuard(
@@ -53,7 +83,7 @@ export async function POST(request: NextRequest) {
         const scrapeStart = Date.now();
 
         const scrapedData = await scrapeLinkedInProfile(
-          inputs.linkedinUrl!,
+          linkedinUrl,
           signal
         );
 

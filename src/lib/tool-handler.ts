@@ -20,6 +20,8 @@ export function createToolHandler(toolId: string) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
+    const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
+
     try {
       const [run] = await withTimeoutGuard(
         async () => {
@@ -30,6 +32,7 @@ export function createToolHandler(toolId: string) {
               status: "pending",
               inputs,
               userId,
+              accountId,
             })
             .returning();
         },
@@ -58,6 +61,7 @@ export function createToolHandler(toolId: string) {
             inputs,
             error: errorMessage,
             userId,
+            accountId,
           })
           .returning();
 

@@ -1,3 +1,5 @@
+export type { UserId, AccountId, ContactId, RunId, ObjectId } from "./ids";
+
 export interface User {
   id: string;
   name: string;
@@ -16,6 +18,8 @@ export interface ToolRun {
   error: string | null;
   userId: string;
   userName?: string;
+  accountId?: string | null;
+  accountName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,7 +35,7 @@ export interface ToolConfig {
 export interface ToolField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "select" | "number";
+  type: "text" | "textarea" | "select" | "number" | "contact";
   placeholder?: string;
   required?: boolean;
   options?: { label: string; value: string }[];
@@ -54,17 +58,9 @@ export const TOOLS: ToolConfig[] = [
     href: "/tools/linkedin-audit",
     fields: [
       {
-        name: "linkedinUrl",
-        label: "LinkedIn Profile URL",
-        type: "text",
-        placeholder: "https://linkedin.com/in/username",
-        required: true,
-      },
-      {
-        name: "companyName",
-        label: "Client / Company Name",
-        type: "text",
-        placeholder: "Acme Inc.",
+        name: "contactId",
+        label: "Contact",
+        type: "contact",
         required: true,
       },
     ],
@@ -112,13 +108,6 @@ export const TOOLS: ToolConfig[] = [
     href: "/tools/gtm-strategy",
     fields: [
       {
-        name: "companyName",
-        label: "Company Name",
-        type: "text",
-        placeholder: "Acme Inc.",
-        required: true,
-      },
-      {
         name: "industry",
         label: "Industry",
         type: "text",
@@ -153,13 +142,6 @@ export const TOOLS: ToolConfig[] = [
         label: "Product Name",
         type: "text",
         placeholder: "e.g. Notion, Slack, HubSpot",
-        required: true,
-      },
-      {
-        name: "companyName",
-        label: "Company Name",
-        type: "text",
-        placeholder: "e.g. Notion Labs, Salesforce",
         required: true,
       },
       {

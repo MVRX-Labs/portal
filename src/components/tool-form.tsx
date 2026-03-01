@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ToolConfig, ToolRun } from "@/lib/types";
+import { ContactPicker } from "./contact-picker";
+import { useAccount } from "./account-provider";
 
 const POLL_INTERVAL_MS = 5000;
 const STALE_THRESHOLD_MS = 10 * 60 * 1000;
@@ -18,6 +20,7 @@ interface ToolFormProps {
 const MODELS = ["haiku", "sonnet", "opus"] as const;
 
 export function ToolForm({ tool }: ToolFormProps) {
+  const { account } = useAccount();
   const [values, setValues] = useState<Record<string, string>>({});
   const [model, setModel] = useState("opus");
   const [submitting, setSubmitting] = useState(false);
@@ -101,7 +104,7 @@ export function ToolForm({ tool }: ToolFormProps) {
       const res = await fetch(`/api/tools/${tool.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, model }),
+        body: JSON.stringify({ ...values, model, accountId: account?.id || null }),
       });
 
       const data = await res.json();
@@ -155,7 +158,15 @@ export function ToolForm({ tool }: ToolFormProps) {
                 )}
               </label>
 
-              {field.type === "textarea" ? (
+              {field.type === "contact" ? (
+                <ContactPicker
+                  value={values[field.name] || ""}
+                  onChange={(id) =>
+                    setValues({ ...values, [field.name]: id })
+                  }
+                  required={field.required}
+                />
+              ) : field.type === "textarea" ? (
                 <textarea
                   value={values[field.name] || ""}
                   onChange={(e) =>

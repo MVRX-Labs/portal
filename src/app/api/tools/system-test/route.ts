@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { model?: string } = {};
+  let inputs: { model?: string; accountId?: string | null } = {};
   try {
     inputs = await request.json();
   } catch {
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs,
       userId,
+      accountId: inputs.accountId || null,
     })
     .returning();
 

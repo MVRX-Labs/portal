@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns } from "@/lib/schema";
+import { toolRuns, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
 import { scrapeSentimentSources, type SourceType } from "@/lib/sentiment-scraper";
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
   let inputs: {
     productName?: string;
-    companyName?: string;
+    accountId?: string | null;
     sources?: string;
     urls?: string;
     keywords?: string;
@@ -34,11 +34,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!inputs.productName || !inputs.companyName) {
+  if (!inputs.productName) {
     return NextResponse.json(
-      { error: "productName and companyName are required" },
+      { error: "productName is required" },
       { status: 400 }
     );
+  }
+
+  // Resolve account name
+  let companyName = "Unknown";
+  if (inputs.accountId) {
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.id, inputs.accountId));
+    if (account) companyName = account.name;
   }
 
   const sourceType = (inputs.sources || "all") as SourceType;
@@ -53,12 +63,13 @@ export async function POST(request: NextRequest) {
     .values({
       tool: "sentiment-analysis",
       status: "running",
-      inputs,
+      inputs: { ...inputs, companyName },
       userId,
+      accountId: inputs.accountId || null,
     })
     .returning();
 
-  log(run.id, `Run created for "${inputs.productName}" (${inputs.companyName}) — source: ${sourceType}, user: ${userName}`);
+  log(run.id, `Run created for "${inputs.productName}" (${companyName}) — source: ${sourceType}, user: ${userName}`);
 
   try {
     await withTimeoutGuard(
@@ -68,7 +79,7 @@ export async function POST(request: NextRequest) {
 
         const scrapedData = await scrapeSentimentSources(
           inputs.productName!,
-          inputs.companyName!,
+          companyName,
           sourceType,
           additionalUrls,
           signal
@@ -103,7 +114,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             runId: run.id,
             productName: inputs.productName,
-            companyName: inputs.companyName,
+            companyName,
             scrapedSources: scrapedData.sources,
             keywords,
             model: inputs.model,

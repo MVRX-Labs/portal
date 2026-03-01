@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns } from "@/lib/schema";
+import { toolRuns, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
 import { withTimeoutGuard } from "@/lib/timeout-guard";
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   let inputs: {
-    companyName?: string;
+    accountId?: string | null;
     industry?: string;
     targetAudience?: string;
     productDescription?: string;
@@ -32,11 +32,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!inputs.companyName || !inputs.industry || !inputs.targetAudience || !inputs.productDescription) {
+  if (!inputs.industry || !inputs.targetAudience || !inputs.productDescription) {
     return NextResponse.json(
-      { error: "companyName, industry, targetAudience, and productDescription are required" },
+      { error: "industry, targetAudience, and productDescription are required" },
       { status: 400 },
     );
+  }
+
+  // Resolve account name
+  let companyName = "Unknown";
+  if (inputs.accountId) {
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.id, inputs.accountId));
+    if (account) companyName = account.name;
   }
 
   const [run] = await db
@@ -44,12 +54,13 @@ export async function POST(request: NextRequest) {
     .values({
       tool: "gtm-strategy",
       status: "running",
-      inputs,
+      inputs: { ...inputs, companyName },
       userId,
+      accountId: inputs.accountId || null,
     })
     .returning();
 
-  log(run.id, `Run created for "${inputs.companyName}" (user: ${userName})`);
+  log(run.id, `Run created for "${companyName}" (user: ${userName})`);
 
   try {
     await withTimeoutGuard(
@@ -80,7 +91,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             runId: run.id,
-            companyName: inputs.companyName,
+            companyName,
             industry: inputs.industry,
             targetAudience: inputs.targetAudience,
             productDescription: inputs.productDescription,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns, users } from "@/lib/schema";
+import { toolRuns, users, accounts } from "@/lib/schema";
 import { desc, eq, and, SQL } from "drizzle-orm";
 
 export const maxDuration = 300;
@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const toolFilter = searchParams.get("tool");
   const userFilter = searchParams.get("user");
   const statusFilter = searchParams.get("status");
+  const accountFilter = searchParams.get("account");
 
   const offset = (page - 1) * limit;
 
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
   if (toolFilter) conditions.push(eq(toolRuns.tool, toolFilter));
   if (userFilter) conditions.push(eq(toolRuns.userId, userFilter));
   if (statusFilter) conditions.push(eq(toolRuns.status, statusFilter));
+  if (accountFilter) conditions.push(eq(toolRuns.accountId, accountFilter));
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -32,11 +34,14 @@ export async function GET(request: NextRequest) {
       error: toolRuns.error,
       userId: toolRuns.userId,
       userName: users.name,
+      accountId: toolRuns.accountId,
+      accountName: accounts.name,
       createdAt: toolRuns.createdAt,
       updatedAt: toolRuns.updatedAt,
     })
     .from(toolRuns)
     .leftJoin(users, eq(toolRuns.userId, users.id))
+    .leftJoin(accounts, eq(toolRuns.accountId, accounts.id))
     .where(where)
     .orderBy(desc(toolRuns.createdAt))
     .limit(limit)

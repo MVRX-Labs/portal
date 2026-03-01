@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
+    "db:migrate-ids": "tsx scripts/migrate-object-ids.ts",
     "setup": "docker compose up -d && sleep 2 && npm run db:push && npm run db:seed",
     "typecheck": "tsc --noEmit"
   },

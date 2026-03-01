@@ -34,7 +34,7 @@ async function getAccessToken(): Promise<string> {
   const payload = btoa(
     JSON.stringify({
       iss: email,
-      scope: "https://www.googleapis.com/auth/drive.readonly",
+      scope: "https://www.googleapis.com/auth/drive",
       aud: "https://oauth2.googleapis.com/token",
       exp: now + 3600,
       iat: now,
@@ -87,6 +87,31 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
+}
+
+export async function createFolder(
+  name: string,
+  parentFolderId: string
+): Promise<string> {
+  const token = await getAccessToken();
+
+  const resp = await fetch("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parentFolderId],
+    }),
+  });
+
+  if (!resp.ok) await throwIfNotOk(resp, "Drive API createFolder");
+
+  const data = await resp.json();
+  return data.id;
 }
 
 export async function listFiles(folderId?: string): Promise<DriveFile[]> {

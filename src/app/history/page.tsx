@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { ToolRun } from "@/lib/types";
 import { TOOLS } from "@/lib/types";
+import { useAccount } from "@/components/account-provider";
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -13,6 +14,7 @@ function formatTimestamp(iso: string): string {
 function HistoryContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { account } = useAccount();
   const page = parseInt(searchParams.get("page") || "1");
 
   const [runs, setRuns] = useState<ToolRun[]>([]);
@@ -30,6 +32,7 @@ function HistoryContent() {
     params.set("limit", "100");
     if (toolFilter) params.set("tool", toolFilter);
     if (statusFilter) params.set("status", statusFilter);
+    if (account) params.set("account", account.id);
 
     setLoading(true);
     fetch(`/api/history?${params}`)
@@ -38,10 +41,10 @@ function HistoryContent() {
         setRuns(data.runs || []);
       })
       .finally(() => setLoading(false));
-  }, [page, toolFilter, statusFilter]);
+  }, [page, toolFilter, statusFilter, account]);
 
   const navigate = (newPage: number) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(newPage));
     if (toolFilter) params.set("tool", toolFilter);
     if (statusFilter) params.set("status", statusFilter);
@@ -52,7 +55,9 @@ function HistoryContent() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Run History</h1>
       <p className="text-sm text-[var(--muted)] mb-4">
-        All tool runs across the organization
+        {account
+          ? `Showing runs for ${account.name}`
+          : "All tool runs across the organization"}
       </p>
 
       <div className="flex gap-3 mb-4">
@@ -89,6 +94,7 @@ function HistoryContent() {
               <th className="pb-2 pr-4 font-medium">Started</th>
               <th className="pb-2 pr-4 font-medium">Ended</th>
               <th className="pb-2 pr-4 font-medium">User</th>
+              <th className="pb-2 pr-4 font-medium">Account</th>
               <th className="pb-2 pr-4 font-medium">Tool</th>
               <th className="pb-2 pr-4 font-medium">Status</th>
               <th className="pb-2 pr-4 font-medium">Inputs</th>
@@ -98,13 +104,13 @@ function HistoryContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
                   Loading...
                 </td>
               </tr>
             ) : runs.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
                   No runs found
                 </td>
               </tr>
@@ -123,6 +129,7 @@ function HistoryContent() {
                       : "—"}
                   </td>
                   <td className="py-2 pr-4">{run.userName || "—"}</td>
+                  <td className="py-2 pr-4">{run.accountName || "—"}</td>
                   <td className="py-2 pr-4">
                     {TOOLS.find((t) => t.id === run.tool)?.name || run.tool}
                   </td>

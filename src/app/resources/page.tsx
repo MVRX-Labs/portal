@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAccount } from "@/components/account-provider";
 
 interface DriveFile {
   id: string;
@@ -20,6 +21,7 @@ const mimeTypeIcons: Record<string, string> = {
 };
 
 export default function ResourcesPage() {
+  const { account } = useAccount();
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,7 +38,10 @@ export default function ResourcesPage() {
     setLoading(true);
     setError("");
     try {
-      const params = folderId ? `?folderId=${folderId}` : "";
+      const searchParams = new URLSearchParams();
+      if (folderId) searchParams.set("folderId", folderId);
+      else if (account?.id) searchParams.set("accountId", account.id);
+      const params = searchParams.toString() ? `?${searchParams}` : "";
       const res = await fetch(`/api/resources${params}`);
       if (!res.ok) {
         const data = await res.json();
@@ -54,8 +59,12 @@ export default function ResourcesPage() {
   };
 
   useEffect(() => {
+    setFolderStack([]);
+  }, [account?.id]);
+
+  useEffect(() => {
     loadFiles(currentFolderId);
-  }, [currentFolderId]);
+  }, [currentFolderId, account?.id]);
 
   const openFolder = (file: DriveFile) => {
     setFolderStack([...folderStack, { id: file.id, name: file.name }]);
@@ -69,7 +78,9 @@ export default function ResourcesPage() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Resources</h1>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Browse generated resources from Google Drive
+        {account
+          ? `Resources for ${account.name}`
+          : "Browse generated resources from Google Drive"}
       </p>
 
       {/* Breadcrumb */}

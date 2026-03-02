@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { sendSlackNotification } from "@/lib/slack";
-
-export const maxDuration = 300;
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { systemTestTask } from "@/trigger/system-test";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -32,40 +31,18 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
-  console.log(`[system-test][${run.id}] Run created (user: ${userName})`);
+  console.log(`[system-test:route][${run.id}] Run created (user: ${userName})`);
 
   try {
-    const ngrokBase = process.env.NGROK_BASE_URL;
-    const apiKey = process.env.DANNY_LOCAL_API_KEY;
-
-    if (!ngrokBase || !apiKey) {
-      throw new Error("Missing NGROK_BASE_URL or DANNY_LOCAL_API_KEY");
-    }
-
-    const callbackUrl = buildCallbackUrl(request);
-
-    const jobRes = await fetch(`${ngrokBase}/api/jobs/test`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "ngrok-skip-browser-warning": "true",
-      },
-      body: JSON.stringify({
+    const handle = await tasks.trigger<typeof systemTestTask>(
+      "system-test",
+      {
         runId: run.id,
         model: inputs.model,
-        callbackUrl,
-      }),
-    });
+      }
+    );
 
-    if (!jobRes.ok) {
-      const body = await jobRes.text();
-      throw new Error(
-        `Failed to start background job (${jobRes.status}): ${body.slice(0, 500)}`
-      );
-    }
-
-    console.log(`[system-test][${run.id}] Local-api accepted the job (202)`);
+    console.log(`[system-test:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
     return NextResponse.json({ id: run.id, status: "running" });
   } catch (error) {
@@ -78,27 +55,11 @@ export async function POST(request: NextRequest) {
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
 
-    console.log(`[system-test][${run.id}] Failed: ${errorMessage}`);
-
-    await sendSlackNotification({
-      tool: "system-test",
-      userName,
-      error: errorMessage,
-      runId: run.id,
-    }).catch(() => {});
+    console.log(`[system-test:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
     return NextResponse.json(
       { id: run.id, error: errorMessage },
       { status: 500 }
     );
   }
-}
-
-function buildCallbackUrl(request: NextRequest): string {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
-  const appUrl = forwardedHost
-    ? `${forwardedProto}://${forwardedHost}`
-    : request.nextUrl.origin;
-  return `${appUrl}/api/hooks/job-complete`;
 }

@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toolRuns, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { sendSlackNotification } from "@/lib/slack";
-import { scrapeSentimentSources, type SourceType } from "@/lib/sentiment-scraper";
-import { withTimeoutGuard } from "@/lib/timeout-guard";
-
-export const maxDuration = 300;
-
-function log(runId: string, message: string) {
-  console.log(`[sentiment-analysis:route][${runId}] ${message}`);
-}
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { sentimentAnalysisTask } from "@/trigger/sentiment-analysis";
+import type { SourceType } from "@/lib/sentiment-scraper";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -41,7 +35,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Resolve account name
   let companyName = "Unknown";
   if (inputs.accountId) {
     const [account] = await db
@@ -69,77 +62,24 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
-  log(run.id, `Run created for "${inputs.productName}" (${companyName}) — source: ${sourceType}, user: ${userName}`);
+  console.log(`[sentiment-analysis:route][${run.id}] Run created for "${inputs.productName}" (${companyName}) — source: ${sourceType}, user: ${userName}`);
 
   try {
-    await withTimeoutGuard(
-      async (signal) => {
-        log(run.id, "Starting sentiment scrape via Apify...");
-        const scrapeStart = Date.now();
-
-        const scrapedData = await scrapeSentimentSources(
-          inputs.productName!,
-          companyName,
-          sourceType,
-          additionalUrls,
-          signal
-        );
-
-        const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
-        log(run.id, `Scrape finished in ${scrapeElapsed}s (${scrapedData.sources.length} sources) — sending to local-api...`);
-
-        const ngrokBase = process.env.NGROK_BASE_URL;
-        const apiKey = process.env.DANNY_LOCAL_API_KEY;
-
-        if (!ngrokBase || !apiKey) {
-          throw new Error("Missing NGROK_BASE_URL or DANNY_LOCAL_API_KEY");
-        }
-
-        const forwardedHost = request.headers.get("x-forwarded-host");
-        const forwardedProto =
-          request.headers.get("x-forwarded-proto") || "https";
-        const appUrl = forwardedHost
-          ? `${forwardedProto}://${forwardedHost}`
-          : request.nextUrl.origin;
-
-        const callbackUrl = `${appUrl}/api/hooks/job-complete`;
-
-        const jobRes = await fetch(`${ngrokBase}/api/jobs/sentiment-analysis`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "ngrok-skip-browser-warning": "true",
-          },
-          body: JSON.stringify({
-            runId: run.id,
-            productName: inputs.productName,
-            companyName,
-            accountName: inputs.accountId ? companyName : undefined,
-            scrapedSources: scrapedData.sources,
-            keywords,
-            model: inputs.model,
-            callbackUrl,
-          }),
-          signal,
-        });
-
-        if (!jobRes.ok) {
-          const body = await jobRes.text();
-          throw new Error(
-            `Failed to start background job (${jobRes.status}): ${body.slice(0, 500)}`
-          );
-        }
-
-        log(run.id, "Local-api accepted the job (202) — Claude processing in background");
-      },
+    const handle = await tasks.trigger<typeof sentimentAnalysisTask>(
+      "sentiment-analysis-generation",
       {
-        maxDuration: 300,
-        routeName: "sentiment-analysis",
         runId: run.id,
-        userName,
+        productName: inputs.productName,
+        companyName,
+        accountName: inputs.accountId ? companyName : undefined,
+        sources: sourceType,
+        additionalUrls,
+        keywords,
+        model: inputs.model,
       }
     );
+
+    console.log(`[sentiment-analysis:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
     return NextResponse.json({ id: run.id, status: "running" });
   } catch (error) {
@@ -152,14 +92,7 @@ export async function POST(request: NextRequest) {
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
 
-    log(run.id, `Failed: ${errorMessage}`);
-
-    await sendSlackNotification({
-      tool: "sentiment-analysis",
-      userName,
-      error: errorMessage,
-      runId: run.id,
-    }).catch(() => {});
+    console.log(`[sentiment-analysis:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
     return NextResponse.json(
       { id: run.id, error: errorMessage },

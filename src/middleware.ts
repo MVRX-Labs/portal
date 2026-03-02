@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth-config";
+import { NextResponse } from "next/server";
 
-export async function proxy(request: NextRequest) {
+export default auth((request) => {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/" || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !token.userId) {
+  const session = request.auth;
+  if (!session?.user?.id) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (!token.isAdmin) {
+    if (!session.user.isAdmin) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -33,13 +33,13 @@ export async function proxy(request: NextRequest) {
   }
 
   const headers = new Headers(request.headers);
-  headers.set("x-user-id", token.userId as string);
-  headers.set("x-user-name", (token.name as string) || "");
-  headers.set("x-user-email", (token.email as string) || "");
-  headers.set("x-user-admin", String(token.isAdmin ?? false));
+  headers.set("x-user-id", session.user.id);
+  headers.set("x-user-name", session.user.name || "");
+  headers.set("x-user-email", session.user.email || "");
+  headers.set("x-user-admin", String(session.user.isAdmin ?? false));
 
   return NextResponse.next({ request: { headers } });
-}
+});
 
 export const config = {
   matcher: [

@@ -16,7 +16,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.63",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@trigger.dev/sdk": "^4.4.1",
+    "docx": "^9.6.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "next": "^16.1.6",
@@ -27,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
+    "@trigger.dev/build": "^4.4.1",
     "@types/node": "^25.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

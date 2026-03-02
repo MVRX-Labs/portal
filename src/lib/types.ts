@@ -35,7 +35,7 @@ export interface ToolConfig {
 export interface ToolField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "select" | "number" | "contact";
+  type: "text" | "textarea" | "select" | "number" | "contact" | "checkbox";
   placeholder?: string;
   required?: boolean;
   options?: { label: string; value: string }[];
@@ -168,6 +168,41 @@ export const TOOLS: ToolConfig[] = [
         label: "Keywords to Track (Optional)",
         type: "text",
         placeholder: "Comma-separated: pricing, support, onboarding",
+      },
+    ],
+  },
+  {
+    id: "linkedin-post-generator",
+    name: "LinkedIn Post Generator",
+    description:
+      "Generate LinkedIn posts with 3 hook variations, a LinkedIn-optimised body, and a humanised body from source material and voice context.",
+    href: "/tools/linkedin-post-generator",
+    fields: [
+      {
+        name: "contactId",
+        label: "Who Is Posting",
+        type: "contact",
+        required: true,
+      },
+      {
+        name: "useLinkedinProfile",
+        label: "Use contact's LinkedIn profile for voice analysis",
+        type: "checkbox",
+      },
+      {
+        name: "sourceMaterial",
+        label: "Source Material",
+        type: "textarea",
+        placeholder:
+          "Meeting notes, topic brief, news article, or brain dump of ideas...",
+        required: true,
+      },
+      {
+        name: "voiceContext",
+        label: "Voice Context (Optional)",
+        type: "textarea",
+        placeholder:
+          "Style guide, past LinkedIn posts, or a description of the tone they want. The more examples, the better the voice match.",
       },
     ],
   },

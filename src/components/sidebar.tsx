@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/tools/system-test", label: "System Test", icon: "🧪", adminOnly: true },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
-  { href: "/tools/linkedin-post-creation", label: "LinkedIn Post Creation", icon: "📝", dev: true },
+  { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝", beta: true },
   { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequence", icon: "📨", dev: true },
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },

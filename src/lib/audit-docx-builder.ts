@@ -25,6 +25,7 @@ const C = {
   body: "444444",
   meta: "888888",
   white: "FFFFFF",
+  tableRowAlt: "F3F5F8",
   green: "2ECC71",
   orange: "F39C12",
   red: "E74C3C",
@@ -144,7 +145,7 @@ function colWidth(pct: number): { size: number; type: typeof WidthType.DXA } {
 
 function headerCell(text: string, widthPct?: number): TableCell {
   return new TableCell({
-    shading: { fill: C.brandBlue, type: ShadingType.CLEAR, color: "auto" },
+    shading: { fill: C.darkNavy, type: ShadingType.CLEAR, color: "auto" },
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(widthPct ? { width: colWidth(widthPct) } : {}),
@@ -157,8 +158,9 @@ function headerCell(text: string, widthPct?: number): TableCell {
   });
 }
 
-function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPct?: number }): TableCell {
+function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPct?: number; fill?: string }): TableCell {
   return new TableCell({
+    ...(opts?.fill ? { shading: { fill: opts.fill, type: ShadingType.CLEAR, color: "auto" } } : {}),
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(opts?.widthPct ? { width: colWidth(opts.widthPct) } : {}),
@@ -224,13 +226,14 @@ function scorecardTable(entries: LinkedInAuditContent["scorecard"]): Table {
           headerCell("Assessment", 60),
         ],
       }),
-      ...entries.map((e) => {
+      ...entries.map((e, rowIndex) => {
         const sc = scoreColor(e.score);
+        const rowFill = rowIndex % 2 === 0 ? C.tableRowAlt : C.white;
         return new TableRow({
           children: [
-            bodyCell(e.category, { bold: true }),
-            bodyCell(`${e.score}/10`, { color: sc }),
-            bodyCell(e.assessment),
+            bodyCell(e.category, { bold: true, fill: rowFill }),
+            bodyCell(`${e.score}/10`, { color: sc, fill: rowFill }),
+            bodyCell(e.assessment, { fill: rowFill }),
           ],
         });
       }),
@@ -248,7 +251,12 @@ function dataTable(headers: string[], rows: string[][]): Table {
     rows: [
       new TableRow({ children: headers.map((h) => headerCell(h, colPct)) }),
       ...rows.map(
-        (row) => new TableRow({ children: row.map((cell) => bodyCell(cell, { widthPct: colPct })) }),
+        (row, rowIndex) => new TableRow({
+          children: row.map((cell) => bodyCell(cell, {
+            widthPct: colPct,
+            fill: rowIndex % 2 === 0 ? C.tableRowAlt : C.white,
+          })),
+        }),
       ),
     ],
   });
@@ -396,6 +404,7 @@ export async function buildAuditDocx(content: LinkedInAuditContent): Promise<Buf
   children.push(emptyPara());
 
   content.sections.forEach((section, si) => {
+    children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(sectionHeading(`${si + 1}. ${section.title}`));
 
     if (section.subsections) {

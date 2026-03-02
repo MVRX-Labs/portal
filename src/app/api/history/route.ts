@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       tool: toolRuns.tool,
       status: toolRuns.status,
       inputs: toolRuns.inputs,
+      output: toolRuns.output,
       outputUrl: toolRuns.outputUrl,
       error: toolRuns.error,
       userId: toolRuns.userId,

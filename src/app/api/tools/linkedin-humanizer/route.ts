@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { postContent?: string; tone?: string; writingExamples?: string; model?: string };
+  let inputs: { postContent?: string; tone?: string; writingExamples?: string; model?: string; accountId?: string };
   try {
     inputs = await request.json();
   } catch {
@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
+
   const [run] = await db
     .insert(toolRuns)
     .values({
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs,
       userId,
+      accountId,
     })
     .returning();
 

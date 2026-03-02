@@ -151,6 +151,15 @@ function HistoryContent() {
                       >
                         View
                       </a>
+                    ) : run.output ? (
+                      <details>
+                        <summary className="cursor-pointer text-[var(--accent)] hover:underline">
+                          View text
+                        </summary>
+                        <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-[var(--muted)]">
+                          {run.output}
+                        </pre>
+                      </details>
                     ) : (
                       "—"
                     )}

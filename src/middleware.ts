@@ -17,8 +17,7 @@ export default auth((request) => {
   }
 
   const isPrefetch =
-    request.headers.get("next-router-prefetch") === "1" ||
-    request.headers.get("purpose") === "prefetch";
+    request.headers.get("next-router-prefetch") === "1" || request.headers.get("purpose") === "prefetch";
   if (isPrefetch) {
     return NextResponse.next();
   }

@@ -167,6 +167,22 @@ export function ToolForm({ tool }: ToolFormProps) {
                   }
                   required={field.required}
                 />
+              ) : field.type === "checkbox" ? (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={values[field.name] === "true"}
+                    onChange={(e) =>
+                      setValues({
+                        ...values,
+                        [field.name]: e.target.checked ? "true" : "false",
+                      })
+                    }
+                  />
+                  <span className="text-[var(--muted)]">
+                    Enable LinkedIn profile scraping
+                  </span>
+                </label>
               ) : field.type === "textarea" ? (
                 <textarea
                   value={values[field.name] || ""}
@@ -325,6 +341,16 @@ export function ToolForm({ tool }: ToolFormProps) {
                     >
                       View Output
                     </a>
+                  )}
+                  {!run.outputUrl && run.output && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-[var(--accent)] hover:underline">
+                        View Output
+                      </summary>
+                      <pre className="mt-2 p-2 rounded bg-black/5 text-xs overflow-auto max-h-56 whitespace-pre-wrap">
+                        {run.output}
+                      </pre>
+                    </details>
                   )}
                 </div>
               ))}

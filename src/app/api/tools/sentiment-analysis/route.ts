@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
             runId: run.id,
             productName: inputs.productName,
             companyName,
+            accountName: inputs.accountId ? companyName : undefined,
             scrapedSources: scrapedData.sources,
             keywords,
             model: inputs.model,

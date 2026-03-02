@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             runId: run.id,
             companyName,
+            accountName: inputs.accountId ? companyName : undefined,
             industry: inputs.industry,
             targetAudience: inputs.targetAudience,
             productDescription: inputs.productDescription,

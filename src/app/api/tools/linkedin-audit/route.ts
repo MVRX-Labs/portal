@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
             slug: scrapedData.slug,
             profileData: scrapedData.profileData,
             postsData: scrapedData.postsData,
+            accountName: inputs.accountId ? companyName : undefined,
             model: inputs.model,
             callbackUrl,
           }),

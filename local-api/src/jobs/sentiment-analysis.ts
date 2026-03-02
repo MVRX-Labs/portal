@@ -2,7 +2,7 @@ import { Router } from "express";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { runClaudeJob, log } from "../lib/claude-runner.js";
-import { OUTPUT_DIR, MODEL_MAP, resolveModel, currentMonth, extractJSON } from "../lib/job-utils.js";
+import { MODEL_MAP, resolveModel, currentMonth, extractJSON, resolveOutputDir } from "../lib/job-utils.js";
 
 const router = Router();
 
@@ -119,6 +119,7 @@ interface SentimentAnalysisRequest {
   runId: string;
   productName: string;
   companyName: string;
+  accountName?: string;
   scrapedSources: ScrapedSource[];
   keywords: string;
   model?: string;
@@ -126,7 +127,7 @@ interface SentimentAnalysisRequest {
 }
 
 router.post("/sentiment-analysis", (req, res) => {
-  const { runId, productName, companyName, scrapedSources, keywords, model, callbackUrl } =
+  const { runId, productName, companyName, accountName, scrapedSources, keywords, model, callbackUrl } =
     req.body as SentimentAnalysisRequest;
 
   if (!runId || !productName || !companyName || !callbackUrl) {
@@ -174,8 +175,9 @@ router.post("/sentiment-analysis", (req, res) => {
       const json = extractJSON(output);
       const content = JSON.parse(json);
 
+      const outputDir = await resolveOutputDir(accountName);
       const filename = `MVRX | ${productName} | Sentiment Analysis.docx`;
-      const filepath = join(OUTPUT_DIR, filename);
+      const filepath = join(outputDir, filename);
 
       const { buildSentimentDocx } = await import("../lib/sentiment-docx-builder.js");
       const buf = await buildSentimentDocx(content);

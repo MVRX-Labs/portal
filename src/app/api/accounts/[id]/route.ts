@@ -3,8 +3,29 @@ import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { isObjectId } from "@/lib/ids";
+import { findOrCreateFolder } from "@/lib/gdrive";
 
 export const maxDuration = 300;
+
+async function ensureDriveFolder(account: typeof accounts.$inferSelect) {
+  if (account.googleDriveFolderId) return account;
+
+  const rootFolderId = process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
+  if (!rootFolderId) return account;
+
+  try {
+    const folderId = await findOrCreateFolder(account.name, rootFolderId);
+    const [updated] = await db
+      .update(accounts)
+      .set({ googleDriveFolderId: folderId, updatedAt: new Date() })
+      .where(eq(accounts.id, account.id))
+      .returning();
+    return updated;
+  } catch (err) {
+    console.error(`Failed to backfill Drive folder for account ${account.id}:`, err);
+    return account;
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -13,7 +34,7 @@ export async function GET(
   const { id } = await params;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
-  const [account] = await db
+  let [account] = await db
     .select()
     .from(accounts)
     .where(eq(column, id));
@@ -21,6 +42,8 @@ export async function GET(
   if (!account) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
   }
+
+  account = await ensureDriveFolder(account);
 
   return NextResponse.json({ account });
 }

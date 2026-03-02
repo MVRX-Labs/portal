@@ -95,23 +95,54 @@ export async function createFolder(
 ): Promise<string> {
   const token = await getAccessToken();
 
-  const resp = await fetch("https://www.googleapis.com/drive/v3/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      mimeType: "application/vnd.google-apps.folder",
-      parents: [parentFolderId],
-    }),
-  });
+  const resp = await fetch(
+    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [parentFolderId],
+      }),
+    }
+  );
 
   if (!resp.ok) await throwIfNotOk(resp, "Drive API createFolder");
 
   const data = await resp.json();
   return data.id;
+}
+
+export async function findOrCreateFolder(
+  name: string,
+  parentFolderId: string
+): Promise<string> {
+  const token = await getAccessToken();
+
+  const query = `name = '${name.replace(/'/g, "\\'")}' and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+  const params = new URLSearchParams({
+    q: query,
+    fields: "files(id)",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+    pageSize: "1",
+  });
+
+  const searchResp = await fetch(
+    `https://www.googleapis.com/drive/v3/files?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (searchResp.ok) {
+    const data: DriveListResponse = await searchResp.json();
+    if (data.files.length > 0) return data.files[0].id;
+  }
+
+  return createFolder(name, parentFolderId);
 }
 
 export async function listFiles(folderId?: string): Promise<DriveFile[]> {

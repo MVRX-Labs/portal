@@ -1,7 +1,14 @@
-import { readdir, readFile } from "fs/promises";
+import { readdir, readFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 export const OUTPUT_DIR = "/Users/danny/Google Drive/Shared drives/Shared Drive - MVRX/Generated materials";
+
+export async function resolveOutputDir(accountName?: string): Promise<string> {
+  if (!accountName) return OUTPUT_DIR;
+  const dir = join(OUTPUT_DIR, accountName);
+  await mkdir(dir, { recursive: true });
+  return dir;
+}
 
 const MODELS = ["haiku", "sonnet", "opus"] as const;
 export type MODEL_IDS = (typeof MODELS)[number];

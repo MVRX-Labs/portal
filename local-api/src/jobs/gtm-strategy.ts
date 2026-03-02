@@ -4,7 +4,7 @@ import { join } from "path";
 import { runClaudeJob, log } from "../lib/claude-runner.js";
 import { buildGtmDocx } from "../lib/gtm-docx-builder.js";
 import type { GTMStrategyContent } from "../lib/gtm-schema.js";
-import { OUTPUT_DIR, MODEL_MAP, resolveModel, currentMonth, extractJSON } from "../lib/job-utils.js";
+import { MODEL_MAP, resolveModel, currentMonth, extractJSON, resolveOutputDir } from "../lib/job-utils.js";
 
 const router = Router();
 
@@ -141,6 +141,7 @@ Just output the raw JSON object as your final message. No markdown formatting, n
 interface GTMStrategyRequest {
   runId: string;
   companyName: string;
+  accountName?: string;
   industry: string;
   targetAudience: string;
   productDescription: string;
@@ -149,7 +150,7 @@ interface GTMStrategyRequest {
 }
 
 router.post("/gtm-strategy", (req, res) => {
-  const { runId, companyName, industry, targetAudience, productDescription, model, callbackUrl } =
+  const { runId, companyName, accountName, industry, targetAudience, productDescription, model, callbackUrl } =
     req.body as GTMStrategyRequest;
 
   if (!runId || !companyName || !callbackUrl) {
@@ -178,8 +179,9 @@ router.post("/gtm-strategy", (req, res) => {
 
       const buf = await buildGtmDocx(content);
 
+      const outputDir = await resolveOutputDir(accountName);
       const filename = `MVRX | ${content.companyName} | GTM Strategy.docx`;
-      const filepath = join(OUTPUT_DIR, filename);
+      const filepath = join(outputDir, filename);
       await writeFile(filepath, buf);
 
       log(runId, `DOCX written → ${filepath} (${(buf.length / 1024).toFixed(0)} KB)`);

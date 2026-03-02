@@ -5,12 +5,12 @@ import { runClaudeJob, log } from "../lib/claude-runner.js";
 import { buildAuditDocx } from "../lib/audit-docx-builder.js";
 import type { LinkedInAuditContent } from "../lib/audit-schema.js";
 import {
-  OUTPUT_DIR,
   MODEL_MAP,
   resolveModel,
   currentMonth,
   extractJSON,
   extractJSONFromSessionDir,
+  resolveOutputDir,
 } from "../lib/job-utils.js";
 
 const router = Router();
@@ -80,12 +80,13 @@ interface LinkedInAuditRequest {
   slug: string;
   profileData: unknown;
   postsData: unknown;
+  accountName?: string;
   model?: string;
   callbackUrl: string;
 }
 
 router.post("/linkedin-audit", (req, res) => {
-  const { runId, slug, profileData, postsData, model, callbackUrl } = req.body as LinkedInAuditRequest;
+  const { runId, slug, profileData, postsData, accountName, model, callbackUrl } = req.body as LinkedInAuditRequest;
 
   if (!runId || !slug || !callbackUrl) {
     res.status(400).json({ error: "runId, slug, and callbackUrl are required" });
@@ -124,8 +125,9 @@ router.post("/linkedin-audit", (req, res) => {
 
       const buf = await buildAuditDocx(content);
 
+      const outputDir = await resolveOutputDir(accountName);
       const filename = `MVRX | ${content.personName} | LinkedIn Audit.docx`;
-      const filepath = join(OUTPUT_DIR, filename);
+      const filepath = join(outputDir, filename);
       await writeFile(filepath, buf);
 
       log(runId, `DOCX written → ${filepath} (${(buf.length / 1024).toFixed(0)} KB)`);

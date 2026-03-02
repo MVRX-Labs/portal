@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Contact } from "./account-provider";
 
 interface CreateContactModalProps {
@@ -23,6 +24,7 @@ export function CreateContactModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!name.trim()) return;
 
     setCreating(true);
@@ -54,7 +56,7 @@ export function CreateContactModal({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/60"
@@ -136,6 +138,7 @@ export function CreateContactModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

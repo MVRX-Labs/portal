@@ -33,3 +33,4 @@ next-env.d.ts
 .env.local
 .env.vercel
 .env.production
+.trigger

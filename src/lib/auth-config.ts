@@ -20,6 +20,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     userId?: string;
     isAdmin?: boolean;
+    userVerifiedAt?: number;
   }
 }
 
@@ -43,8 +44,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async jwt({ token, trigger }) {
-      if (trigger === "signIn" || (token.email && !token.userId)) {
-        const email = token.email!;
+      const shouldSync =
+        trigger === "signIn" || !token.userId || !token.userVerifiedAt ||
+        Date.now() - (token.userVerifiedAt as number) > 60 * 60 * 1000;
+
+      if (shouldSync && token.email) {
+        const email = token.email;
         const [existing] = await db
           .select()
           .from(users)
@@ -67,6 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.userId = created.id;
           token.isAdmin = false;
         }
+        token.userVerifiedAt = Date.now();
       }
       return token;
     },

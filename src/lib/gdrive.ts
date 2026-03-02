@@ -203,6 +203,48 @@ export async function exportFileContent(fileId: string): Promise<string> {
   return resp.text();
 }
 
+export async function uploadFile(
+  name: string,
+  content: Buffer,
+  mimeType: string,
+  parentFolderId: string,
+): Promise<DriveFile> {
+  const token = await getAccessToken();
+
+  const boundary = `----trigger${Date.now()}`;
+  const metadata = JSON.stringify({
+    name,
+    parents: [parentFolderId],
+  });
+
+  const bodyParts = [
+    `--${boundary}\r\n`,
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
+    metadata,
+    `\r\n--${boundary}\r\n`,
+    `Content-Type: ${mimeType}\r\n`,
+    `Content-Transfer-Encoding: base64\r\n\r\n`,
+    content.toString("base64"),
+    `\r\n--${boundary}--`,
+  ];
+
+  const resp = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,mimeType,modifiedTime,webViewLink",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body: bodyParts.join(""),
+    }
+  );
+
+  if (!resp.ok) await throwIfNotOk(resp, "Drive API uploadFile");
+
+  return resp.json();
+}
+
 export function getPreviewUrl(fileId: string, mimeType: string): string {
   if (mimeType === "application/vnd.google-apps.document") {
     return `https://docs.google.com/document/d/${fileId}/preview`;

@@ -3,10 +3,9 @@ import { db } from "@/lib/db";
 import { toolRuns, accounts, contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
-import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
-import { withTimeoutGuard } from "@/lib/timeout-guard";
+import { startLinkedInAudit } from "@/lib/temporal";
 
-export const maxDuration = 300;
+export const maxDuration = 30;
 
 function log(runId: string, message: string) {
   console.log(`[linkedin-audit:route][${runId}] ${message}`);
@@ -30,11 +29,10 @@ export async function POST(request: NextRequest) {
   if (!inputs.contactId) {
     return NextResponse.json(
       { error: "A contact is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // Resolve contact data
   const [contact] = await db
     .select()
     .from(contacts)
@@ -47,11 +45,10 @@ export async function POST(request: NextRequest) {
   if (!contact.linkedinUrl) {
     return NextResponse.json(
       { error: "Selected contact has no LinkedIn URL" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  // Resolve account name
   let companyName = "Unknown";
   if (inputs.accountId) {
     const [account] = await db
@@ -77,70 +74,14 @@ export async function POST(request: NextRequest) {
   log(run.id, `Run created for "${linkedinUrl}" (contact: ${contact.name}, account: ${companyName}, user: ${userName})`);
 
   try {
-    await withTimeoutGuard(
-      async (signal) => {
-        log(run.id, "Starting LinkedIn scrape via Apify...");
-        const scrapeStart = Date.now();
+    const workflowId = await startLinkedInAudit({
+      runId: run.id,
+      linkedinUrl,
+      accountName: inputs.accountId ? companyName : undefined,
+      model: inputs.model,
+    });
 
-        const scrapedData = await scrapeLinkedInProfile(
-          linkedinUrl,
-          signal
-        );
-
-        const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
-        log(run.id, `Scrape finished in ${scrapeElapsed}s — sending to local-api for Claude processing...`);
-
-        const ngrokBase = process.env.NGROK_BASE_URL;
-        const apiKey = process.env.DANNY_LOCAL_API_KEY;
-
-        if (!ngrokBase || !apiKey) {
-          throw new Error("Missing NGROK_BASE_URL or DANNY_LOCAL_API_KEY");
-        }
-
-        const forwardedHost = request.headers.get("x-forwarded-host");
-        const forwardedProto =
-          request.headers.get("x-forwarded-proto") || "https";
-        const appUrl = forwardedHost
-          ? `${forwardedProto}://${forwardedHost}`
-          : request.nextUrl.origin;
-
-        const callbackUrl = `${appUrl}/api/hooks/job-complete`;
-
-        const jobRes = await fetch(`${ngrokBase}/api/jobs/linkedin-audit`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "ngrok-skip-browser-warning": "true",
-          },
-          body: JSON.stringify({
-            runId: run.id,
-            slug: scrapedData.slug,
-            profileData: scrapedData.profileData,
-            postsData: scrapedData.postsData,
-            accountName: inputs.accountId ? companyName : undefined,
-            model: inputs.model,
-            callbackUrl,
-          }),
-          signal,
-        });
-
-        if (!jobRes.ok) {
-          const body = await jobRes.text();
-          throw new Error(
-            `Failed to start background job (${jobRes.status}): ${body.slice(0, 500)}`
-          );
-        }
-
-        log(run.id, "Local-api accepted the job (202) — Claude processing in background");
-      },
-      {
-        maxDuration: 300,
-        routeName: "linkedin-audit",
-        runId: run.id,
-        userName,
-      }
-    );
+    log(run.id, `Temporal workflow started: ${workflowId}`);
 
     return NextResponse.json({ id: run.id, status: "running" });
   } catch (error) {
@@ -153,7 +94,7 @@ export async function POST(request: NextRequest) {
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
 
-    log(run.id, `Failed: ${errorMessage}`);
+    log(run.id, `Failed to start workflow: ${errorMessage}`);
 
     await sendSlackNotification({
       tool: "linkedin-audit",
@@ -164,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { id: run.id, error: errorMessage },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

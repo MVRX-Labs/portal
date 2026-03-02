@@ -33,3 +33,6 @@ next-env.d.ts
 .env.local
 .env.vercel
 .env.production
+
+# worker build output
+worker/dist/

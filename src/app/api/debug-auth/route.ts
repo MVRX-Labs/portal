@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   }));
 
   const url = request.url;
+
   const proto = request.headers.get("x-forwarded-proto");
   const host = request.headers.get("host");
 

@@ -18,7 +18,6 @@ export default function AdminUsersPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    password: "",
     isAdmin: false,
   });
   const [error, setError] = useState("");
@@ -37,7 +36,7 @@ export default function AdminUsersPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", email: "", password: "", isAdmin: false });
+    setForm({ name: "", email: "", isAdmin: false });
     setError("");
     setShowModal(true);
   };
@@ -47,7 +46,6 @@ export default function AdminUsersPage() {
     setForm({
       name: user.name,
       email: user.email,
-      password: "",
       isAdmin: user.isAdmin,
     });
     setError("");
@@ -61,10 +59,6 @@ export default function AdminUsersPage() {
       setError("Name and email are required");
       return;
     }
-    if (!editing && !form.password) {
-      setError("Password is required for new users");
-      return;
-    }
 
     const method = editing ? "PUT" : "POST";
     const body = editing
@@ -73,7 +67,6 @@ export default function AdminUsersPage() {
           name: form.name,
           email: form.email,
           isAdmin: form.isAdmin,
-          ...(form.password ? { password: form.password } : {}),
         }
       : form;
 
@@ -106,7 +99,7 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>
           <p className="text-sm text-[var(--muted)]">
-            Create and manage portal users
+            Manage portal users. New users are auto-created on first Google sign-in.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary">
@@ -194,18 +187,6 @@ export default function AdminUsersPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Password{editing && " (leave blank to keep current)"}
-                </label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
                 />
               </div>
               <div className="flex items-center gap-2">

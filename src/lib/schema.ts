@@ -7,7 +7,6 @@ export const users = pgTable("users", {
     .$defaultFn(() => createObjectId("user")),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

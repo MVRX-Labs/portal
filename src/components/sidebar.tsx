@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { AccountSelector } from "./account-selector";
-
-interface UserInfo {
-  name: string;
-  email: string;
-  isAdmin: boolean;
-}
 
 interface NavItem {
   href: string;
@@ -35,25 +29,12 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const { data: session } = useSession();
 
+  const user = session?.user;
   const accountParam = searchParams.get("account");
   const qs = accountParam ? `?account=${accountParam}` : "";
-
-  useEffect(() => {
-    const stored = localStorage.getItem("mvrx-user");
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-  }, []);
-
-  const handleLogout = async () => {
-    await fetch("/api/auth", { method: "DELETE" });
-    localStorage.removeItem("mvrx-user");
-    router.push("/");
-  };
 
   return (
     <aside className="flex flex-col w-56 min-h-screen border-r border-[var(--border)] bg-black">
@@ -123,7 +104,10 @@ export function Sidebar() {
             <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
           </div>
         )}
-        <button onClick={handleLogout} className="btn-secondary w-full text-xs">
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="btn-secondary w-full text-xs"
+        >
           Sign Out
         </button>
       </div>

@@ -21,11 +21,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, email, password, isAdmin } = body;
+  const { name, email, isAdmin } = body;
 
-  if (!name || !email || !password) {
+  if (!name || !email) {
     return NextResponse.json(
-      { error: "Name, email, and password are required" },
+      { error: "Name and email are required" },
       { status: 400 }
     );
   }
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     const [user] = await db
       .insert(users)
-      .values({ name, email, password, isAdmin: isAdmin || false })
+      .values({ name, email, isAdmin: isAdmin || false })
       .returning({
         id: users.id,
         name: users.name,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const body = await request.json();
-  const { id, name, email, password, isAdmin } = body;
+  const { id, name, email, isAdmin } = body;
 
   if (!id) {
     return NextResponse.json(
@@ -71,7 +71,6 @@ export async function PUT(request: NextRequest) {
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (email !== undefined) updates.email = email;
-  if (password !== undefined) updates.password = password;
   if (isAdmin !== undefined) updates.isAdmin = isAdmin;
 
   const [user] = await db

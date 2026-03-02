@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import type { ToolConfig, ToolRun } from "@/lib/types";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
@@ -20,6 +21,7 @@ interface ToolFormProps {
 const MODELS = ["haiku", "sonnet", "opus"] as const;
 
 export function ToolForm({ tool }: ToolFormProps) {
+  const { data: session } = useSession();
   const { account } = useAccount();
   const [values, setValues] = useState<Record<string, string>>({});
   const [model, setModel] = useState("opus");
@@ -46,8 +48,7 @@ export function ToolForm({ tool }: ToolFormProps) {
 
   const loadHistory = useCallback(async () => {
     try {
-      const stored = localStorage.getItem("mvrx-user");
-      const userId = stored ? JSON.parse(stored).id : "";
+      const userId = session?.user?.id || "";
       const params = new URLSearchParams({ tool: tool.id, limit: "10" });
       if (userId) params.set("user", userId);
       const res = await fetch(`/api/history?${params}`);
@@ -57,7 +58,7 @@ export function ToolForm({ tool }: ToolFormProps) {
     } catch {
       // ignore
     }
-  }, [tool.id]);
+  }, [tool.id, session?.user?.id]);
 
   const pollRunStatus = useCallback(
     async (runId: string) => {

@@ -17,19 +17,17 @@ async function seed() {
       {
         name: "Danny",
         email: "danny@mvrxlabs.com",
-        password: "admin",
         isAdmin: true,
       },
       {
         name: "Nitanshu",
         email: "nitanshu@mvrxlabs.com",
-        password: "admin",
         isAdmin: true,
       },
     ])
     .onConflictDoNothing();
 
-  console.log("Seeded 2 admin users (danny@, nitanshu@) with password: admin");
+  console.log("Seeded 2 admin users (danny@, nitanshu@)");
   process.exit(0);
 }
 

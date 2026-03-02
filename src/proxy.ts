@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
-
-const publicPaths = ["/", "/api/auth"];
+import { getToken } from "next-auth/jwt";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (publicPaths.some((p) => pathname === p)) {
+  if (pathname === "/" || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("session")?.value;
-  if (!token) {
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  if (!token || !token.userId) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -25,18 +23,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = await verifyToken(token);
-  if (!session) {
-    const response = pathname.startsWith("/api/")
-      ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      : NextResponse.redirect(new URL("/", request.url));
-    response.cookies.delete("session");
-    return response;
-  }
-
-  // Admin-only routes
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (!session.isAdmin) {
+    if (!token.isAdmin) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -44,12 +32,11 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Attach user info to headers for API routes
   const headers = new Headers(request.headers);
-  headers.set("x-user-id", session.userId);
-  headers.set("x-user-name", session.name);
-  headers.set("x-user-email", session.email);
-  headers.set("x-user-admin", String(session.isAdmin));
+  headers.set("x-user-id", token.userId as string);
+  headers.set("x-user-name", (token.name as string) || "");
+  headers.set("x-user-email", (token.email as string) || "");
+  headers.set("x-user-admin", String(token.isAdmin ?? false));
 
   return NextResponse.next({ request: { headers } });
 }
@@ -66,5 +53,7 @@ export const config = {
     "/api/admin/:path*",
     "/api/resources/:path*",
     "/api/runs/:path*",
+    "/api/accounts/:path*",
+    "/api/contacts/:path*",
   ],
 };

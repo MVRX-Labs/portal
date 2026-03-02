@@ -22,14 +22,32 @@ interface LinkedInPostGeneratorPayload {
   model?: string;
 }
 
+const URL_REGEX = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
+
+function extractUrls(text: string): string[] {
+  const matches = text.match(URL_REGEX) ?? [];
+  const cleaned = matches
+    .map((url) => url.replace(/[.,!?;:)\]]+$/g, ""))
+    .filter(Boolean);
+
+  return Array.from(new Set(cleaned));
+}
+
 function buildPrompt(
   posterName: string,
   posterRole: string,
   hasScrapedData: boolean,
   hasVoiceContext: boolean,
+  sourceUrls: string[],
 ): string {
+  const hasSourceUrls = sourceUrls.length > 0;
+  const hasGranolaUrl = sourceUrls.some((url) =>
+    url.toLowerCase().includes("granola")
+  );
   const fileInstructions = [
     "Read source-material.txt for the raw material to base the post on.",
+    hasSourceUrls &&
+      "Read source-urls.txt for links detected in the source material (including meeting-note links).",
     hasVoiceContext &&
       "Read voice-context.txt for the client's style guide, past posts, or tone description. Analyze it for voice patterns before writing.",
     hasScrapedData &&
@@ -45,6 +63,16 @@ You are writing for: ${posterName}, ${posterRole}
 ## STEP 1: READ THE SOURCE FILES
 
 ${fileInstructions}
+
+${hasSourceUrls ? `## STEP 1.5: EXTRACT LINK CONTENT (MANDATORY)
+
+The source material includes URL(s). Before writing, use WebFetch on each URL from source-urls.txt and extract concrete facts, quotes, decisions, and action items.
+
+- Treat link content as primary source material, especially if source-material.txt mostly contains links.
+- If a URL is inaccessible (auth/paywall/expired), continue with available content and do not invent details.
+- Prefer specific evidence from fetched pages: names, numbers, timestamps, direct phrasing.
+${hasGranolaUrl ? "- At least one URL appears to be a Granola meeting-notes link. Prioritize extracting meeting summary, decisions, key quotes, owners, and next steps from that page." : ""}
+` : ""}
 
 ## STEP 2: VOICE ANALYSIS
 
@@ -267,6 +295,14 @@ export const linkedinPostGeneratorTask = task({
         sourceMaterial,
         "utf-8"
       );
+      const sourceUrls = extractUrls(sourceMaterial);
+      if (sourceUrls.length > 0) {
+        await writeFile(
+          join(sessionDir, "source-urls.txt"),
+          sourceUrls.join("\n"),
+          "utf-8"
+        );
+      }
 
       if (voiceContext) {
         await writeFile(
@@ -313,7 +349,8 @@ export const linkedinPostGeneratorTask = task({
         posterName,
         posterRole,
         hasScrapedData,
-        !!voiceContext
+        !!voiceContext,
+        sourceUrls
       );
 
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });

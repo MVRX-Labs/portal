@@ -6,7 +6,7 @@ import { linkedinEngagementScrapeTask } from "./linkedin-engagement-scrape";
 
 export const linkedinEngagementScheduler = schedules.task({
   id: "linkedin-engagement-scheduler",
-  cron: "0 2 * * *", // 2 AM UTC nightly
+  cron: "0 5 * * *", // 5 AM UTC daily
   run: async () => {
     logger.info("Starting LinkedIn engagement scheduler");
 

@@ -1,12 +1,20 @@
-import { task, logger, metadata } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata, queue } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
 import { leads, toolRuns } from "@/lib/schema";
 import { and, eq, inArray } from "drizzle-orm";
+import { sendSlackNotification } from "@/lib/slack";
 import {
   scrapeRecentPosts,
+  scrapePostReactions,
   scrapePostComments,
+  scrapePostReshares,
   type EngagedPerson,
 } from "@/lib/linkedin-engagement";
+
+const engagementQueue = queue({
+  name: "linkedin-engagement-scrape",
+  concurrencyLimit: 2,
+});
 
 interface ScrapePayload {
   accountId: string;
@@ -18,6 +26,7 @@ interface ScrapePayload {
 
 export const linkedinEngagementScrapeTask = task({
   id: "linkedin-engagement-scrape",
+  queue: engagementQueue,
   maxDuration: 3600,
   retry: {
     maxAttempts: 3,
@@ -34,7 +43,7 @@ export const linkedinEngagementScrapeTask = task({
         sourceType,
       });
 
-      // Step 1: Scrape recent posts
+      // Step 1: Discover recent posts
       metadata.set("progress", {
         step: "Scraping recent posts",
         stepNumber: 1,
@@ -69,9 +78,9 @@ export const linkedinEngagementScrapeTask = task({
         return result;
       }
 
-      // Step 2: Collect reactions (already embedded in posts) + scrape comments
+      // Step 2: Scrape reactions, comments, and reshares for each post
       metadata.set("progress", {
-        step: "Scraping comments",
+        step: "Scraping reactions, comments, and reshares",
         stepNumber: 2,
         totalSteps: 4,
         percentage: 20,
@@ -79,19 +88,54 @@ export const linkedinEngagementScrapeTask = task({
 
       const allEngagers: EngagedPerson[] = [];
 
-      for (const post of recentPosts) {
-        // Reactions are already extracted from the posts actor response
-        allEngagers.push(...post.reactions);
+      for (let i = 0; i < recentPosts.length; i++) {
+        const post = recentPosts[i];
+        const postDate = new Date(post.postedDate);
+        logger.info(
+          `Processing post ${i + 1}/${recentPosts.length}: ${post.numLikes} likes, ${post.numComments} comments, ${post.numShares} shares`,
+        );
 
-        // Comments need a separate actor call
+        // Reactions
         try {
-          const comments = await scrapePostComments(post.postUrl, signal);
+          const reactions = await scrapePostReactions(post.postUrl, signal, runId, postDate);
+          allEngagers.push(...reactions);
+          logger.info(`Got ${reactions.length} reactions for post ${i + 1}`);
+        } catch (err) {
+          logger.warn(`Failed to scrape reactions for ${post.postUrl}`, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+
+        // Comments
+        try {
+          const comments = await scrapePostComments(post.postUrl, signal, runId, postDate);
           allEngagers.push(...comments);
+          logger.info(`Got ${comments.length} comments for post ${i + 1}`);
         } catch (err) {
           logger.warn(`Failed to scrape comments for ${post.postUrl}`, {
             error: err instanceof Error ? err.message : String(err),
           });
         }
+
+        // Reshares
+        if (post.numShares > 0) {
+          try {
+            const reshares = await scrapePostReshares(post.postUrl, signal, runId, postDate);
+            allEngagers.push(...reshares);
+            logger.info(`Got ${reshares.length} reshares for post ${i + 1}`);
+          } catch (err) {
+            logger.warn(`Failed to scrape reshares for ${post.postUrl}`, {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
+        metadata.set("progress", {
+          step: `Scraped post ${i + 1}/${recentPosts.length}`,
+          stepNumber: 2,
+          totalSteps: 4,
+          percentage: 20 + Math.round((40 * (i + 1)) / recentPosts.length),
+        });
       }
 
       logger.info(`Total engagers found: ${allEngagers.length}`);
@@ -124,7 +168,7 @@ export const linkedinEngagementScrapeTask = task({
         return result;
       }
 
-      // Step 3: Deduplicate by LinkedIn URL locally
+      // Step 3: Deduplicate by LinkedIn URL
       metadata.set("progress", {
         step: "Normalizing and deduplicating leads",
         stepNumber: 3,
@@ -132,35 +176,89 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 60,
       });
 
-      const engagerMap = new Map<string, EngagedPerson & { engagementTypes: string[]; engagementPosts: string[] }>();
+      type DedupedEngager = EngagedPerson & {
+        engagementTypes: string[];
+        engagementPosts: string[];
+        firstEngagedAt: Date;
+        lastEngagedAt: Date;
+      };
 
+      function mergeInto(target: DedupedEngager, source: EngagedPerson) {
+        if (!target.engagementTypes.includes(source.engagementType)) {
+          target.engagementTypes.push(source.engagementType);
+        }
+        if (!target.engagementPosts.includes(source.postUrl)) {
+          target.engagementPosts.push(source.postUrl);
+        }
+        if (source.headline && !target.headline) target.headline = source.headline;
+        if (source.company && !target.company) target.company = source.company;
+        if (source.profileImageUrl && !target.profileImageUrl) target.profileImageUrl = source.profileImageUrl;
+        if (source.linkedinUrnUrl && !target.linkedinUrnUrl) target.linkedinUrnUrl = source.linkedinUrnUrl;
+        // Prefer slug URL over URN URL as the primary linkedinUrl
+        if (source.linkedinSlug && !target.linkedinSlug) {
+          target.linkedinUrl = source.linkedinUrl;
+          target.linkedinSlug = source.linkedinSlug;
+        }
+        if (source.engagedAt < target.firstEngagedAt) target.firstEngagedAt = source.engagedAt;
+        if (source.engagedAt > target.lastEngagedAt) target.lastEngagedAt = source.engagedAt;
+      }
+
+      // Pass 1: Dedup by URL
+      const engagerMap = new Map<string, DedupedEngager>();
       for (const person of allEngagers) {
         const key = person.linkedinUrl.toLowerCase().replace(/\/$/, "");
         const existing = engagerMap.get(key);
-
         if (existing) {
-          if (!existing.engagementTypes.includes(person.engagementType)) {
-            existing.engagementTypes.push(person.engagementType);
-          }
-          if (!existing.engagementPosts.includes(person.postUrl)) {
-            existing.engagementPosts.push(person.postUrl);
-          }
-          // Prefer newer/more complete data
-          if (person.headline && !existing.headline) existing.headline = person.headline;
-          if (person.company && !existing.company) existing.company = person.company;
-          if (person.profileImageUrl && !existing.profileImageUrl)
-            existing.profileImageUrl = person.profileImageUrl;
+          mergeInto(existing, person);
         } else {
           engagerMap.set(key, {
             ...person,
             engagementTypes: [person.engagementType],
             engagementPosts: [person.postUrl],
+            firstEngagedAt: person.engagedAt,
+            lastEngagedAt: person.engagedAt,
           });
         }
       }
 
+      // Pass 2: Merge URN-URL entries with slug-URL entries by name.
+      // The same person can appear with a slug URL (from comments) and a URN URL
+      // (from reactions). Match them by lowercase firstName+lastName.
+      const nameMap = new Map<string, DedupedEngager>();
+      const urlsToRemove: string[] = [];
+      for (const [url, engager] of engagerMap) {
+        const nameKey = `${engager.firstName.toLowerCase()}|${(engager.lastName || "").toLowerCase()}`;
+        const byName = nameMap.get(nameKey);
+        if (byName && byName !== engager) {
+          // Same name, different URL — merge the URN one into the slug one
+          const hasSlug = !engager.linkedinUrnUrl || engager.linkedinSlug;
+          const otherHasSlug = !byName.linkedinUrnUrl || byName.linkedinSlug;
+
+          if (hasSlug && !otherHasSlug) {
+            // Current has slug, other has URN — merge other into current
+            mergeInto(engager, byName);
+            if (!engager.linkedinUrnUrl) engager.linkedinUrnUrl = byName.linkedinUrl;
+            const otherUrl = byName.linkedinUrl.toLowerCase().replace(/\/$/, "");
+            urlsToRemove.push(otherUrl);
+            nameMap.set(nameKey, engager);
+          } else if (!hasSlug && otherHasSlug) {
+            // Other has slug, current has URN — merge current into other
+            mergeInto(byName, engager);
+            if (!byName.linkedinUrnUrl) byName.linkedinUrnUrl = engager.linkedinUrl;
+            urlsToRemove.push(url);
+          } else {
+            // Both have slug or both have URN — don't merge (could be different people)
+          }
+        } else {
+          nameMap.set(nameKey, engager);
+        }
+      }
+      for (const url of urlsToRemove) {
+        engagerMap.delete(url);
+      }
+
       const uniqueEngagers = Array.from(engagerMap.values());
-      logger.info(`Unique engagers after dedup: ${uniqueEngagers.length}`);
+      logger.info(`Unique engagers after dedup: ${uniqueEngagers.length} (merged ${urlsToRemove.length} cross-URL duplicates)`);
 
       // Step 4: Upsert into leads table
       metadata.set("progress", {
@@ -170,23 +268,18 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 80,
       });
 
-      const linkedinUrls = uniqueEngagers.map((e) =>
-        e.linkedinUrl.toLowerCase().replace(/\/$/, "")
-      );
+      const linkedinUrls = uniqueEngagers.map((e) => e.linkedinUrl.toLowerCase().replace(/\/$/, ""));
 
       // Fetch existing leads for this account matching these URLs
-      const existingLeads = linkedinUrls.length > 0
-        ? await db
-            .select()
-            .from(leads)
-            .where(
-              and(eq(leads.accountId, accountId), inArray(leads.linkedinUrl, linkedinUrls))
-            )
-        : [];
+      const existingLeads =
+        linkedinUrls.length > 0
+          ? await db
+              .select()
+              .from(leads)
+              .where(and(eq(leads.accountId, accountId), inArray(leads.linkedinUrl, linkedinUrls)))
+          : [];
 
-      const existingMap = new Map(
-        existingLeads.map((l) => [l.linkedinUrl.toLowerCase().replace(/\/$/, ""), l])
-      );
+      const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl.toLowerCase().replace(/\/$/, ""), l]));
 
       let upsertCount = 0;
       const now = new Date();
@@ -197,29 +290,32 @@ export const linkedinEngagementScrapeTask = task({
           const existing = existingMap.get(normalizedUrl);
 
           if (existing) {
-            // Merge engagement types and posts
             const mergedTypes = [
-              ...new Set([
-                ...((existing.engagementTypes as string[]) || []),
-                ...engager.engagementTypes,
-              ]),
+              ...new Set([...((existing.engagementTypes as string[]) || []), ...engager.engagementTypes]),
             ];
             const mergedPosts = [
-              ...new Set([
-                ...((existing.engagementPosts as string[]) || []),
-                ...engager.engagementPosts,
-              ]),
+              ...new Set([...((existing.engagementPosts as string[]) || []), ...engager.engagementPosts]),
             ];
+
+            // Use the earlier of existing or new engagement date
+            const firstSeenAt = existing.firstSeenAt < engager.firstEngagedAt
+              ? existing.firstSeenAt
+              : engager.firstEngagedAt;
+            const lastSeenAt = existing.lastSeenAt > engager.lastEngagedAt
+              ? existing.lastSeenAt
+              : engager.lastEngagedAt;
 
             await tx
               .update(leads)
               .set({
                 engagementTypes: mergedTypes,
                 engagementPosts: mergedPosts,
-                lastSeenAt: now,
+                firstSeenAt,
+                lastSeenAt,
                 headline: engager.headline || existing.headline,
                 company: engager.company || existing.company,
                 profileImageUrl: engager.profileImageUrl || existing.profileImageUrl,
+                linkedinUrnUrl: engager.linkedinUrnUrl || existing.linkedinUrnUrl,
                 updatedAt: now,
               })
               .where(eq(leads.id, existing.id));
@@ -228,6 +324,7 @@ export const linkedinEngagementScrapeTask = task({
               accountId,
               contactId,
               linkedinUrl: normalizedUrl,
+              linkedinUrnUrl: engager.linkedinUrnUrl,
               linkedinSlug: engager.linkedinSlug,
               firstName: engager.firstName,
               lastName: engager.lastName,
@@ -236,8 +333,8 @@ export const linkedinEngagementScrapeTask = task({
               profileImageUrl: engager.profileImageUrl,
               engagementTypes: engager.engagementTypes,
               engagementPosts: engager.engagementPosts,
-              firstSeenAt: now,
-              lastSeenAt: now,
+              firstSeenAt: engager.firstEngagedAt,
+              lastSeenAt: engager.lastEngagedAt,
             });
           }
           upsertCount++;
@@ -282,6 +379,13 @@ export const linkedinEngagementScrapeTask = task({
           .where(eq(toolRuns.id, runId))
           .catch(() => {});
       }
+
+      sendSlackNotification({
+        tool: "linkedin-engagement-scrape",
+        userName: "trigger-task",
+        error: errorMessage,
+        runId: runId ?? "unknown",
+      }).catch(() => {});
 
       throw err;
     }

@@ -43,6 +43,13 @@
       "when": 1772533031101,
       "tag": "0005_jittery_albert_cleary",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772555647036,
+      "tag": "0006_green_aqueduct",
+      "breakpoints": true
     }
   ]
 }

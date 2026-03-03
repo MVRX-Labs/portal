@@ -53,6 +53,7 @@ export const leads = pgTable(
       .references(() => accounts.id),
     contactId: text("contact_id").references(() => contacts.id),
     linkedinUrl: text("linkedin_url").notNull(),
+    linkedinUrnUrl: text("linkedin_urn_url"),
     linkedinSlug: text("linkedin_slug"),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
@@ -61,6 +62,8 @@ export const leads = pgTable(
     profileImageUrl: text("profile_image_url"),
     engagementTypes: jsonb("engagement_types").$type<string[]>().default([]),
     engagementPosts: jsonb("engagement_posts").$type<string[]>().default([]),
+    // Based on the post date, not the scrape date. Represents the earliest/latest
+    // post where this person was seen engaging.
     firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
     lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),

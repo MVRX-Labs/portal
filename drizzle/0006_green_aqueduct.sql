@@ -1,0 +1,1 @@
+ALTER TABLE "leads" ADD COLUMN "linkedin_urn_url" text;

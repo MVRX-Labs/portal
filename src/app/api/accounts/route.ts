@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { accounts } from "@/lib/schema";
-import { eq, ilike } from "drizzle-orm";
+import { accounts, users, contacts, accountActions } from "@/lib/schema";
+import { eq, ilike, and, ne, sql } from "drizzle-orm";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
-import { slugify } from "@/lib/ids";
+import { uniqueSlug } from "@/lib/account-utils";
 
 export const maxDuration = 300;
-
-async function uniqueSlug(base: string): Promise<string> {
-  let candidate = slugify(base);
-  if (!candidate) candidate = "account";
-  let suffix = 0;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const slug = suffix === 0 ? candidate : `${candidate}-${suffix}`;
-    const existing = await db.select({ id: accounts.id }).from(accounts).where(eq(accounts.slug, slug)).limit(1);
-    if (existing.length === 0) return slug;
-    suffix++;
-  }
-}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -34,10 +21,20 @@ export async function GET(request: NextRequest) {
       linkedinUrl: accounts.linkedinUrl,
       engagementScrapeEnabled: accounts.engagementScrapeEnabled,
       googleDriveFolderId: accounts.googleDriveFolderId,
+      summary: accounts.summary,
+      ownerId: accounts.ownerId,
+      ownerName: users.name,
+      mrr: accounts.mrr,
+      lastMeetingAt: accounts.lastMeetingAt,
+      nextMeetingAt: accounts.nextMeetingAt,
+      autoCreated: accounts.autoCreated,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
+      contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as("contact_count"),
+      pendingActionCount: sql<number>`(select count(*) from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as("pending_action_count"),
     })
     .from(accounts)
+    .leftJoin(users, eq(accounts.ownerId, users.id))
     .where(q ? ilike(accounts.name, `%${q}%`) : undefined)
     .orderBy(accounts.name);
 

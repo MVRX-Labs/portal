@@ -50,6 +50,20 @@
       "when": 1772555647036,
       "tag": "0006_green_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772570412575,
+      "tag": "0007_chunky_unus",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772570500282,
+      "tag": "0008_cuddly_triathlon",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,11 @@ export interface Account {
   linkedinUrl: string | null;
   engagementScrapeEnabled: boolean;
   googleDriveFolderId: string | null;
+  summary: string | null;
+  ownerId: string | null;
+  mrr: number;
+  lastMeetingAt: string | null;
+  nextMeetingAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

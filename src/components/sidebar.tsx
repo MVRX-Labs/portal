@@ -16,6 +16,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
+  { href: "/accounts", label: "Accounts", icon: "🏢" },
   { href: "/tools/system-test", label: "System Test", icon: "🧪", adminOnly: true },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝", beta: true },
@@ -84,17 +85,30 @@ export function Sidebar() {
           )}
 
         {user?.isAdmin && (
-          <Link
-            href={`/admin/users${qs}`}
-            className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
-              pathname.startsWith("/admin")
-                ? "bg-[var(--input)] text-white"
-                : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
-            }`}
-          >
-            <span className="text-base">⚙</span>
-            User Management
-          </Link>
+          <>
+            <Link
+              href={`/admin/calendar${qs}`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin/calendar")
+                  ? "bg-[var(--input)] text-white"
+                  : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+              }`}
+            >
+              <span className="text-base">📅</span>
+              Calendar Sync
+            </Link>
+            <Link
+              href={`/admin/users${qs}`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin/users")
+                  ? "bg-[var(--input)] text-white"
+                  : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+              }`}
+            >
+              <span className="text-base">⚙</span>
+              User Management
+            </Link>
+          </>
         )}
       </nav>
 

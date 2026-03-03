@@ -128,6 +128,11 @@ button {
   color: var(--destructive);
 }
 
+.badge-neutral {
+  background: rgba(136, 136, 136, 0.15);
+  color: var(--muted);
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

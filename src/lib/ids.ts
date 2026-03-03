@@ -15,6 +15,7 @@ const PREFIXES = {
   acct: "acct",
   contact: "contact",
   run: "run",
+  lead: "lead",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -23,13 +24,15 @@ export type UserId = `user_${string}`;
 export type AccountId = `acct_${string}`;
 export type ContactId = `contact_${string}`;
 export type RunId = `run_${string}`;
-export type ObjectId = UserId | AccountId | ContactId | RunId;
+export type LeadId = `lead_${string}`;
+export type ObjectId = UserId | AccountId | ContactId | RunId | LeadId;
 
 type PrefixToId = {
   user: UserId;
   acct: AccountId;
   contact: ContactId;
   run: RunId;
+  lead: LeadId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -61,6 +64,7 @@ export function prefixForTable(table: string): Prefix {
     accounts: "acct",
     contacts: "contact",
     tool_runs: "run",
+    leads: "lead",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

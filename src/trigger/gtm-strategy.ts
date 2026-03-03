@@ -162,7 +162,8 @@ export const gtmStrategyTask = task({
   id: "gtm-strategy-generation",
   maxDuration: 3600,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: GTMStrategyPayload, { signal }) => {
     const { runId, companyName, accountName, industry, targetAudience, productDescription, model } = payload;

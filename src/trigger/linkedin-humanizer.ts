@@ -100,7 +100,8 @@ export const linkedinHumanizerTask = task({
   id: "linkedin-humanizer",
   maxDuration: 300,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInHumanizerPayload, { signal }) => {
     const { runId, postContent, tone, writingExamples, model } = payload;

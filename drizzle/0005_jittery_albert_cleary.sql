@@ -1,0 +1,1 @@
+ALTER TABLE "tool_runs" ALTER COLUMN "user_id" DROP NOT NULL;

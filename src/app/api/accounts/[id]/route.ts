@@ -53,13 +53,15 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name, industry, website } = body;
+  const { name, industry, website, linkedinUrl, engagementScrapeEnabled } = body;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (name !== undefined) updates.name = name;
   if (industry !== undefined) updates.industry = industry;
   if (website !== undefined) updates.website = website;
+  if (linkedinUrl !== undefined) updates.linkedinUrl = linkedinUrl;
+  if (engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = engagementScrapeEnabled;
 
   const [account] = await db
     .update(accounts)

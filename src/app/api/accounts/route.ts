@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       slug: accounts.slug,
       industry: accounts.industry,
       website: accounts.website,
+      linkedinUrl: accounts.linkedinUrl,
+      engagementScrapeEnabled: accounts.engagementScrapeEnabled,
       googleDriveFolderId: accounts.googleDriveFolderId,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, industry, website } = body;
+  const { name, industry, website, linkedinUrl, engagementScrapeEnabled } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -67,6 +69,8 @@ export async function POST(request: NextRequest) {
       slug,
       industry: industry || null,
       website: website || null,
+      linkedinUrl: linkedinUrl || null,
+      engagementScrapeEnabled: engagementScrapeEnabled || false,
       googleDriveFolderId,
     })
     .returning();

@@ -91,7 +91,8 @@ export const linkedinAuditTask = task({
   id: "linkedin-audit-generation",
   maxDuration: 3600,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInAuditPayload, { signal }) => {
     const { runId, linkedinUrl, accountName, model } = payload;

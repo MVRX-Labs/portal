@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, accountId, accountEmail, personalEmail, linkedinUrl } = body;
+  const { name, accountId, accountEmail, personalEmail, linkedinUrl, engagementScrapeEnabled } = body;
 
   if (!name || !accountId) {
     return NextResponse.json(
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       accountEmail: accountEmail || null,
       personalEmail: personalEmail || null,
       linkedinUrl: linkedinUrl || null,
+      engagementScrapeEnabled: engagementScrapeEnabled || false,
     })
     .returning();
 

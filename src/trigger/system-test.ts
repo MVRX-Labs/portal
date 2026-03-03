@@ -15,7 +15,8 @@ export const systemTestTask = task({
   id: "system-test",
   maxDuration: 120,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: SystemTestPayload, { signal }) => {
     const { runId, model } = payload;

@@ -17,6 +17,8 @@ export interface Account {
   slug: string;
   industry: string | null;
   website: string | null;
+  linkedinUrl: string | null;
+  engagementScrapeEnabled: boolean;
   googleDriveFolderId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +31,7 @@ export interface Contact {
   accountEmail: string | null;
   personalEmail: string | null;
   linkedinUrl: string | null;
+  engagementScrapeEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

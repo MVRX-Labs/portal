@@ -262,7 +262,8 @@ export const linkedinPostGeneratorTask = task({
   id: "linkedin-post-generator",
   maxDuration: 600,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInPostGeneratorPayload, { signal }) => {
     const {

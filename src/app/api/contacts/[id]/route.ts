@@ -11,13 +11,14 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name, accountEmail, personalEmail, linkedinUrl } = body;
+  const { name, accountEmail, personalEmail, linkedinUrl, engagementScrapeEnabled } = body;
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (name !== undefined) updates.name = name;
   if (accountEmail !== undefined) updates.accountEmail = accountEmail;
   if (personalEmail !== undefined) updates.personalEmail = personalEmail;
   if (linkedinUrl !== undefined) updates.linkedinUrl = linkedinUrl;
+  if (engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = engagementScrapeEnabled;
 
   const [contact] = await db
     .update(contacts)

@@ -145,7 +145,8 @@ export const sentimentAnalysisTask = task({
   id: "sentiment-analysis-generation",
   maxDuration: 3600,
   retry: {
-    maxAttempts: 1,
+    maxAttempts: 3,
+    minTimeoutInMs: 2000,
   },
   run: async (payload: SentimentAnalysisPayload, { signal }) => {
     const { runId, productName, companyName, accountName, sources, additionalUrls, keywords, model } = payload;

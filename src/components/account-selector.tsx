@@ -13,6 +13,8 @@ export function AccountSelector() {
   const [newName, setNewName] = useState("");
   const [newIndustry, setNewIndustry] = useState("");
   const [newWebsite, setNewWebsite] = useState("");
+  const [newLinkedinUrl, setNewLinkedinUrl] = useState("");
+  const [newEngagementScrape, setNewEngagementScrape] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export function AccountSelector() {
           name: newName.trim(),
           industry: newIndustry.trim() || null,
           website: newWebsite.trim() || null,
+          linkedinUrl: newLinkedinUrl.trim() || null,
+          engagementScrapeEnabled: newEngagementScrape,
         }),
       });
       const data = await res.json();
@@ -78,6 +82,8 @@ export function AccountSelector() {
         setNewName("");
         setNewIndustry("");
         setNewWebsite("");
+        setNewLinkedinUrl("");
+        setNewEngagementScrape(false);
       }
     } catch {
       // ignore
@@ -176,6 +182,22 @@ export function AccountSelector() {
                 placeholder="Website"
                 className="w-full text-xs px-2 py-1"
               />
+              <input
+                type="text"
+                value={newLinkedinUrl}
+                onChange={(e) => setNewLinkedinUrl(e.target.value)}
+                placeholder="LinkedIn Company URL"
+                className="w-full text-xs px-2 py-1"
+              />
+              <label className="flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newEngagementScrape}
+                  onChange={(e) => setNewEngagementScrape(e.target.checked)}
+                  className="rounded"
+                />
+                Enable engagement scraping
+              </label>
               <button
                 type="submit"
                 disabled={creating}

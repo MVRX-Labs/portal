@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accounts, users, contacts, accountActions } from "@/lib/schema";
-import { eq, ilike, and, ne, sql } from "drizzle-orm";
+import { eq, ilike, and, ne, sql, desc, asc } from "drizzle-orm";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { uniqueSlug } from "@/lib/account-utils";
 
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       ownerId: accounts.ownerId,
       ownerName: users.name,
       mrr: accounts.mrr,
+      mrrCurrency: accounts.mrrCurrency,
       lastMeetingAt: accounts.lastMeetingAt,
       nextMeetingAt: accounts.nextMeetingAt,
       autoCreated: accounts.autoCreated,
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     .from(accounts)
     .leftJoin(users, eq(accounts.ownerId, users.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(accounts.name);
+    .orderBy(desc(accounts.mrr), sql`${accounts.lastMeetingAt} asc nulls last`);
 
   return NextResponse.json({ accounts: results });
 }

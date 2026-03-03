@@ -53,7 +53,7 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, hidden } = body;
+  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden } = body;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -65,6 +65,7 @@ export async function PUT(
   if (summary !== undefined) updates.summary = summary;
   if (ownerId !== undefined) updates.ownerId = ownerId || null;
   if (mrr !== undefined) updates.mrr = mrr;
+  if (mrrCurrency !== undefined) updates.mrrCurrency = mrrCurrency;
   if (hidden !== undefined) updates.hidden = hidden;
 
   const [account] = await db

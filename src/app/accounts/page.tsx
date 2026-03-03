@@ -10,6 +10,7 @@ interface AccountOverview {
   ownerId: string | null;
   ownerName: string | null;
   mrr: number;
+  mrrCurrency: string;
   lastMeetingAt: string | null;
   nextMeetingAt: string | null;
   autoCreated: boolean;
@@ -45,8 +46,9 @@ interface User {
   email: string;
 }
 
-function formatMrr(cents: number): string {
-  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+function formatMrr(cents: number, currency: string = "$"): string {
+  const locale = currency === "£" ? "en-GB" : "en-US";
+  return `${currency}${(cents / 100).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function formatDate(iso: string | null): string {
@@ -97,6 +99,7 @@ function ExpandedView({
   const [summary, setSummary] = useState(account.summary || "");
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
+  const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -105,8 +108,9 @@ function ExpandedView({
     setSummary(account.summary || "");
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
+    setMrrCurrency(account.mrrCurrency || "$");
     setDirty(false);
-  }, [account.id, account.summary, account.ownerId, account.mrr]);
+  }, [account.id, account.summary, account.ownerId, account.mrr, account.mrrCurrency]);
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -198,6 +202,7 @@ function ExpandedView({
           summary: summary || null,
           ownerId: ownerId || null,
           mrr: mrrCents,
+          mrrCurrency,
         }),
       });
       if (res.ok) {
@@ -208,6 +213,7 @@ function ExpandedView({
           ownerId: ownerId || null,
           ownerName: ownerUser?.name || null,
           mrr: mrrCents,
+          mrrCurrency,
         });
         setDirty(false);
       }
@@ -356,15 +362,26 @@ function ExpandedView({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[var(--muted)] mb-1">MRR ($)</label>
-                <input
-                  type="number"
-                  value={mrr}
-                  onChange={(e) => { setMrr(e.target.value); setDirty(true); }}
-                  placeholder="0"
-                  min="0"
-                  step="1"
-                />
+                <label className="block text-xs text-[var(--muted)] mb-1">MRR</label>
+                <div className="flex">
+                  <button
+                    type="button"
+                    onClick={() => { setMrrCurrency(mrrCurrency === "$" ? "£" : "$"); setDirty(true); }}
+                    className="shrink-0 w-8 text-center border border-r-0 border-[var(--border)] rounded-l bg-[var(--input)] text-sm hover:bg-[var(--border)] transition-colors"
+                    title="Click to toggle currency"
+                  >
+                    {mrrCurrency}
+                  </button>
+                  <input
+                    type="number"
+                    value={mrr}
+                    onChange={(e) => { setMrr(e.target.value); setDirty(true); }}
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    className="rounded-l-none flex-1 min-w-0"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -453,6 +470,15 @@ function AccountsContent() {
   const visibleCount = accounts.filter((a) => !a.hidden).length;
   const hiddenCount = accounts.filter((a) => a.hidden).length;
 
+  // Sum MRR by currency (only visible accounts)
+  const mrrTotals = accounts
+    .filter((a) => !a.hidden && a.mrr > 0)
+    .reduce<Record<string, number>>((acc, a) => {
+      const cur = a.mrrCurrency || "$";
+      acc[cur] = (acc[cur] || 0) + a.mrr;
+      return acc;
+    }, {});
+
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
@@ -479,19 +505,27 @@ function AccountsContent() {
       </div>
       <p className="text-sm text-[var(--muted)] mb-4">
         Overview of all accounts{!loading && ` \u2014 ${visibleCount} total${showHidden && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`}
+        {!loading && Object.keys(mrrTotals).length > 0 && (
+          <span className="ml-3 font-medium text-[var(--foreground)]">
+            Total MRR: {Object.entries(mrrTotals)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([cur, cents]) => formatMrr(cents, cur))
+              .join(" + ")}
+          </span>
+        )}
       </p>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-              <th className="p-4 pb-2 font-medium">Account</th>
-              <th className="p-4 pb-2 font-medium">Summary</th>
-              <th className="p-4 pb-2 font-medium">Owner</th>
-              <th className="p-4 pb-2 font-medium text-right">MRR</th>
-              <th className="p-4 pb-2 font-medium">Last Meeting</th>
-              <th className="p-4 pb-2 font-medium">Next Meeting</th>
-              {editMode && <th className="p-4 pb-2 font-medium w-20"></th>}
+              <th className="px-3 py-2 font-medium">Account</th>
+              <th className="px-3 py-2 font-medium">Summary</th>
+              <th className="px-3 py-2 font-medium">Owner</th>
+              <th className="px-3 py-2 font-medium text-right">MRR</th>
+              <th className="px-3 py-2 font-medium">Last Meeting</th>
+              <th className="px-3 py-2 font-medium">Next Meeting</th>
+              {editMode && <th className="px-3 py-2 font-medium w-20"></th>}
             </tr>
           </thead>
           <tbody>
@@ -518,7 +552,7 @@ function AccountsContent() {
                       expandedId === account.id ? "bg-[var(--input)]" : ""
                     } ${account.hidden ? "opacity-50" : ""}`}
                   >
-                    <td className="p-4">
+                    <td className="px-3 py-1.5">
                       <div className="font-medium flex items-center gap-1.5">
                         {account.name}
                         {account.autoCreated && (
@@ -541,29 +575,29 @@ function AccountsContent() {
                         )}
                       </div>
                     </td>
-                    <td className="p-4 max-w-xs">
+                    <td className="px-3 py-1.5 max-w-xs">
                       <span className="text-[var(--muted)] truncate block">
                         {account.summary || "\u2014"}
                       </span>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       {account.ownerName || (
                         <span className="text-[var(--muted)]">Unassigned</span>
                       )}
                     </td>
-                    <td className="p-4 text-right whitespace-nowrap font-medium">
-                      {account.mrr > 0 ? formatMrr(account.mrr) : (
-                        <span className="text-[var(--muted)]">$0</span>
+                    <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
+                      {account.mrr > 0 ? formatMrr(account.mrr, account.mrrCurrency) : (
+                        <span className="text-[var(--muted)]">{account.mrrCurrency || "$"}0</span>
                       )}
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       <span
                         className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}
                       >
                         {relativeDate(account.lastMeetingAt)}
                       </span>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       <span
                         className={`badge ${account.nextMeetingAt ? "badge-running" : "badge-neutral"}`}
                       >
@@ -573,7 +607,7 @@ function AccountsContent() {
                       </span>
                     </td>
                     {editMode && (
-                      <td className="p-4 whitespace-nowrap">
+                      <td className="px-3 py-1.5 whitespace-nowrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

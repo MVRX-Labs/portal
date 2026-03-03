@@ -26,6 +26,7 @@ export const accounts = pgTable("accounts", {
   summary: text("summary"),
   ownerId: text("owner_id").references(() => users.id),
   mrr: integer("mrr").notNull().default(0),
+  mrrCurrency: text("mrr_currency").notNull().default("$"),
   nextMeetingAt: timestamp("next_meeting_at"),
   lastMeetingAt: timestamp("last_meeting_at"),
   autoCreated: boolean("auto_created").notNull().default(false),

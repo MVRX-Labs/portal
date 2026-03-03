@@ -23,6 +23,7 @@ export interface Account {
   summary: string | null;
   ownerId: string | null;
   mrr: number;
+  mrrCurrency: string;
   lastMeetingAt: string | null;
   nextMeetingAt: string | null;
   createdAt: string;

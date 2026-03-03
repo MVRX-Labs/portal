@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "mrr_currency" text DEFAULT '$' NOT NULL;

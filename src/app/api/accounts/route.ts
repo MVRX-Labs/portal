@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq, ilike } from "drizzle-orm";
-import { findOrCreateFolder } from "@/lib/gdrive";
+import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { slugify } from "@/lib/ids";
 
 export const maxDuration = 300;
@@ -54,10 +54,8 @@ export async function POST(request: NextRequest) {
 
   let googleDriveFolderId: string | null = null;
   try {
-    const rootFolderId = process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
-    if (rootFolderId) {
-      googleDriveFolderId = await findOrCreateFolder(name, rootFolderId);
-    }
+    const rootFolderId = getGeneratedMaterialsFolderId();
+    googleDriveFolderId = await findOrCreateFolder(name, rootFolderId);
   } catch (err) {
     console.error("Failed to create Google Drive folder:", err);
   }

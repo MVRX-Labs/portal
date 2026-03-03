@@ -89,6 +89,22 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+export function getGeneratedMaterialsFolderId(): string {
+  const isLocal = process.env.NODE_ENV === "development";
+  const folderId = isLocal
+    ? process.env.DEV_GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID
+    : process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
+
+  if (!folderId) {
+    const varName = isLocal
+      ? "DEV_GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID"
+      : "GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID";
+    throw new Error(`${varName} is not configured`);
+  }
+
+  return folderId;
+}
+
 export async function createFolder(
   name: string,
   parentFolderId: string
@@ -146,13 +162,7 @@ export async function findOrCreateFolder(
 }
 
 export async function listFiles(folderId?: string): Promise<DriveFile[]> {
-  const targetFolder = folderId || process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID || "";
-
-  if (!targetFolder) {
-    throw new Error(
-      "GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID is not configured. Set it in your environment variables."
-    );
-  }
+  const targetFolder = folderId || getGeneratedMaterialsFolderId();
 
   const token = await getAccessToken();
 

@@ -10,7 +10,7 @@ import { toolRuns } from "@/lib/schema";
 import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
 import { buildAuditDocx } from "@/lib/audit-docx-builder";
 import { sendSlackNotification } from "@/lib/slack";
-import { findOrCreateFolder, uploadFile } from "@/lib/gdrive";
+import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import type { LinkedInAuditContent } from "@/lib/audit-schema";
 import {
   resolveModel,
@@ -188,8 +188,7 @@ export const linkedinAuditTask = task({
       const buf = await buildAuditDocx(content);
 
       // 6. Upload to Google Drive via API
-      const rootFolderId = process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
-      if (!rootFolderId) throw new Error("GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID not configured");
+      const rootFolderId = getGeneratedMaterialsFolderId();
 
       let targetFolderId = rootFolderId;
       if (accountName) {

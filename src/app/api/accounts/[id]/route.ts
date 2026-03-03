@@ -3,15 +3,14 @@ import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { isObjectId } from "@/lib/ids";
-import { findOrCreateFolder } from "@/lib/gdrive";
+import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 
 export const maxDuration = 300;
 
 async function ensureDriveFolder(account: typeof accounts.$inferSelect) {
   if (account.googleDriveFolderId) return account;
 
-  const rootFolderId = process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
-  if (!rootFolderId) return account;
+  const rootFolderId = getGeneratedMaterialsFolderId();
 
   try {
     const folderId = await findOrCreateFolder(account.name, rootFolderId);

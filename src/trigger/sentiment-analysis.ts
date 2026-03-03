@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
-import { findOrCreateFolder, uploadFile } from "@/lib/gdrive";
+import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import { buildSentimentDocx } from "@/lib/sentiment-docx-builder";
 import { scrapeSentimentSources, type SourceType } from "@/lib/sentiment-scraper";
 import {
@@ -241,8 +241,7 @@ export const sentimentAnalysisTask = task({
       const buf = await buildSentimentDocx(content);
 
       // 5. Upload to Google Drive
-      const rootFolderId = process.env.GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID;
-      if (!rootFolderId) throw new Error("GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID not configured");
+      const rootFolderId = getGeneratedMaterialsFolderId();
 
       let targetFolderId = rootFolderId;
       if (accountName) {

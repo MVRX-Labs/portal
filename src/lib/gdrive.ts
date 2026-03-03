@@ -255,6 +255,47 @@ export async function uploadFile(
   return resp.json();
 }
 
+export async function createGoogleDoc(
+  name: string,
+  textContent: string,
+  parentFolderId: string,
+): Promise<DriveFile> {
+  const token = await getAccessToken();
+
+  const boundary = `----trigger${Date.now()}`;
+  const fileMetadata = JSON.stringify({
+    name,
+    parents: [parentFolderId],
+    mimeType: "application/vnd.google-apps.document",
+  });
+
+  const bodyParts = [
+    `--${boundary}\r\n`,
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
+    fileMetadata,
+    `\r\n--${boundary}\r\n`,
+    `Content-Type: text/plain; charset=UTF-8\r\n\r\n`,
+    textContent,
+    `\r\n--${boundary}--`,
+  ];
+
+  const resp = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,mimeType,modifiedTime,webViewLink",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body: bodyParts.join(""),
+    }
+  );
+
+  if (!resp.ok) await throwIfNotOk(resp, "Drive API createGoogleDoc");
+
+  return resp.json();
+}
+
 export function getPreviewUrl(fileId: string, mimeType: string): string {
   if (mimeType === "application/vnd.google-apps.document") {
     return `https://docs.google.com/document/d/${fileId}/preview`;

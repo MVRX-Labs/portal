@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns, contacts } from "@/lib/schema";
+import { toolRuns, contacts, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinPostGeneratorTask } from "@/trigger/linkedin-post-generator";
@@ -60,6 +60,15 @@ export async function POST(request: NextRequest) {
   const accountId =
     typeof inputs.accountId === "string" ? inputs.accountId : null;
 
+  let accountName: string | undefined;
+  if (accountId) {
+    const [account] = await db
+      .select({ name: accounts.name })
+      .from(accounts)
+      .where(eq(accounts.id, accountId));
+    accountName = account?.name;
+  }
+
   const [run] = await db
     .insert(toolRuns)
     .values({
@@ -92,6 +101,7 @@ export async function POST(request: NextRequest) {
         linkedinUrl,
         useLinkedinProfile,
         model: inputs.model,
+        accountName,
       }
     );
 

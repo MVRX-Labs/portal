@@ -10,6 +10,7 @@ import { toolRuns } from "@/lib/schema";
 import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
 import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
+import { findOrCreateFolder, getGeneratedMaterialsFolderId, createGoogleDoc } from "@/lib/gdrive";
 
 interface LinkedInPostGeneratorPayload {
   runId: string;
@@ -20,6 +21,7 @@ interface LinkedInPostGeneratorPayload {
   linkedinUrl?: string;
   useLinkedinProfile?: boolean;
   model?: string;
+  accountName?: string;
 }
 
 const URL_REGEX = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
@@ -275,11 +277,12 @@ export const linkedinPostGeneratorTask = task({
       linkedinUrl,
       useLinkedinProfile,
       model,
+      accountName,
     } = payload;
 
     try {
       const hasLinkedinScrape = useLinkedinProfile && linkedinUrl;
-      const totalSteps = hasLinkedinScrape ? 3 : 2;
+      const totalSteps = hasLinkedinScrape ? 4 : 3;
       metadata.set("progress", { step: hasLinkedinScrape ? "Scraping LinkedIn profile" : "Preparing source material", stepNumber: 1, totalSteps, percentage: 5 });
 
       const resolvedModel = resolveModel(model, MODEL_MAP.sonnet);
@@ -416,13 +419,27 @@ export const linkedinPostGeneratorTask = task({
 
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
+      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: totalSteps, totalSteps, percentage: 90 });
+
+      const rootFolderId = getGeneratedMaterialsFolderId();
+      let targetFolderId = rootFolderId;
+      if (accountName) {
+        targetFolderId = await findOrCreateFolder(accountName, rootFolderId);
+      }
+
+      const filename = `MVRX | ${posterName} | LinkedIn Posts`;
+      const driveFile = await createGoogleDoc(filename, output, targetFolderId);
+      logger.info(`Google Doc created: ${driveFile.webViewLink}`);
+
       metadata.set("progress", { step: "Complete", stepNumber: totalSteps, totalSteps, percentage: 100 });
 
+      const outputMessage = `Posts document saved: ${filename}`;
       await db
         .update(toolRuns)
         .set({
           status: "completed",
-          output,
+          output: outputMessage,
+          outputUrl: driveFile.webViewLink || null,
           updatedAt: new Date(),
         })
         .where(eq(toolRuns.id, runId));
@@ -430,9 +447,10 @@ export const linkedinPostGeneratorTask = task({
       logger.info("Post generator completed", {
         runId,
         outputLength: output.length,
+        driveUrl: driveFile.webViewLink,
       });
 
-      return { success: true, output };
+      return { success: true, filename, driveUrl: driveFile.webViewLink };
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error";

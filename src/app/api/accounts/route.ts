@@ -10,6 +10,11 @@ export const maxDuration = 300;
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
+  const includeHidden = searchParams.get("includeHidden") === "true";
+
+  const conditions = [];
+  if (q) conditions.push(ilike(accounts.name, `%${q}%`));
+  if (!includeHidden) conditions.push(eq(accounts.hidden, false));
 
   const results = await db
     .select({
@@ -28,6 +33,7 @@ export async function GET(request: NextRequest) {
       lastMeetingAt: accounts.lastMeetingAt,
       nextMeetingAt: accounts.nextMeetingAt,
       autoCreated: accounts.autoCreated,
+      hidden: accounts.hidden,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
       contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as("contact_count"),
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
     })
     .from(accounts)
     .leftJoin(users, eq(accounts.ownerId, users.id))
-    .where(q ? ilike(accounts.name, `%${q}%`) : undefined)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(accounts.name);
 
   return NextResponse.json({ accounts: results });

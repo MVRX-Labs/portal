@@ -19,6 +19,7 @@ export const accounts = pgTable("accounts", {
   slug: text("slug").notNull().unique(),
   industry: text("industry"),
   website: text("website"),
+  emailDomain: text("email_domain"),
   linkedinUrl: text("linkedin_url"),
   engagementScrapeEnabled: boolean("engagement_scrape_enabled").notNull().default(false),
   googleDriveFolderId: text("google_drive_folder_id"),
@@ -28,6 +29,7 @@ export const accounts = pgTable("accounts", {
   nextMeetingAt: timestamp("next_meeting_at"),
   lastMeetingAt: timestamp("last_meeting_at"),
   autoCreated: boolean("auto_created").notNull().default(false),
+  hidden: boolean("hidden").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

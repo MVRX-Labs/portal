@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "email_domain" text;

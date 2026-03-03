@@ -93,18 +93,13 @@ Production uses `drizzle-kit push` to apply schema changes directly (no migratio
 
 This happens when the database was originally set up with `db:push` (which doesn't record migration history), so Drizzle tries to replay old migrations.
 
-**Fix:** Manually insert the already-applied migrations into the tracking table:
+**Fix:** Run the script to insert all migration records into prod:
 
 ```bash
-# Get the hash of the migration file that's already applied
-HASH=$(md5 -q drizzle/0000_round_falcon.sql)
-
-# Mark it as applied (use the 'when' timestamp from drizzle/meta/_journal.json)
-psql "$STORAGE_DATABASE_URL" -c \
-  "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('$HASH', 1772090842128);"
+npm run db:fix-prod-journal
 ```
 
-Then re-run `npm run db:migrate`.
+This uses SHA256 hashes of each migration file and the `when` timestamps from `drizzle/meta/_journal.json`. Then re-run `npm run db:migrate` (with prod URL) to verify.
 
 ### Can't connect to local database
 

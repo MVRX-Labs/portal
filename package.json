@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate-ids": "tsx scripts/migrate-object-ids.ts",
+    "db:fix-prod-journal": "node -e \"require('dotenv').config({path:'.env.local'});process.env.STORAGE_DATABASE_URL=process.env.PROD_STORAGE_DATABASE_URL;require('child_process').execSync('npx tsx scripts/fix-prod-migration-journal.ts',{stdio:'inherit',env:process.env})\"",
     "setup": "docker compose up -d && sleep 2 && npm run db:push && npm run db:seed",
     "typecheck": "tsc --noEmit"
   },

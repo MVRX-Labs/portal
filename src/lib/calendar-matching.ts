@@ -107,12 +107,15 @@ export async function matchOrCreateForAttendee(
     };
   }
 
-  // Step 2: Try to match account by website domain
+  // Step 2: Try to match account by website domain or emailDomain
   const allAccounts = await db
-    .select({ id: accounts.id, website: accounts.website })
+    .select({ id: accounts.id, website: accounts.website, emailDomain: accounts.emailDomain })
     .from(accounts);
 
   const matchedAccount = allAccounts.find((a) => {
+    // Check emailDomain first (stable, set during auto-creation)
+    if (a.emailDomain && a.emailDomain === domainBase) return true;
+    // Fall back to website domain (may have been updated by enrichment)
     if (!a.website) return false;
     const accountDomain = extractDomain(a.website);
     return accountDomain === domainBase;
@@ -153,6 +156,7 @@ export async function matchOrCreateForAttendee(
       name: capitalizedName,
       slug,
       website: domainBase,
+      emailDomain: domainBase,
       autoCreated: true,
     })
     .returning();

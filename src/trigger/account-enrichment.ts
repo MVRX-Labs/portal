@@ -137,6 +137,7 @@ export const accountEnrichmentTask = task({
       // Update the account with enriched data
       const updates: Record<string, unknown> = {
         name: result.companyName,
+        autoCreated: false,
         updatedAt: new Date(),
       };
 

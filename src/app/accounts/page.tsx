@@ -13,6 +13,7 @@ interface AccountOverview {
   lastMeetingAt: string | null;
   nextMeetingAt: string | null;
   autoCreated: boolean;
+  hidden: boolean;
   contactCount: number;
   pendingActionCount: number;
 }
@@ -77,10 +78,12 @@ function relativeDate(iso: string | null): string {
 function ExpandedView({
   account,
   users,
+  editMode,
   onSave,
 }: {
   account: AccountOverview;
   users: User[];
+  editMode: boolean;
   onSave: (updated: AccountOverview) => void;
 }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -96,6 +99,14 @@ function ExpandedView({
   const [mrr, setMrr] = useState(String(account.mrr / 100));
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+
+  // Reset editable fields when account changes
+  useEffect(() => {
+    setSummary(account.summary || "");
+    setOwnerId(account.ownerId || "");
+    setMrr(String(account.mrr / 100));
+    setDirty(false);
+  }, [account.id, account.summary, account.ownerId, account.mrr]);
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -315,59 +326,61 @@ function ExpandedView({
         </div>
       </div>
 
-      {/* Editable fields */}
-      <div className="border-t border-[var(--border)] pt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <label className="block text-xs text-[var(--muted)] mb-1">Summary</label>
-            <textarea
-              value={summary}
-              onChange={(e) => { setSummary(e.target.value); setDirty(true); }}
-              placeholder="Describe the state of this account..."
-              rows={2}
-              className="w-full"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-[var(--muted)] mb-1">Owner</label>
-              <select
-                value={ownerId}
-                onChange={(e) => { setOwnerId(e.target.value); setDirty(true); }}
-              >
-                <option value="">Unassigned</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-[var(--muted)] mb-1">MRR ($)</label>
-              <input
-                type="number"
-                value={mrr}
-                onChange={(e) => { setMrr(e.target.value); setDirty(true); }}
-                placeholder="0"
-                min="0"
-                step="1"
+      {/* Editable fields — only shown in edit mode */}
+      {editMode && (
+        <div className="border-t border-[var(--border)] pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <label className="block text-xs text-[var(--muted)] mb-1">Summary</label>
+              <textarea
+                value={summary}
+                onChange={(e) => { setSummary(e.target.value); setDirty(true); }}
+                placeholder="Describe the state of this account..."
+                rows={2}
+                className="w-full"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-[var(--muted)] mb-1">Owner</label>
+                <select
+                  value={ownerId}
+                  onChange={(e) => { setOwnerId(e.target.value); setDirty(true); }}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--muted)] mb-1">MRR ($)</label>
+                <input
+                  type="number"
+                  value={mrr}
+                  onChange={(e) => { setMrr(e.target.value); setDirty(true); }}
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                />
+              </div>
+            </div>
           </div>
+          {dirty && (
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-primary text-sm"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          )}
         </div>
-        {dirty && (
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-primary text-sm"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -377,31 +390,35 @@ function AccountsContent() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+
+  const fetchAccounts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = showHidden ? "?includeHidden=true" : "";
+      const [acctRes, userRes] = await Promise.all([
+        fetch(`/api/accounts${params}`),
+        fetch("/api/admin/users"),
+      ]);
+      if (acctRes.ok) {
+        const data = await acctRes.json();
+        setAccounts(data.accounts);
+      }
+      if (userRes.ok) {
+        const data = await userRes.json();
+        setUsers(data.users);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [showHidden]);
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [acctRes, userRes] = await Promise.all([
-          fetch("/api/accounts"),
-          fetch("/api/admin/users"),
-        ]);
-        if (acctRes.ok) {
-          const data = await acctRes.json();
-          setAccounts(data.accounts);
-        }
-        if (userRes.ok) {
-          const data = await userRes.json();
-          setUsers(data.users);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+    fetchAccounts();
+  }, [fetchAccounts]);
 
   const handleSave = (updated: AccountOverview) => {
     setAccounts((prev) =>
@@ -409,11 +426,59 @@ function AccountsContent() {
     );
   };
 
+  const handleToggleHidden = async (account: AccountOverview) => {
+    const newHidden = !account.hidden;
+    try {
+      const res = await fetch(`/api/accounts/${account.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hidden: newHidden }),
+      });
+      if (res.ok) {
+        if (!showHidden && newHidden) {
+          // Remove from list if we're not showing hidden
+          setAccounts((prev) => prev.filter((a) => a.id !== account.id));
+          if (expandedId === account.id) setExpandedId(null);
+        } else {
+          setAccounts((prev) =>
+            prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a))
+          );
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const visibleCount = accounts.filter((a) => !a.hidden).length;
+  const hiddenCount = accounts.filter((a) => a.hidden).length;
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">Accounts</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-2xl font-bold">Accounts</h1>
+        <div className="flex items-center gap-3">
+          {editMode && (
+            <label className="flex items-center gap-2 text-sm text-[var(--muted)] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showHidden}
+                onChange={(e) => setShowHidden(e.target.checked)}
+                className="w-4 h-auto"
+              />
+              Show hidden ({hiddenCount})
+            </label>
+          )}
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={editMode ? "btn-primary text-sm" : "btn-secondary text-sm"}
+          >
+            {editMode ? "Done Editing" : "Edit"}
+          </button>
+        </div>
+      </div>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Overview of all accounts{!loading && ` \u2014 ${accounts.length} total`}
+        Overview of all accounts{!loading && ` \u2014 ${visibleCount} total${showHidden && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`}
       </p>
 
       <div className="card overflow-x-auto p-0">
@@ -426,18 +491,19 @@ function AccountsContent() {
               <th className="p-4 pb-2 font-medium text-right">MRR</th>
               <th className="p-4 pb-2 font-medium">Last Meeting</th>
               <th className="p-4 pb-2 font-medium">Next Meeting</th>
+              {editMode && <th className="p-4 pb-2 font-medium w-20"></th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-[var(--muted)]">
                   Loading...
                 </td>
               </tr>
             ) : accounts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-[var(--muted)]">
                   No accounts found
                 </td>
               </tr>
@@ -450,7 +516,7 @@ function AccountsContent() {
                     }
                     className={`border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--input)] ${
                       expandedId === account.id ? "bg-[var(--input)]" : ""
-                    }`}
+                    } ${account.hidden ? "opacity-50" : ""}`}
                   >
                     <td className="p-4">
                       <div className="font-medium flex items-center gap-1.5">
@@ -458,6 +524,11 @@ function AccountsContent() {
                         {account.autoCreated && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none" title="Auto-created from calendar sync — review details">
                             Auto
+                          </span>
+                        )}
+                        {account.hidden && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--muted)]/20 text-[var(--muted)] font-medium leading-none">
+                            Hidden
                           </span>
                         )}
                       </div>
@@ -501,16 +572,30 @@ function AccountsContent() {
                           : "None scheduled"}
                       </span>
                     </td>
+                    {editMode && (
+                      <td className="p-4 whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleHidden(account);
+                          }}
+                          className={`text-xs hover:underline ${account.hidden ? "text-[var(--success)]" : "text-[var(--muted)]"}`}
+                        >
+                          {account.hidden ? "Show" : "Hide"}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                   {expandedId === account.id && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={editMode ? 7 : 6}
                         className="border-b border-[var(--border)] bg-[var(--card)]"
                       >
                         <ExpandedView
                           account={account}
                           users={users}
+                          editMode={editMode}
                           onSave={handleSave}
                         />
                       </td>

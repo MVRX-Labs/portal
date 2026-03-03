@@ -35,7 +35,7 @@ export function ToolForm({ tool }: ToolFormProps) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [model, setModel] = useState("opus");
   const [submitting, setSubmitting] = useState(false);
-  const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
+  const [activeRuns, setActiveRuns] = useState<ActiveRun[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -46,12 +46,15 @@ export function ToolForm({ tool }: ToolFormProps) {
       if (!res.ok) return;
       const data = await res.json();
       if (data.status === "running" || data.status === "pending") {
-        setActiveRun({
-          id: data.id,
-          status: data.status,
-          createdAt,
-          triggerRunId: data.triggerRunId,
-          publicAccessToken: data.publicAccessToken,
+        setActiveRuns((prev) => {
+          if (prev.some((r) => r.id === data.id)) return prev;
+          return [...prev, {
+            id: data.id,
+            status: data.status,
+            createdAt,
+            triggerRunId: data.triggerRunId,
+            publicAccessToken: data.publicAccessToken,
+          }];
         });
       }
     } catch {
@@ -70,30 +73,34 @@ export function ToolForm({ tool }: ToolFormProps) {
       setHistory(runs);
       setHistoryLoaded(true);
 
-      if (!activeRun) {
-        const runningRun = runs.find((r) => r.status === "running" || r.status === "pending");
-        if (runningRun) {
-          reconnectToRun(runningRun.id, runningRun.createdAt);
-        }
+      // Reconnect to all running runs
+      const runningRuns = runs.filter((r) => r.status === "running" || r.status === "pending");
+      for (const run of runningRuns) {
+        reconnectToRun(run.id, run.createdAt);
       }
     } catch {
       // ignore
     }
-  }, [tool.id, session?.user?.id, activeRun, reconnectToRun]);
+  }, [tool.id, session?.user?.id, reconnectToRun]);
 
-  const handleRunComplete = useCallback(async () => {
-    if (!activeRun) return;
+  const handleRunComplete = useCallback(async (completedRunId: string) => {
     try {
-      const res = await fetch(`/api/runs/${activeRun.id}`);
+      const res = await fetch(`/api/runs/${completedRunId}`);
       if (res.ok) {
         const data = await res.json();
-        setActiveRun((prev) => (prev ? { ...prev, ...data } : prev));
+        setActiveRuns((prev) =>
+          prev.map((r) => (r.id === completedRunId ? { ...r, ...data } : r))
+        );
       }
     } catch {
       // ignore
     }
     loadHistory();
-  }, [activeRun, loadHistory]);
+  }, [loadHistory]);
+
+  const dismissRun = useCallback((runId: string) => {
+    setActiveRuns((prev) => prev.filter((r) => r.id !== runId));
+  }, []);
 
   useEffect(() => {
     loadHistory();
@@ -103,7 +110,6 @@ export function ToolForm({ tool }: ToolFormProps) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    setActiveRun(null);
 
     try {
       const res = await fetch(`/api/tools/${tool.id}`, {
@@ -119,13 +125,14 @@ export function ToolForm({ tool }: ToolFormProps) {
       }
 
       setValues({});
-      setActiveRun({
+      const newRun: ActiveRun = {
         id: data.id,
         status: data.status,
         createdAt: new Date().toISOString(),
         triggerRunId: data.triggerRunId,
         publicAccessToken: data.publicAccessToken,
-      });
+      };
+      setActiveRuns((prev) => [newRun, ...prev]);
 
       if (data.status !== "running" && data.status !== "pending") {
         loadHistory();
@@ -137,8 +144,12 @@ export function ToolForm({ tool }: ToolFormProps) {
     }
   };
 
-  const isRunning =
-    activeRun?.status === "running" || activeRun?.status === "pending";
+  const inProgressRuns = activeRuns.filter(
+    (r) => r.status === "running" || r.status === "pending"
+  );
+  const finishedRuns = activeRuns.filter(
+    (r) => r.status === "completed" || r.status === "failed"
+  );
 
   return (
     <div>
@@ -148,168 +159,200 @@ export function ToolForm({ tool }: ToolFormProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <form onSubmit={handleSubmit} className="card lg:col-span-2 space-y-4">
-          {tool.fields.map((field) => (
-            <div key={field.name}>
-              <label className="block text-sm font-medium mb-1">
-                {field.label}
-                {field.required && (
-                  <span className="text-[var(--destructive)]"> *</span>
-                )}
-              </label>
-
-              {field.type === "contact" ? (
-                <ContactPicker
-                  value={values[field.name] || ""}
-                  onChange={(id) =>
-                    setValues({ ...values, [field.name]: id })
-                  }
-                  required={field.required}
-                />
-              ) : field.type === "checkbox" ? (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={values[field.name] === "true"}
-                    onChange={(e) =>
-                      setValues({
-                        ...values,
-                        [field.name]: e.target.checked ? "true" : "false",
-                      })
-                    }
-                  />
-                  <span className="text-[var(--muted)]">
-                    Enable LinkedIn profile scraping
-                  </span>
+        <div className="lg:col-span-2 space-y-4">
+          <form onSubmit={handleSubmit} className="card space-y-4">
+            {tool.fields.map((field) => (
+              <div key={field.name}>
+                <label className="block text-sm font-medium mb-1">
+                  {field.label}
+                  {field.required && (
+                    <span className="text-[var(--destructive)]"> *</span>
+                  )}
                 </label>
-              ) : field.type === "textarea" ? (
-                <textarea
-                  value={values[field.name] || ""}
-                  onChange={(e) =>
-                    setValues({ ...values, [field.name]: e.target.value })
-                  }
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  rows={4}
-                />
-              ) : field.type === "select" ? (
-                <select
-                  value={values[field.name] || ""}
-                  onChange={(e) =>
-                    setValues({ ...values, [field.name]: e.target.value })
-                  }
-                  required={field.required}
-                >
-                  <option value="">Select...</option>
-                  {field.options?.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type={field.type}
-                  value={values[field.name] || ""}
-                  onChange={(e) =>
-                    setValues({ ...values, [field.name]: e.target.value })
-                  }
-                  placeholder={field.placeholder}
-                  required={field.required}
-                />
-              )}
-            </div>
-          ))}
 
-          <div className="flex items-center gap-4">
-            {MODELS.map((m) => (
-              <label key={m} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="model"
-                  value={m}
-                  checked={model === m}
-                  onChange={() => setModel(m)}
-                />
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </label>
+                {field.type === "contact" ? (
+                  <ContactPicker
+                    value={values[field.name] || ""}
+                    onChange={(id) =>
+                      setValues({ ...values, [field.name]: id })
+                    }
+                    required={field.required}
+                  />
+                ) : field.type === "checkbox" ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={values[field.name] === "true"}
+                      onChange={(e) =>
+                        setValues({
+                          ...values,
+                          [field.name]: e.target.checked ? "true" : "false",
+                        })
+                      }
+                    />
+                    <span className="text-[var(--muted)]">
+                      Enable LinkedIn profile scraping
+                    </span>
+                  </label>
+                ) : field.type === "textarea" ? (
+                  <textarea
+                    value={values[field.name] || ""}
+                    onChange={(e) =>
+                      setValues({ ...values, [field.name]: e.target.value })
+                    }
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    rows={4}
+                  />
+                ) : field.type === "select" ? (
+                  <select
+                    value={values[field.name] || ""}
+                    onChange={(e) =>
+                      setValues({ ...values, [field.name]: e.target.value })
+                    }
+                    required={field.required}
+                  >
+                    <option value="">Select...</option>
+                    {field.options?.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={field.type}
+                    value={values[field.name] || ""}
+                    onChange={(e) =>
+                      setValues({ ...values, [field.name]: e.target.value })
+                    }
+                    placeholder={field.placeholder}
+                    required={field.required}
+                  />
+                )}
+              </div>
             ))}
-          </div>
 
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={submitting || isRunning}
-          >
-            {submitting
-              ? "Starting..."
-              : isRunning
-                ? "Running..."
-                : "Run Tool"}
-          </button>
-
-          {isRunning && activeRun.triggerRunId && activeRun.publicAccessToken && (
-            <RunProgress
-              triggerRunId={activeRun.triggerRunId}
-              publicAccessToken={activeRun.publicAccessToken}
-              dbRunId={activeRun.id}
-              createdAt={activeRun.createdAt || new Date().toISOString()}
-              onComplete={handleRunComplete}
-            />
-          )}
-
-          {isRunning && (!activeRun.triggerRunId || !activeRun.publicAccessToken) && (
-            <div className="p-3 rounded-md bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)] text-sm">
-              <p className="font-medium text-[var(--accent)]">Job in progress...</p>
-              <p className="text-[var(--muted)] mt-1">Run ID: {activeRun.id}</p>
-              {activeRun.createdAt && (
-                <p className="text-[var(--muted)] mt-1">
-                  Started: {formatTimestamp(activeRun.createdAt)}
-                </p>
-              )}
+            <div className="flex items-center gap-4">
+              {MODELS.map((m) => (
+                <label key={m} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="model"
+                    value={m}
+                    checked={model === m}
+                    onChange={() => setModel(m)}
+                  />
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </label>
+              ))}
             </div>
-          )}
 
-          {activeRun?.status === "completed" && (
-            <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
-              <p className="font-medium text-[var(--success)]">
-                Job completed successfully
-              </p>
-              <p className="text-[var(--muted)] mt-1">
-                Run ID: {activeRun.id}
-              </p>
-              <div className="text-[var(--muted)] mt-1">
-                {activeRun.createdAt && <p>Started: {formatTimestamp(activeRun.createdAt)}</p>}
-                {activeRun.updatedAt && <p>Ended: {formatTimestamp(activeRun.updatedAt)}</p>}
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={submitting}
+            >
+              {submitting ? "Starting..." : "Run Tool"}
+            </button>
+
+            {error && (
+              <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+                {error}
               </div>
-              {activeRun.output && (
-                <pre className="mt-3 p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
-                  {activeRun.output}
-                </pre>
+            )}
+          </form>
+
+          {/* Active runs */}
+          {activeRuns.length > 0 && (
+            <div className="space-y-3">
+              {inProgressRuns.length > 0 && (
+                <h2 className="text-sm font-semibold">
+                  Running ({inProgressRuns.length})
+                </h2>
               )}
-            </div>
-          )}
+              {inProgressRuns.map((run) => (
+                <div key={run.id}>
+                  {run.triggerRunId && run.publicAccessToken ? (
+                    <RunProgress
+                      triggerRunId={run.triggerRunId}
+                      publicAccessToken={run.publicAccessToken}
+                      dbRunId={run.id}
+                      createdAt={run.createdAt || new Date().toISOString()}
+                      onComplete={() => handleRunComplete(run.id)}
+                    />
+                  ) : (
+                    <div className="p-3 rounded-md bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)] text-sm">
+                      <p className="font-medium text-[var(--accent)]">Job in progress...</p>
+                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
+                      {run.createdAt && (
+                        <p className="text-[var(--muted)] mt-1">
+                          Started: {formatTimestamp(run.createdAt)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
 
-          {activeRun?.status === "failed" && (
-            <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
-              <p className="font-medium">Job failed</p>
-              <p className="mt-1">{activeRun.error}</p>
-              <p className="text-[var(--muted)] mt-1">
-                Run ID: {activeRun.id}
-              </p>
-              <div className="text-[var(--muted)] mt-1">
-                {activeRun.createdAt && <p>Started: {formatTimestamp(activeRun.createdAt)}</p>}
-                {activeRun.updatedAt && <p>Ended: {formatTimestamp(activeRun.updatedAt)}</p>}
-              </div>
-            </div>
-          )}
+              {finishedRuns.map((run) => (
+                <div key={run.id}>
+                  {run.status === "completed" && (
+                    <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-[var(--success)]">
+                          Job completed successfully
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => dismissRun(run.id)}
+                          className="text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                      <p className="text-[var(--muted)] mt-1">
+                        Run ID: {run.id}
+                      </p>
+                      <div className="text-[var(--muted)] mt-1">
+                        {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
+                        {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
+                      </div>
+                      {run.output && (
+                        <pre className="mt-3 p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                          {run.output}
+                        </pre>
+                      )}
+                    </div>
+                  )}
 
-          {error && !activeRun && (
-            <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
-              {error}
+                  {run.status === "failed" && (
+                    <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">Job failed</p>
+                        <button
+                          type="button"
+                          onClick={() => dismissRun(run.id)}
+                          className="text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                      <p className="mt-1">{run.error}</p>
+                      <p className="text-[var(--muted)] mt-1">
+                        Run ID: {run.id}
+                      </p>
+                      <div className="text-[var(--muted)] mt-1">
+                        {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
+                        {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
-        </form>
+        </div>
 
         <div className="card">
           <h2 className="text-sm font-semibold mb-3">Your Recent Runs</h2>

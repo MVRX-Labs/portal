@@ -18,6 +18,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.63",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@trigger.dev/react-hooks": "^4.4.1",
     "@trigger.dev/sdk": "^4.4.1",
     "docx": "^9.6.0",
     "dotenv": "^17.3.1",

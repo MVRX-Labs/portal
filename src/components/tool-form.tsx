@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import type { ToolConfig, ToolRun } from "@/lib/types";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
-
-const POLL_INTERVAL_MS = 5000;
-const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+import { RunProgress } from "./run-progress";
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -20,29 +18,44 @@ interface ToolFormProps {
 
 const MODELS = ["haiku", "sonnet", "opus"] as const;
 
+interface ActiveRun {
+  id: string;
+  status: string;
+  output?: string | null;
+  error?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  triggerRunId?: string;
+  publicAccessToken?: string;
+}
+
 export function ToolForm({ tool }: ToolFormProps) {
   const { data: session } = useSession();
   const { account } = useAccount();
   const [values, setValues] = useState<Record<string, string>>({});
   const [model, setModel] = useState("opus");
   const [submitting, setSubmitting] = useState(false);
-  const [activeRun, setActiveRun] = useState<{
-    id: string;
-    status: string;
-    output?: string | null;
-    error?: string | null;
-    createdAt?: string;
-    updatedAt?: string;
-  } | null>(null);
+  const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const reconnectToRun = useCallback(async (runId: string, createdAt: string) => {
+    try {
+      const res = await fetch(`/api/runs/${runId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.status === "running" || data.status === "pending") {
+        setActiveRun({
+          id: data.id,
+          status: data.status,
+          createdAt,
+          triggerRunId: data.triggerRunId,
+          publicAccessToken: data.publicAccessToken,
+        });
+      }
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -53,53 +66,44 @@ export function ToolForm({ tool }: ToolFormProps) {
       if (userId) params.set("user", userId);
       const res = await fetch(`/api/history?${params}`);
       const data = await res.json();
-      setHistory(data.runs || []);
+      const runs: ToolRun[] = data.runs || [];
+      setHistory(runs);
       setHistoryLoaded(true);
+
+      if (!activeRun) {
+        const runningRun = runs.find((r) => r.status === "running" || r.status === "pending");
+        if (runningRun) {
+          reconnectToRun(runningRun.id, runningRun.createdAt);
+        }
+      }
     } catch {
       // ignore
     }
-  }, [tool.id, session?.user?.id]);
+  }, [tool.id, session?.user?.id, activeRun, reconnectToRun]);
 
-  const pollRunStatus = useCallback(
-    async (runId: string) => {
-      try {
-        const res = await fetch(`/api/runs/${runId}`);
-        if (!res.ok) return;
+  const handleRunComplete = useCallback(async () => {
+    if (!activeRun) return;
+    try {
+      const res = await fetch(`/api/runs/${activeRun.id}`);
+      if (res.ok) {
         const data = await res.json();
-
-        setActiveRun(data);
-
-        if (data.status === "completed" || data.status === "failed") {
-          stopPolling();
-          setHistoryLoaded(false);
-          loadHistory();
-        }
-      } catch {
-        // Network error, keep polling
+        setActiveRun((prev) => (prev ? { ...prev, ...data } : prev));
       }
-    },
-    [stopPolling, loadHistory]
-  );
-
-  const startPolling = useCallback(
-    (runId: string) => {
-      stopPolling();
-      pollRef.current = setInterval(() => pollRunStatus(runId), POLL_INTERVAL_MS);
-    },
-    [stopPolling, pollRunStatus]
-  );
+    } catch {
+      // ignore
+    }
+    loadHistory();
+  }, [activeRun, loadHistory]);
 
   useEffect(() => {
     loadHistory();
-    return stopPolling;
-  }, [loadHistory, stopPolling]);
+  }, [loadHistory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     setActiveRun(null);
-    stopPolling();
 
     try {
       const res = await fetch(`/api/tools/${tool.id}`, {
@@ -119,12 +123,11 @@ export function ToolForm({ tool }: ToolFormProps) {
         id: data.id,
         status: data.status,
         createdAt: new Date().toISOString(),
+        triggerRunId: data.triggerRunId,
+        publicAccessToken: data.publicAccessToken,
       });
 
-      if (data.status === "running" || data.status === "pending") {
-        startPolling(data.id);
-      } else {
-        setHistoryLoaded(false);
+      if (data.status !== "running" && data.status !== "pending") {
         loadHistory();
       }
     } catch (err) {
@@ -136,10 +139,6 @@ export function ToolForm({ tool }: ToolFormProps) {
 
   const isRunning =
     activeRun?.status === "running" || activeRun?.status === "pending";
-  const isStale =
-    isRunning &&
-    activeRun?.createdAt &&
-    Date.now() - new Date(activeRun.createdAt).getTime() > STALE_THRESHOLD_MS;
 
   return (
     <div>
@@ -249,16 +248,20 @@ export function ToolForm({ tool }: ToolFormProps) {
                 : "Run Tool"}
           </button>
 
-          {isRunning && (
+          {isRunning && activeRun.triggerRunId && activeRun.publicAccessToken && (
+            <RunProgress
+              triggerRunId={activeRun.triggerRunId}
+              publicAccessToken={activeRun.publicAccessToken}
+              dbRunId={activeRun.id}
+              createdAt={activeRun.createdAt || new Date().toISOString()}
+              onComplete={handleRunComplete}
+            />
+          )}
+
+          {isRunning && (!activeRun.triggerRunId || !activeRun.publicAccessToken) && (
             <div className="p-3 rounded-md bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)] text-sm">
-              <p className="font-medium text-[var(--accent)]">
-                {isStale
-                  ? "This is taking longer than expected..."
-                  : "Job in progress..."}
-              </p>
-              <p className="text-[var(--muted)] mt-1">
-                Run ID: {activeRun.id}
-              </p>
+              <p className="font-medium text-[var(--accent)]">Job in progress...</p>
+              <p className="text-[var(--muted)] mt-1">Run ID: {activeRun.id}</p>
               {activeRun.createdAt && (
                 <p className="text-[var(--muted)] mt-1">
                   Started: {formatTimestamp(activeRun.createdAt)}

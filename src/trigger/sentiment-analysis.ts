@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
@@ -153,7 +153,9 @@ export const sentimentAnalysisTask = task({
     const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
 
     try {
-      // 1. Scrape sentiment sources via Apify
+      const totalSteps = 5;
+      metadata.set("progress", { step: "Scraping sentiment sources", stepNumber: 1, totalSteps, percentage: 0 });
+
       logger.info("Starting sentiment scrape via Apify", { runId, productName, companyName, sources });
       const scrapeStart = Date.now();
 
@@ -168,7 +170,8 @@ export const sentimentAnalysisTask = task({
       const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
       logger.info(`Scrape finished in ${scrapeElapsed}s (${scrapedData.sources.length} sources)`);
 
-      // 2. Set up session directory with scraped data
+      metadata.set("progress", { step: "Preparing data for analysis", stepNumber: 2, totalSteps, percentage: 20 });
+
       await mkdir(sessionDir, { recursive: true });
 
       for (const source of scrapedData.sources) {
@@ -177,10 +180,10 @@ export const sentimentAnalysisTask = task({
         logger.info(`Wrote ${filename}`);
       }
 
-      // 3. Run Claude Agent SDK
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
 
+      metadata.set("progress", { step: "Running AI analysis", stepNumber: 3, totalSteps, percentage: 30 });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
 
@@ -233,14 +236,16 @@ export const sentimentAnalysisTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      // 4. Extract JSON and build DOCX
+      metadata.set("progress", { step: "Building document", stepNumber: 4, totalSteps, percentage: 70 });
+
       const json = extractJSON(output);
       const content = JSON.parse(json);
 
       logger.info("Building DOCX");
       const buf = await buildSentimentDocx(content);
 
-      // 5. Upload to Google Drive
+      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 5, totalSteps, percentage: 85 });
+
       const rootFolderId = getGeneratedMaterialsFolderId();
 
       let targetFolderId = rootFolderId;
@@ -253,10 +258,9 @@ export const sentimentAnalysisTask = task({
       const driveFile = await uploadFile(filename, buf, DOCX_MIME, targetFolderId);
       logger.info(`DOCX uploaded to Google Drive: ${driveFile.webViewLink} (${(buf.length / 1024).toFixed(0)} KB)`);
 
-      // 6. Clean up
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
-      // 7. Update DB
+      metadata.set("progress", { step: "Complete", stepNumber: 5, totalSteps, percentage: 100 });
       const outputMessage = `Sentiment analysis document saved: ${filename}`;
       await db
         .update(toolRuns)

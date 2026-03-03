@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { mkdir, rm } from "fs/promises";
 import { join } from "path";
@@ -170,11 +170,15 @@ export const gtmStrategyTask = task({
     const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
 
     try {
+      const totalSteps = 4;
+      metadata.set("progress", { step: "Preparing research session", stepNumber: 1, totalSteps, percentage: 0 });
+
       await mkdir(sessionDir, { recursive: true });
 
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.opus);
 
+      metadata.set("progress", { step: "Researching & generating strategy", stepNumber: 2, totalSteps, percentage: 10 });
       logger.info("Starting GTM strategy generation", { runId, companyName, model: resolvedModel });
 
       const abortController = new AbortController();
@@ -227,14 +231,16 @@ export const gtmStrategyTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      // Extract JSON and build DOCX
+      metadata.set("progress", { step: "Building document", stepNumber: 3, totalSteps, percentage: 65 });
+
       const json = extractJSON(output);
       const content: GTMStrategyContent = JSON.parse(json);
 
       logger.info("Building DOCX");
       const buf = await buildGtmDocx(content);
 
-      // Upload to Google Drive
+      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 4, totalSteps, percentage: 80 });
+
       const rootFolderId = getGeneratedMaterialsFolderId();
 
       let targetFolderId = rootFolderId;
@@ -247,10 +253,9 @@ export const gtmStrategyTask = task({
       const driveFile = await uploadFile(filename, buf, DOCX_MIME, targetFolderId);
       logger.info(`DOCX uploaded to Google Drive: ${driveFile.webViewLink} (${(buf.length / 1024).toFixed(0)} KB)`);
 
-      // Clean up
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
-      // Update DB
+      metadata.set("progress", { step: "Complete", stepNumber: 4, totalSteps, percentage: 100 });
       const outputMessage = `GTM Strategy document saved: ${filename}`;
       await db
         .update(toolRuns)

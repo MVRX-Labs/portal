@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
@@ -97,14 +97,17 @@ export const linkedinAuditTask = task({
     const { runId, linkedinUrl, accountName, model } = payload;
 
     try {
-      // 1. Scrape LinkedIn profile via Apify
+      const totalSteps = 5;
+      metadata.set("progress", { step: "Scraping LinkedIn profile", stepNumber: 1, totalSteps, percentage: 0 });
+
       logger.info("Starting LinkedIn scrape via Apify", { runId, linkedinUrl });
       const scrapeStart = Date.now();
       const scrapedData = await scrapeLinkedInProfile(linkedinUrl, signal);
       const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
       logger.info(`Scrape finished in ${scrapeElapsed}s`, { slug: scrapedData.slug });
 
-      // 2. Set up session directory with scraped data for Claude
+      metadata.set("progress", { step: "Preparing data for analysis", stepNumber: 2, totalSteps, percentage: 20 });
+
       const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
       await mkdir(sessionDir, { recursive: true });
       await writeFile(join(sessionDir, "scraped-profile.json"), JSON.stringify(scrapedData.profileData, null, 2), "utf-8");
@@ -113,7 +116,7 @@ export const linkedinAuditTask = task({
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.opus);
 
-      // 3. Run Claude Agent SDK
+      metadata.set("progress", { step: "Running AI analysis", stepNumber: 3, totalSteps, percentage: 30 });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
       let output = "";
@@ -173,7 +176,8 @@ export const linkedinAuditTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      // 4. Extract JSON and parse audit content
+      metadata.set("progress", { step: "Building document", stepNumber: 4, totalSteps, percentage: 70 });
+
       let json: string;
       try {
         json = extractJSON(output);
@@ -183,11 +187,11 @@ export const linkedinAuditTask = task({
       }
       const content: LinkedInAuditContent = JSON.parse(json);
 
-      // 5. Build DOCX
       logger.info("Building DOCX");
       const buf = await buildAuditDocx(content);
 
-      // 6. Upload to Google Drive via API
+      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 5, totalSteps, percentage: 85 });
+
       const rootFolderId = getGeneratedMaterialsFolderId();
 
       let targetFolderId = rootFolderId;
@@ -200,10 +204,9 @@ export const linkedinAuditTask = task({
       const driveFile = await uploadFile(filename, buf, DOCX_MIME, targetFolderId);
       logger.info(`DOCX uploaded to Google Drive: ${driveFile.webViewLink} (${(buf.length / 1024).toFixed(0)} KB)`);
 
-      // 7. Clean up session directory
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
-      // 8. Update DB — mark as completed
+      metadata.set("progress", { step: "Complete", stepNumber: 5, totalSteps, percentage: 100 });
       const outputMessage = `Audit document saved: ${filename}`;
       await db
         .update(toolRuns)

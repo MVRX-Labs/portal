@@ -49,6 +49,7 @@ export const toolRuns = pgTable("tool_runs", {
   output: text("output"),
   outputUrl: text("output_url"),
   error: text("error"),
+  triggerRunId: text("trigger_run_id"),
   userId: text("user_id")
     .notNull()
     .references(() => users.id),

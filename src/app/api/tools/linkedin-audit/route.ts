@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { toolRuns, accounts, contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { tasks } from "@trigger.dev/sdk/v3";
+import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinAuditTask } from "@/trigger/linkedin-audit";
 
 export async function POST(request: NextRequest) {
@@ -80,7 +80,18 @@ export async function POST(request: NextRequest) {
 
     console.log(`[linkedin-audit:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
-    return NextResponse.json({ id: run.id, status: "running" });
+    await db
+      .update(toolRuns)
+      .set({ triggerRunId: handle.id })
+      .where(eq(toolRuns.id, run.id))
+      .catch(() => {});
+
+    const publicAccessToken = await auth.createPublicToken({
+      scopes: { read: { runs: [handle.id] } },
+      expirationTime: "1h",
+    });
+
+    return NextResponse.json({ id: run.id, status: "running", triggerRunId: handle.id, publicAccessToken });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

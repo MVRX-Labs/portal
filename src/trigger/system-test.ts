@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -21,6 +21,8 @@ export const systemTestTask = task({
     const { runId, model } = payload;
 
     try {
+      metadata.set("progress", { step: "Running system test", stepNumber: 1, totalSteps: 1, percentage: 10 });
+
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
       logger.info("Starting system test", { runId, model: resolvedModel });
 
@@ -52,6 +54,8 @@ export const systemTestTask = task({
           }
         }
       }
+
+      metadata.set("progress", { step: "Complete", stepNumber: 1, totalSteps: 1, percentage: 100 });
 
       await db
         .update(toolRuns)

@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -106,6 +106,8 @@ export const linkedinHumanizerTask = task({
     const { runId, postContent, tone, writingExamples, model } = payload;
 
     try {
+      metadata.set("progress", { step: "Rewriting post", stepNumber: 1, totalSteps: 2, percentage: 10 });
+
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
       logger.info("Starting LinkedIn humanizer", { runId, tone, model: resolvedModel });
 
@@ -146,6 +148,8 @@ export const linkedinHumanizerTask = task({
           }
         }
       }
+
+      metadata.set("progress", { step: "Complete", stepNumber: 2, totalSteps: 2, percentage: 100 });
 
       await db
         .update(toolRuns)

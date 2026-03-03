@@ -1,4 +1,4 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task, logger, metadata } from "@trigger.dev/sdk/v3";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
@@ -277,6 +277,10 @@ export const linkedinPostGeneratorTask = task({
     } = payload;
 
     try {
+      const hasLinkedinScrape = useLinkedinProfile && linkedinUrl;
+      const totalSteps = hasLinkedinScrape ? 3 : 2;
+      metadata.set("progress", { step: hasLinkedinScrape ? "Scraping LinkedIn profile" : "Preparing source material", stepNumber: 1, totalSteps, percentage: 5 });
+
       const resolvedModel = resolveModel(model, MODEL_MAP.sonnet);
       logger.info("Starting LinkedIn post generator", {
         runId,
@@ -353,6 +357,8 @@ export const linkedinPostGeneratorTask = task({
         sourceUrls
       );
 
+      const genStep = hasLinkedinScrape ? 2 : 1;
+      metadata.set("progress", { step: "Generating posts", stepNumber: genStep, totalSteps, percentage: hasLinkedinScrape ? 30 : 15 });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
       let output = "";
@@ -408,6 +414,8 @@ export const linkedinPostGeneratorTask = task({
       );
 
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
+
+      metadata.set("progress", { step: "Complete", stepNumber: totalSteps, totalSteps, percentage: 100 });
 
       await db
         .update(toolRuns)

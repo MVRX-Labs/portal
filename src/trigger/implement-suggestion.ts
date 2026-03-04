@@ -88,6 +88,8 @@ export const implementSuggestionTask = task({
       cloneDir = await mkdtemp(join(tmpdir(), "suggestion-"));
       const cloneUrl = `https://x-access-token:${githubToken}@github.com/${repoOwner}/${repoName}.git`;
       exec(`git clone --depth 50 ${cloneUrl} .`, cloneDir);
+      exec(`git config user.name "vex"`, cloneDir);
+      exec(`git config user.email "vex@mvrxlabs.com"`, cloneDir);
       logger.info("Repository cloned", { cloneDir });
 
       // 2. Create branch

@@ -11,6 +11,7 @@ import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
 import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, createGoogleDoc } from "@/lib/gdrive";
+import { getRandomHookTemplates, formatHookTemplatesForPrompt } from "./linkedin-hook-templates";
 
 interface LinkedInPostGeneratorPayload {
   runId: string;
@@ -40,6 +41,10 @@ function buildPrompt(
   hasVoiceContext: boolean,
   sourceUrls: string[]
 ): string {
+  const randomHooks = getRandomHookTemplates(5);
+  const hookInspiration = formatHookTemplatesForPrompt(randomHooks);
+  const hookCount = randomHooks.length;
+
   const hasSourceUrls = sourceUrls.length > 0;
   const hasGranolaUrl = sourceUrls.some((url) => url.toLowerCase().includes("granola"));
   const fileInstructions = [
@@ -148,6 +153,14 @@ Write 3 hook variations. Each hook:
 Hook structure to aim for (Bite and Twist):
 - Line 1 (The Bite): Short, aggressive reaction or observation. Under 7 words. Sounds like someone calling it out in real time.
 - Line 2 (The Twist): Visceral consequence that makes the reader feel the risk physically. Names the actor, not just the consequence.
+
+### HOOK TEMPLATE INSPIRATION
+
+Below are ${hookCount} hook structures chosen at random for inspiration. Use them as structural starting points, not fill-in-the-blanks. Adapt the patterns to fit THIS specific story and ${posterName}'s voice. Do not use any template verbatim.
+
+${hookInspiration}
+
+After reviewing these templates, generate your 3 hooks. At least one hook should draw structural inspiration from one of the templates above, but rewritten to feel original and specific to this story.
 
 ### BODY A: LinkedIn Optimised (150-300 words)
 

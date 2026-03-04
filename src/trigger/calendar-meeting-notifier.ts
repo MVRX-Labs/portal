@@ -1,12 +1,21 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
-import { calendarEvents, calendarEventAccounts, calendarEventContacts, accounts, contacts } from "@/lib/schema";
+import {
+  calendarEvents,
+  calendarEventAccounts,
+  calendarEventContacts,
+  calendarSyncState,
+  accounts,
+  contacts,
+  users,
+} from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
+import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
   cron: {
-    pattern: "*/30 7-22 * * *",
+    pattern: "25,55 6-21 * * *",
     timezone: "Europe/London",
   },
   maxDuration: 120,
@@ -14,9 +23,8 @@ export const calendarMeetingNotifier = schedules.task({
     maxAttempts: 1,
   },
   run: async () => {
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-    if (!webhookUrl) {
-      logger.warn("SLACK_WEBHOOK_URL not configured, skipping");
+    if (!process.env.SLACKBOT_TOKEN) {
+      logger.warn("SLACKBOT_TOKEN not configured, skipping");
       return { notified: 0, total: 0 };
     }
 
@@ -41,6 +49,32 @@ export const calendarMeetingNotifier = schedules.task({
     let notified = 0;
 
     for (const event of upcomingEvents) {
+      // Resolve the owning user via calendarSyncState
+      const [syncRow] = await db
+        .select({
+          userId: calendarSyncState.userId,
+          userEmail: users.email,
+          userName: users.name,
+        })
+        .from(calendarSyncState)
+        .innerJoin(users, eq(calendarSyncState.userId, users.id))
+        .where(eq(calendarSyncState.calendarId, event.calendarId))
+        .limit(1);
+
+      if (!syncRow) {
+        logger.warn(`No sync state found for calendarId=${event.calendarId}, skipping event ${event.id}`);
+        continue;
+      }
+
+      // Resolve Slack user ID (lookup + cache)
+      const slackUserId = await resolveSlackUserId(syncRow.userId, syncRow.userEmail);
+      if (!slackUserId) {
+        logger.warn(
+          `Could not resolve Slack user for ${syncRow.userName} (${syncRow.userEmail}), skipping event ${event.id}`
+        );
+        continue;
+      }
+
       // Get linked accounts
       const linkedAccounts = await db
         .select({
@@ -68,15 +102,42 @@ export const calendarMeetingNotifier = schedules.task({
         timeZone: "Europe/London",
       });
 
+      // Build a lookup of attendee email → response status from the event's attendees JSONB
+      const attendees = (event.attendees ?? []) as Array<{
+        email: string;
+        responseStatus?: string;
+      }>;
+      const responseByEmail = new Map(attendees.map((a) => [a.email.toLowerCase(), a.responseStatus]));
+
+      const responseLabel = (status: string | undefined): string => {
+        switch (status) {
+          case "accepted":
+            return "accepted";
+          case "tentative":
+            return "tentative";
+          case "declined":
+            return "declined";
+          default:
+            return "awaiting response";
+        }
+      };
+
       const accountLines = linkedAccounts.map((a) => {
         const tag = a.matchConfidence === "auto_created" ? " _(auto-created)_" : "";
-        return `  - ${a.accountName}${tag}`;
+        return `  • ${a.accountName}${tag}`;
       });
 
       const contactLines = linkedContacts.map((c) => {
         const tag = c.matchConfidence === "auto_created" ? " _(auto-created)_" : "";
-        return `  - ${c.contactName} (${c.attendeeEmail})${tag}`;
+        const status = responseByEmail.get(c.attendeeEmail.toLowerCase());
+        return `  • ${c.contactName} (${c.attendeeEmail}) — ${responseLabel(status)}${tag}`;
       });
+
+      const descriptionSnippet = event.description
+        ? event.description.length > 150
+          ? event.description.slice(0, 150) + "…"
+          : event.description
+        : null;
 
       const textLines = [
         `:calendar: *Upcoming Meeting in ~30 minutes*`,
@@ -84,6 +145,9 @@ export const calendarMeetingNotifier = schedules.task({
         `*Time:* ${startTimeStr} UK`,
         event.location ? `*Location:* ${event.location}` : null,
         event.htmlLink ? `<${event.htmlLink}|Open in Calendar>` : null,
+        descriptionSnippet ? `` : null,
+        descriptionSnippet ? `*Description:*` : null,
+        descriptionSnippet ? descriptionSnippet : null,
         ``,
         accountLines.length > 0 ? `*Accounts:*` : null,
         ...(accountLines.length > 0 ? accountLines : []),
@@ -94,33 +158,28 @@ export const calendarMeetingNotifier = schedules.task({
         .filter((line): line is string => line !== null)
         .join("\n");
 
+      const fallbackText = `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`;
+
       try {
-        await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`,
-            blocks: [
-              {
-                type: "section",
-                text: { type: "mrkdwn", text: textLines },
-              },
-            ],
-          }),
-        });
+        await sendSlackDM(slackUserId, fallbackText, [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: textLines },
+          },
+        ]);
 
         // Mark as notified to prevent duplicates
         await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));
 
         notified++;
       } catch (err) {
-        logger.error(`Failed to send Slack notification for event ${event.id}`, {
+        logger.error(`Failed to send Slack DM for event ${event.id} to ${syncRow.userName}`, {
           error: err instanceof Error ? err.message : String(err),
         });
       }
     }
 
-    logger.info(`Sent ${notified} Slack notifications out of ${upcomingEvents.length} upcoming events`);
+    logger.info(`Sent ${notified} Slack DM notifications out of ${upcomingEvents.length} upcoming events`);
 
     return { notified, total: upcomingEvents.length };
   },

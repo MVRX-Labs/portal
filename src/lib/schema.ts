@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   isAdmin: boolean("is_admin").notNull().default(false),
+  slackUserId: text("slack_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

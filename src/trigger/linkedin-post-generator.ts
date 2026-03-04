@@ -57,6 +57,15 @@ function buildPrompt(
 
 You are writing for: ${posterName}, ${posterRole}
 
+## CRITICAL IDENTITY RULE
+
+${posterName} is the author of (or a key contributor to) the source material. The blog post, article, or content you are given was written by them, comes from their company, or reflects their direct experience. Write the LinkedIn post in FIRST PERSON from ${posterName}'s perspective as someone who lived this, built this, or wrote this. Never refer to ${posterName} or their company in the third person. Never write as an outside observer summarising someone else's work. The reader should feel ${posterName} is sharing their own thinking, not reporting on a company announcement.
+
+- BANNED: "${posterName}'s team built..." or "The team at [Company] released..."
+- BANNED: "This article by ${posterName} explores..."
+- BANNED: "Check out what [Company] has been working on..."
+- GOOD: "We spent three months rebuilding..." / "I wrote about this because..." / "Here's what we found when..."
+
 ## STEP 1: READ THE SOURCE FILES
 
 ${fileInstructions}
@@ -128,6 +137,16 @@ Make it its own sentence or cut it entirely.
 **RULE 6: Zero em-dashes.**
 Use commas, full stops, parentheses, or colons instead. Zero em-dashes anywhere including hooks.
 
+**RULE 7: Zero company pitching. The post sells the IDEA, never the company.**
+The post must read as ${posterName} sharing a genuine insight, story, or lesson. The company and its product should be incidental background, not the point. The goal is to make the reader so curious about the idea that they click the link to the source material on their own. Through reading the blog post, they discover the company organically. Think of it as a trap they walk into willingly because the idea hooked them, not because they were pitched.
+- BANNED: Naming the company's product as the hero or solution
+- BANNED: "We built X and it does Y" framing (product-launch tone)
+- BANNED: Any sentence whose primary purpose is to make the company look good
+- BANNED: Feature lists, capability descriptions, or anything resembling marketing copy
+- GOOD: Share the problem, the surprise, the counterintuitive finding. Let the reader think "I need to read more about this."
+- GOOD: The company/product only appears as a natural part of telling the story ("while we were rebuilding our pipeline..." not "our product can rebuild your pipeline")
+- If the source material is promotional, extract the underlying insight or story and lead with THAT. Strip the sales wrapper entirely.
+
 ### BANNED VOCABULARY
 Never use: delve, tapestry, moreover, furthermore, comprehensive, robust, utilize, leverage, nuanced, crucial, significant, transformative, testament, enhance, ever-evolving, game-changer, landscape, navigate, realm, embark, foster, facilitate, streamline, underscore, commendable, meticulous, adept, pivotal, vital, vibrant, intricate, multifaceted, profound, compelling, poignant, visceral, palpable, enduring, seemingly, arguably, notably, importantly, ultimately, fundamentally, inherently, undeniably.
 
@@ -144,6 +163,7 @@ Write 3 hook variations. Each hook:
 - Starts mid-conflict or mid-scene, never with meta-commentary ("Here's why", "I've noticed", "Let's talk about")
 - Uses strong, non-neutral verbs: kills, guts, breaks, fakes, buries, exposes
 - Names concrete, visceral consequences, not abstract ones ("losing the deal in the final five minutes" not "enterprise readiness")
+- Hooks the reader with an IDEA, TENSION, or QUESTION they personally relate to. Never hook with a company name, product name, or announcement. The reader should think "that's interesting, tell me more" not "this person is promoting something."
 
 Hook structure to aim for (Bite and Twist):
 - Line 1 (The Bite): Short, aggressive reaction or observation. Under 7 words. Sounds like someone calling it out in real time.
@@ -157,19 +177,26 @@ Pick any of the 3 hooks to open with. Then write the body:
 - Include a "disruption" moment mid-post (a shift, twist, or unexpected detail)
 - Narrative arc: setup, tension, resolution/insight
 - Reference specific details from the source material (names, numbers, timeframes, quotes)
-- Clear CTA at the end that invites engagement (not "What do you think?" which is overused)
+- Write from first person as ${posterName}. This is YOUR experience, YOUR insight, YOUR story. You lived it.
+- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
+- If the source material contains a URL/link, include it naturally as a "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
+- Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.
 - 3-5 relevant hashtags at the end
 - Never start with "I'm" or "We're"
 - No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
+- No company-pitching language. The company is backdrop, not the main character. (See Rule 7.)
 
 ### BODY B: Humanised (200-400 words)
 
 Pick any of the 3 hooks to open with (can be the same or different from Body A). Then:
+- Write entirely in first person as ${posterName}. This is you reflecting on your own experience and your own writing.
 - Start from experience, not the topic. Open with the moment or conversation that led to the insight.
 - Let the thinking show. The logic can wander slightly. "And here's the thing I keep coming back to..." is human.
 - Use 1-2 soft qualifiers: "I think", "in my experience", "I'm probably biased here, but."
 - Let the ending be quieter. End on something smaller: a specific detail, an open question, or a soft invitation. Not a polished takeaway.
 - Some roughness is the point. A sentence that trails off, an informal aside.
+- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.
+- The company name should appear at most once, and only if it's natural to the story. The reader should not feel marketed to at any point.
 - Fewer or no hashtags.
 - Soft CTA or none.
 
@@ -209,8 +236,10 @@ After writing each body, scan line by line and FIX any violations:
 6. Em-dash scan: replace every single one with comma, full stop, colon, or parenthesis. Target: ZERO.
 7. Interchangeability test: could this sentence appear unchanged in a different post about a different company? Rewrite with details specific to THIS story.
 8. Sentence length distribution: scan each paragraph. If three consecutive sentences are similar in length, break the pattern.
+9. Third-person scan: does any sentence refer to ${posterName} or their company as "they", "the team", or by name in the third person? Rewrite in first person ("I" / "we"). The poster IS the author. Target: ZERO third-person self-references.
+10. Sales pitch scan: does any sentence exist primarily to make the company or product look good? Would a reader think "this is an ad" if they read it? Rewrite to focus on the insight, story, or lesson instead. Strip any sentence that reads like marketing copy. Target: ZERO promotional sentences.
 
-Do not present output that violates rules 1-6. These are hard failures.
+Do not present output that violates rules 1-7. These are hard failures.
 
 ## STEP 5: HUMANIZATION PASS (mandatory for Body B, strongly recommended for Body A)
 

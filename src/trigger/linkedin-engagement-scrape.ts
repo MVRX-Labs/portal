@@ -207,7 +207,7 @@ export const linkedinEngagementScrapeTask = task({
       // Pass 1: Dedup by URL
       const engagerMap = new Map<string, DedupedEngager>();
       for (const person of allEngagers) {
-        const key = person.linkedinUrl.toLowerCase().replace(/\/$/, "");
+        const key = person.linkedinUrl.replace(/\/$/, "");
         const existing = engagerMap.get(key);
         if (existing) {
           mergeInto(existing, person);
@@ -239,7 +239,7 @@ export const linkedinEngagementScrapeTask = task({
             // Current has slug, other has URN — merge other into current
             mergeInto(engager, byName);
             if (!engager.linkedinUrnUrl) engager.linkedinUrnUrl = byName.linkedinUrl;
-            const otherUrl = byName.linkedinUrl.toLowerCase().replace(/\/$/, "");
+            const otherUrl = byName.linkedinUrl.replace(/\/$/, "");
             urlsToRemove.push(otherUrl);
             nameMap.set(nameKey, engager);
           } else if (!hasSlug && otherHasSlug) {
@@ -269,7 +269,7 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 80,
       });
 
-      const linkedinUrls = uniqueEngagers.map((e) => e.linkedinUrl.toLowerCase().replace(/\/$/, ""));
+      const linkedinUrls = uniqueEngagers.map((e) => e.linkedinUrl.replace(/\/$/, ""));
 
       // Fetch existing leads for this account matching these URLs
       const existingLeads =
@@ -280,14 +280,14 @@ export const linkedinEngagementScrapeTask = task({
               .where(and(eq(leads.accountId, accountId), inArray(leads.linkedinUrl, linkedinUrls)))
           : [];
 
-      const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl.toLowerCase().replace(/\/$/, ""), l]));
+      const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl.replace(/\/$/, ""), l]));
 
       let upsertCount = 0;
       const now = new Date();
 
       await db.transaction(async (tx) => {
         for (const engager of uniqueEngagers) {
-          const normalizedUrl = engager.linkedinUrl.toLowerCase().replace(/\/$/, "");
+          const normalizedUrl = engager.linkedinUrl.replace(/\/$/, "");
           const existing = existingMap.get(normalizedUrl);
 
           if (existing) {

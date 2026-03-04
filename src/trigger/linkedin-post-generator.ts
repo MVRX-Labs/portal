@@ -28,9 +28,7 @@ const URL_REGEX = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
 
 function extractUrls(text: string): string[] {
   const matches = text.match(URL_REGEX) ?? [];
-  const cleaned = matches
-    .map((url) => url.replace(/[.,!?;:)\]]+$/g, ""))
-    .filter(Boolean);
+  const cleaned = matches.map((url) => url.replace(/[.,!?;:)\]]+$/g, "")).filter(Boolean);
 
   return Array.from(new Set(cleaned));
 }
@@ -43,13 +41,10 @@ function buildPrompt(
   sourceUrls: string[],
 ): string {
   const hasSourceUrls = sourceUrls.length > 0;
-  const hasGranolaUrl = sourceUrls.some((url) =>
-    url.toLowerCase().includes("granola")
-  );
+  const hasGranolaUrl = sourceUrls.some((url) => url.toLowerCase().includes("granola"));
   const fileInstructions = [
     "Read source-material.txt for the raw material to base the post on.",
-    hasSourceUrls &&
-      "Read source-urls.txt for links detected in the source material (including meeting-note links).",
+    hasSourceUrls && "Read source-urls.txt for links detected in the source material (including meeting-note links).",
     hasVoiceContext &&
       "Read voice-context.txt for the client's style guide, past posts, or tone description. Analyze it for voice patterns before writing.",
     hasScrapedData &&
@@ -66,7 +61,9 @@ You are writing for: ${posterName}, ${posterRole}
 
 ${fileInstructions}
 
-${hasSourceUrls ? `## STEP 1.5: EXTRACT LINK CONTENT (MANDATORY)
+${
+  hasSourceUrls
+    ? `## STEP 1.5: EXTRACT LINK CONTENT (MANDATORY)
 
 The source material includes URL(s). Before writing, use WebFetch on each URL from source-urls.txt and extract concrete facts, quotes, decisions, and action items.
 
@@ -74,11 +71,15 @@ The source material includes URL(s). Before writing, use WebFetch on each URL fr
 - If a URL is inaccessible (auth/paywall/expired), continue with available content and do not invent details.
 - Prefer specific evidence from fetched pages: names, numbers, timestamps, direct phrasing.
 ${hasGranolaUrl ? "- At least one URL appears to be a Granola meeting-notes link. Prioritize extracting meeting summary, decisions, key quotes, owners, and next steps from that page." : ""}
-` : ""}
+`
+    : ""
+}
 
 ## STEP 2: VOICE ANALYSIS
 
-${hasScrapedData || hasVoiceContext ? `Before writing, analyze the voice material and identify:
+${
+  hasScrapedData || hasVoiceContext
+    ? `Before writing, analyze the voice material and identify:
 - First words of sentences (ratio of "I" vs "We" vs "The" vs other)
 - Hedging vs. confidence patterns
 - Contraction habits (contractions = informal; expanded forms = formal)
@@ -87,7 +88,9 @@ ${hasScrapedData || hasVoiceContext ? `Before writing, analyze the voice materia
 - What they never do (no humour? no doubt? no competitor mentions?)
 - Sentence length range (shortest to longest)
 
-Use these patterns to guide your writing.` : `No voice samples were provided. Default to conversational and direct. It's easier for a client to add formality than to strip away artificiality.`}
+Use these patterns to guide your writing.`
+    : `No voice samples were provided. Default to conversational and direct. It's easier for a client to add formality than to strip away artificiality.`
+}
 
 ## STEP 3: WRITE THE POST
 
@@ -222,16 +225,13 @@ After the self-edit:
 Present your output in exactly this structure:
 
 ## HOOK 1
-[Line 1]
-[Line 2]
+[Hook 1 text]
 
 ## HOOK 2
-[Line 1]
-[Line 2]
+[Hook 2 text]
 
 ## HOOK 3
-[Line 1]
-[Line 2]
+[Hook 3 text]
 
 ---
 
@@ -283,7 +283,12 @@ export const linkedinPostGeneratorTask = task({
     try {
       const hasLinkedinScrape = useLinkedinProfile && linkedinUrl;
       const totalSteps = hasLinkedinScrape ? 4 : 3;
-      metadata.set("progress", { step: hasLinkedinScrape ? "Scraping LinkedIn profile" : "Preparing source material", stepNumber: 1, totalSteps, percentage: 5 });
+      metadata.set("progress", {
+        step: hasLinkedinScrape ? "Scraping LinkedIn profile" : "Preparing source material",
+        stepNumber: 1,
+        totalSteps,
+        percentage: 5,
+      });
 
       const resolvedModel = resolveModel(model, MODEL_MAP.sonnet);
       logger.info("Starting LinkedIn post generator", {
@@ -298,26 +303,14 @@ export const linkedinPostGeneratorTask = task({
       const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
       await mkdir(sessionDir, { recursive: true });
 
-      await writeFile(
-        join(sessionDir, "source-material.txt"),
-        sourceMaterial,
-        "utf-8"
-      );
+      await writeFile(join(sessionDir, "source-material.txt"), sourceMaterial, "utf-8");
       const sourceUrls = extractUrls(sourceMaterial);
       if (sourceUrls.length > 0) {
-        await writeFile(
-          join(sessionDir, "source-urls.txt"),
-          sourceUrls.join("\n"),
-          "utf-8"
-        );
+        await writeFile(join(sessionDir, "source-urls.txt"), sourceUrls.join("\n"), "utf-8");
       }
 
       if (voiceContext) {
-        await writeFile(
-          join(sessionDir, "voice-context.txt"),
-          voiceContext,
-          "utf-8"
-        );
+        await writeFile(join(sessionDir, "voice-context.txt"), voiceContext, "utf-8");
       }
 
       let hasScrapedData = false;
@@ -332,12 +325,12 @@ export const linkedinPostGeneratorTask = task({
           await writeFile(
             join(sessionDir, "scraped-profile.json"),
             JSON.stringify(scrapedData.profileData, null, 2),
-            "utf-8"
+            "utf-8",
           );
           await writeFile(
             join(sessionDir, "scraped-posts.json"),
             JSON.stringify(scrapedData.postsData, null, 2),
-            "utf-8"
+            "utf-8",
           );
           hasScrapedData = true;
           const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
@@ -345,24 +338,20 @@ export const linkedinPostGeneratorTask = task({
             slug: scrapedData.slug,
           });
         } catch (scrapeErr) {
-          const msg =
-            scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
-          logger.warn(
-            `LinkedIn scrape failed, continuing without profile data: ${msg}`
-          );
+          const msg = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
+          logger.warn(`LinkedIn scrape failed, continuing without profile data: ${msg}`);
         }
       }
 
-      const prompt = buildPrompt(
-        posterName,
-        posterRole,
-        hasScrapedData,
-        !!voiceContext,
-        sourceUrls
-      );
+      const prompt = buildPrompt(posterName, posterRole, hasScrapedData, !!voiceContext, sourceUrls);
 
       const genStep = hasLinkedinScrape ? 2 : 1;
-      metadata.set("progress", { step: "Generating posts", stepNumber: genStep, totalSteps, percentage: hasLinkedinScrape ? 30 : 15 });
+      metadata.set("progress", {
+        step: "Generating posts",
+        stepNumber: genStep,
+        totalSteps,
+        percentage: hasLinkedinScrape ? 30 : 15,
+      });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
       let output = "";
@@ -386,10 +375,7 @@ export const linkedinPostGeneratorTask = task({
         if (message.type === "assistant" && message.message?.content) {
           for (const block of message.message.content) {
             if ("text" in block && block.text) {
-              const preview =
-                block.text.length > 150
-                  ? block.text.slice(0, 150) + "..."
-                  : block.text;
+              const preview = block.text.length > 150 ? block.text.slice(0, 150) + "..." : block.text;
               logger.info(`Claude: ${preview}`);
             } else if ("name" in block) {
               logger.info(`Tool call: ${(block as any).name}`);
@@ -401,9 +387,7 @@ export const linkedinPostGeneratorTask = task({
           if (message.subtype === "success") {
             output = message.result;
             const cost = message.total_cost_usd.toFixed(4);
-            logger.info(
-              `Claude finished: ${message.num_turns} turns, $${cost}, ${message.duration_ms}ms`
-            );
+            logger.info(`Claude finished: ${message.num_turns} turns, $${cost}, ${message.duration_ms}ms`);
           } else {
             const msg = message as any;
             const errors = msg.errors ? msg.errors.join("; ") : msg.subtype;
@@ -413,13 +397,16 @@ export const linkedinPostGeneratorTask = task({
       }
 
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
-      logger.info(
-        `Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`
-      );
+      logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
-      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: totalSteps, totalSteps, percentage: 90 });
+      metadata.set("progress", {
+        step: "Uploading to Google Drive",
+        stepNumber: totalSteps,
+        totalSteps,
+        percentage: 90,
+      });
 
       const rootFolderId = getGeneratedMaterialsFolderId();
       let targetFolderId = rootFolderId;
@@ -452,8 +439,7 @@ export const linkedinPostGeneratorTask = task({
 
       return { success: true, filename, driveUrl: driveFile.webViewLink };
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error";
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       logger.error(`Post generator failed: ${errorMessage}`, { runId });
 
       await db

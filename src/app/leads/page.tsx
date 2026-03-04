@@ -121,8 +121,12 @@ function LeadsContent() {
       if (!res.ok) {
         setScrapeStatus(data.error || "Failed to trigger scrape");
       } else {
+        const labels = (data.sources || []).map(
+          (s: { sourceType: string; linkedinUrl: string }) =>
+            `${s.sourceType === "company" ? "Company" : "Personal"}: ${s.linkedinUrl}`
+        );
         setScrapeStatus(
-          `Triggered ${data.triggered} scrape task${data.triggered === 1 ? "" : "s"}. Results will appear here shortly.`
+          `Scraping ${labels.join(", ")}. Results will appear here shortly.`
         );
       }
     } catch {

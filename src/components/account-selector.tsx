@@ -34,10 +34,7 @@ export function AccountSelector() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false);
         setShowCreate(false);
       }
@@ -94,9 +91,7 @@ export function AccountSelector() {
 
   return (
     <div ref={wrapperRef} className="relative px-4 py-3 border-b border-[var(--border)]">
-      <label className="block text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">
-        Account
-      </label>
+      <label className="block text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">Account</label>
       <button
         onClick={() => setOpen(!open)}
         className="w-full text-left text-sm px-2 py-1.5 rounded bg-[var(--input)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors truncate"
@@ -126,16 +121,12 @@ export function AccountSelector() {
               }`}
             >
               <div className="font-medium truncate">{acc.name}</div>
-              {acc.industry && (
-                <div className="text-xs text-[var(--muted)]">{acc.industry}</div>
-              )}
+              {acc.industry && <div className="text-xs text-[var(--muted)]">{acc.industry}</div>}
             </button>
           ))}
 
           {results.length === 0 && query && (
-            <div className="px-3 py-2 text-xs text-[var(--muted)]">
-              No accounts found
-            </div>
+            <div className="px-3 py-2 text-xs text-[var(--muted)]">No accounts found</div>
           )}
 
           <div className="border-t border-[var(--border)]">
@@ -156,10 +147,7 @@ export function AccountSelector() {
           </div>
 
           {showCreate && (
-            <form
-              onSubmit={handleCreate}
-              className="p-3 border-t border-[var(--border)] space-y-2"
-            >
+            <form onSubmit={handleCreate} className="p-3 border-t border-[var(--border)] space-y-2">
               <input
                 type="text"
                 value={newName}
@@ -198,11 +186,7 @@ export function AccountSelector() {
                 />
                 Enable engagement scraping
               </label>
-              <button
-                type="submit"
-                disabled={creating}
-                className="btn-primary w-full text-xs"
-              >
+              <button type="submit" disabled={creating} className="btn-primary w-full text-xs">
                 {creating ? "Creating..." : "Create"}
               </button>
             </form>

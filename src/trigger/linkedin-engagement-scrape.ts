@@ -93,7 +93,7 @@ export const linkedinEngagementScrapeTask = task({
         const post = recentPosts[i];
         const postDate = new Date(post.postedDate);
         logger.info(
-          `Processing post ${i + 1}/${recentPosts.length}: ${post.numLikes} likes, ${post.numComments} comments, ${post.numShares} shares`,
+          `Processing post ${i + 1}/${recentPosts.length}: ${post.numLikes} likes, ${post.numComments} comments, ${post.numShares} shares`
         );
 
         // Reactions
@@ -259,7 +259,9 @@ export const linkedinEngagementScrapeTask = task({
       }
 
       const uniqueEngagers = Array.from(engagerMap.values());
-      logger.info(`Unique engagers after dedup: ${uniqueEngagers.length} (merged ${urlsToRemove.length} cross-URL duplicates)`);
+      logger.info(
+        `Unique engagers after dedup: ${uniqueEngagers.length} (merged ${urlsToRemove.length} cross-URL duplicates)`
+      );
 
       // Step 4: Upsert into leads table
       metadata.set("progress", {
@@ -299,12 +301,10 @@ export const linkedinEngagementScrapeTask = task({
             ];
 
             // Use the earlier of existing or new engagement date
-            const firstSeenAt = existing.firstSeenAt < engager.firstEngagedAt
-              ? existing.firstSeenAt
-              : engager.firstEngagedAt;
-            const lastSeenAt = existing.lastSeenAt > engager.lastEngagedAt
-              ? existing.lastSeenAt
-              : engager.lastEngagedAt;
+            const firstSeenAt =
+              existing.firstSeenAt < engager.firstEngagedAt ? existing.firstSeenAt : engager.firstEngagedAt;
+            const lastSeenAt =
+              existing.lastSeenAt > engager.lastEngagedAt ? existing.lastSeenAt : engager.lastEngagedAt;
 
             await tx
               .update(leads)

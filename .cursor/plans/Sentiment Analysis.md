@@ -11,9 +11,11 @@ The MVRX portal has a non-functional stub for "Product Sentiment Analysis" — t
 ## Implementation Steps
 
 ### Step 1: Update tool config fields
+
 **File:** `src/lib/types.ts` (lines 138-165)
 
 Replace the current sentiment-analysis config fields with:
+
 - `productName` (text, required) — product to analyze
 - `companyName` (text, required) — company name for search context
 - `sources` (select, required) — "All Sources", "Reddit + Forums", "Review Sites (G2, Capterra)", "Google Reviews", "General Web"
@@ -21,9 +23,11 @@ Replace the current sentiment-analysis config fields with:
 - `keywords` (text, optional) — comma-separated keywords to track
 
 ### Step 2: Create sentiment scraper module
+
 **New file:** `src/lib/sentiment-scraper.ts`
 
 Modeled on `src/lib/linkedin-audit.ts` (reuses the same `runApifyActor` pattern). This module:
+
 - Exports `scrapeSentimentSources()` function
 - Takes productName, companyName, sourceType, additionalUrls, AbortSignal
 - Runs appropriate Apify actors based on selected source type:
@@ -35,15 +39,18 @@ Modeled on `src/lib/linkedin-audit.ts` (reuses the same `runApifyActor` pattern)
 - Returns `{ productName, sources: ScrapedSource[], discoveredUrls: string[] }`
 
 Apify actors to research/select:
+
 - Google Search Results Scraper (discover mentions)
 - Reddit Scraper (Reddit discussions)
 - Google Maps Reviews Scraper (Google reviews)
 - Generic Web Scraper (G2, Capterra, and custom URLs)
 
 ### Step 3: Rewrite the API route
+
 **File:** `src/app/api/tools/sentiment-analysis/route.ts`
 
 Replace the generic `createToolHandler` with a custom handler following the LinkedIn Audit pattern (`src/app/api/tools/linkedin-audit/route.ts`):
+
 1. Validate inputs (productName, companyName required)
 2. Parse URLs from textarea (split by newline), parse source type
 3. Create `"running"` DB record
@@ -54,9 +61,11 @@ Replace the generic `createToolHandler` with a custom handler following the Link
 6. Return `{ id, status: "running" }`
 
 ### Step 4: Add local-api job handler
+
 **File:** `local-api/src/routes/jobs.ts`
 
 Add new `POST /api/jobs/sentiment-analysis` route:
+
 - Accepts: `runId, productName, companyName, scrapedSources, keywords, callbackUrl`
 - Responds 202 immediately
 - Calls `runClaudeJob()` with:
@@ -66,6 +75,7 @@ Add new `POST /api/jobs/sentiment-analysis` route:
   - `setupSession`: Writes scraped data as JSON files grouped by platform (e.g., `reddit-data.json`, `reviews-data.json`, `google-data.json`, `web-data.json`)
 
 The .docx report should include:
+
 - Executive summary with overall sentiment score (1-10) and distribution
 - Platform-by-platform breakdown
 - Theme analysis with sentiment per theme
@@ -75,6 +85,7 @@ The .docx report should include:
 - Appendix with all source URLs
 
 ### Step 5: No frontend changes needed
+
 - `src/app/tools/sentiment-analysis/page.tsx` — already renders `ToolForm` dynamically
 - `src/components/tool-form.tsx` — handles field rendering, submission, polling, and completion display
 - `src/app/api/hooks/job-complete/route.ts` — callback handler works for all tools
@@ -84,14 +95,15 @@ The .docx report should include:
 
 ## Files Summary
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/lib/types.ts` | Modify | Update sentiment-analysis fields (lines 138-165) |
-| `src/lib/sentiment-scraper.ts` | **Create** | Apify scraping orchestrator (modeled on `linkedin-audit.ts`) |
-| `src/app/api/tools/sentiment-analysis/route.ts` | Rewrite | Custom handler with scraping + local-api dispatch |
-| `local-api/src/routes/jobs.ts` | Modify | Add `/sentiment-analysis` route handler |
+| File                                            | Action     | Description                                                  |
+| ----------------------------------------------- | ---------- | ------------------------------------------------------------ |
+| `src/lib/types.ts`                              | Modify     | Update sentiment-analysis fields (lines 138-165)             |
+| `src/lib/sentiment-scraper.ts`                  | **Create** | Apify scraping orchestrator (modeled on `linkedin-audit.ts`) |
+| `src/app/api/tools/sentiment-analysis/route.ts` | Rewrite    | Custom handler with scraping + local-api dispatch            |
+| `local-api/src/routes/jobs.ts`                  | Modify     | Add `/sentiment-analysis` route handler                      |
 
 **Reused as-is (no changes):**
+
 - `src/app/tools/sentiment-analysis/page.tsx`
 - `src/components/tool-form.tsx`
 - `src/lib/tool-handler.ts` (no longer used by this tool, but kept for others)
@@ -100,6 +112,7 @@ The .docx report should include:
 - `src/app/api/runs/[id]/route.ts`
 
 **Reference files (patterns to follow):**
+
 - `src/app/api/tools/linkedin-audit/route.ts` — custom route handler pattern
 - `src/lib/linkedin-audit.ts` — Apify actor orchestration pattern
 

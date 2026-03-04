@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
     const files = await listFiles(rootFolderId);
     return NextResponse.json({ files });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to list files";
+    const message = error instanceof Error ? error.message : "Failed to list files";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

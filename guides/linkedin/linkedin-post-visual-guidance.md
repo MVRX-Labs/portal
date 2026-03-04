@@ -78,7 +78,7 @@ Share a universal message that has a strong villain or callout that affects - or
 
 Write your short-form post. It must be digestible content that makes one clear point about one clear topic in a strong way. Easy to read, understand and agree with. Share it without an image.
 
-**Why no image?** Because it maximises shareability. People are *less likely* to repost something if it has a photo of a person they do not know (i.e. of a stranger). But if it's a strong message they agree with, it's an easy repost.
+**Why no image?** Because it maximises shareability. People are _less likely_ to repost something if it has a photo of a person they do not know (i.e. of a stranger). But if it's a strong message they agree with, it's an easy repost.
 
 ---
 

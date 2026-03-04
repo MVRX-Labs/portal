@@ -10,11 +10,7 @@ interface CreateContactModalProps {
   onClose: () => void;
 }
 
-export function CreateContactModal({
-  accountId,
-  onCreated,
-  onClose,
-}: CreateContactModalProps) {
+export function CreateContactModal({ accountId, onCreated, onClose }: CreateContactModalProps) {
   const [name, setName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
@@ -60,10 +56,7 @@ export function CreateContactModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 w-full max-w-md shadow-xl">
         <h2 className="text-lg font-bold mb-4">Create Contact</h2>
 
@@ -83,9 +76,7 @@ export function CreateContactModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Work Email
-            </label>
+            <label className="block text-sm font-medium mb-1">Work Email</label>
             <input
               type="email"
               value={accountEmail}
@@ -95,9 +86,7 @@ export function CreateContactModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Personal Email
-            </label>
+            <label className="block text-sm font-medium mb-1">Personal Email</label>
             <input
               type="email"
               value={personalEmail}
@@ -107,9 +96,7 @@ export function CreateContactModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              LinkedIn URL
-            </label>
+            <label className="block text-sm font-medium mb-1">LinkedIn URL</label>
             <input
               type="text"
               value={linkedinUrl}
@@ -128,23 +115,13 @@ export function CreateContactModal({
             Enable engagement scraping
           </label>
 
-          {error && (
-            <div className="text-sm text-[var(--destructive)]">{error}</div>
-          )}
+          {error && <div className="text-sm text-[var(--destructive)]">{error}</div>}
 
           <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary flex-1"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={creating}
-              className="btn-primary flex-1"
-            >
+            <button type="submit" disabled={creating} className="btn-primary flex-1">
               {creating ? "Creating..." : "Create"}
             </button>
           </div>

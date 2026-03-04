@@ -17,12 +17,7 @@ export const linkedinEngagementScheduler = schedules.task({
         linkedinUrl: accounts.linkedinUrl,
       })
       .from(accounts)
-      .where(
-        and(
-          eq(accounts.engagementScrapeEnabled, true),
-          isNotNull(accounts.linkedinUrl)
-        )
-      );
+      .where(and(eq(accounts.engagementScrapeEnabled, true), isNotNull(accounts.linkedinUrl)));
 
     // Collect opted-in contacts with a LinkedIn profile URL
     const optedInContacts = await db
@@ -32,16 +27,9 @@ export const linkedinEngagementScheduler = schedules.task({
         linkedinUrl: contacts.linkedinUrl,
       })
       .from(contacts)
-      .where(
-        and(
-          eq(contacts.engagementScrapeEnabled, true),
-          isNotNull(contacts.linkedinUrl)
-        )
-      );
+      .where(and(eq(contacts.engagementScrapeEnabled, true), isNotNull(contacts.linkedinUrl)));
 
-    logger.info(
-      `Found ${optedInAccounts.length} accounts and ${optedInContacts.length} contacts to scrape`
-    );
+    logger.info(`Found ${optedInAccounts.length} accounts and ${optedInContacts.length} contacts to scrape`);
 
     if (optedInAccounts.length === 0 && optedInContacts.length === 0) {
       logger.info("No sources to scrape, exiting");
@@ -90,7 +78,12 @@ export const linkedinEngagementScheduler = schedules.task({
         .values({
           tool: "linkedin-engagement-scrape",
           status: "running",
-          inputs: { accountId: contact.accountId, contactId: contact.id, linkedinUrl: contact.linkedinUrl, sourceType: "personal" },
+          inputs: {
+            accountId: contact.accountId,
+            contactId: contact.id,
+            linkedinUrl: contact.linkedinUrl,
+            sourceType: "personal",
+          },
           userId: null,
           accountId: contact.accountId,
         })

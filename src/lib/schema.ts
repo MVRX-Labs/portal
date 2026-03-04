@@ -83,7 +83,7 @@ export const leads = pgTable(
   },
   (table) => ({
     uniqueAccountLead: unique().on(table.accountId, table.linkedinUrl),
-  }),
+  })
 );
 
 export const toolRuns = pgTable("tool_runs", {
@@ -139,7 +139,7 @@ export const calendarSyncState = pgTable(
   },
   (table) => ({
     uniqueUserCalendar: unique().on(table.userId, table.calendarId),
-  }),
+  })
 );
 
 export const calendarEvents = pgTable(
@@ -178,7 +178,7 @@ export const calendarEvents = pgTable(
   },
   (table) => ({
     uniqueCalendarEvent: unique().on(table.calendarId, table.googleEventId),
-  }),
+  })
 );
 
 export const calendarEventAccounts = pgTable(
@@ -199,7 +199,7 @@ export const calendarEventAccounts = pgTable(
   },
   (table) => ({
     uniqueEventAccount: unique().on(table.eventId, table.accountId),
-  }),
+  })
 );
 
 export const calendarEventContacts = pgTable(
@@ -221,5 +221,5 @@ export const calendarEventContacts = pgTable(
   },
   (table) => ({
     uniqueEventContact: unique().on(table.eventId, table.contactId),
-  }),
+  })
 );

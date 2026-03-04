@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export interface Account {
@@ -141,9 +133,5 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     [account, contacts, loading, setAccount, refreshContacts]
   );
 
-  return (
-    <AccountContext.Provider value={value}>
-      {children}
-    </AccountContext.Provider>
-  );
+  return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

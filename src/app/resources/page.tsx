@@ -25,14 +25,9 @@ export default function ResourcesPage() {
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [folderStack, setFolderStack] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
 
-  const currentFolderId =
-    folderStack.length > 0
-      ? folderStack[folderStack.length - 1].id
-      : undefined;
+  const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : undefined;
 
   const loadFiles = async (folderId?: string) => {
     setLoading(true);
@@ -50,9 +45,7 @@ export default function ResourcesPage() {
       const data = await res.json();
       setFiles(data.files || []);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load files"
-      );
+      setError(err instanceof Error ? err.message : "Failed to load files");
     } finally {
       setLoading(false);
     }
@@ -78,26 +71,18 @@ export default function ResourcesPage() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Resources</h1>
       <p className="text-sm text-[var(--muted)] mb-4">
-        {account
-          ? `Resources for ${account.name}`
-          : "Browse generated resources from Google Drive"}
+        {account ? `Resources for ${account.name}` : "Browse generated resources from Google Drive"}
       </p>
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-1 text-sm mb-4">
-        <button
-          onClick={() => navigateBack(0)}
-          className="text-[var(--accent)] hover:underline"
-        >
+        <button onClick={() => navigateBack(0)} className="text-[var(--accent)] hover:underline">
           Root
         </button>
         {folderStack.map((folder, i) => (
           <span key={folder.id} className="flex items-center gap-1">
             <span className="text-[var(--muted)]">/</span>
-            <button
-              onClick={() => navigateBack(i + 1)}
-              className="text-[var(--accent)] hover:underline"
-            >
+            <button onClick={() => navigateBack(i + 1)} className="text-[var(--accent)] hover:underline">
               {folder.name}
             </button>
           </span>
@@ -113,8 +98,7 @@ export default function ResourcesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {files.map((file) => {
-            const isFolder =
-              file.mimeType === "application/vnd.google-apps.folder";
+            const isFolder = file.mimeType === "application/vnd.google-apps.folder";
             const icon = mimeTypeIcons[file.mimeType] || "📄";
 
             if (isFolder) {
@@ -128,9 +112,7 @@ export default function ResourcesPage() {
                     <span className="text-lg">{icon}</span>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {new Date(file.modifiedTime).toLocaleDateString()}
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">{new Date(file.modifiedTime).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </button>
@@ -144,9 +126,7 @@ export default function ResourcesPage() {
                     <span className="text-lg">{icon}</span>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {new Date(file.modifiedTime).toLocaleDateString()}
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">{new Date(file.modifiedTime).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>

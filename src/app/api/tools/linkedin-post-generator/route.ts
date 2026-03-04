@@ -28,16 +28,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (!inputs.contactId || !inputs.sourceMaterial) {
-    return NextResponse.json(
-      { error: "contactId and sourceMaterial are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "contactId and sourceMaterial are required" }, { status: 400 });
   }
 
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, inputs.contactId));
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, inputs.contactId));
 
   if (!contact) {
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
@@ -51,21 +45,14 @@ export async function POST(request: NextRequest) {
     (typeof dynamicContact.headline === "string" && dynamicContact.headline) ||
     "Unknown role";
 
-  const useLinkedinProfile =
-    inputs.useLinkedinProfile === true ||
-    inputs.useLinkedinProfile === "true";
-  const linkedinUrl =
-    useLinkedinProfile && contact.linkedinUrl ? contact.linkedinUrl : undefined;
+  const useLinkedinProfile = inputs.useLinkedinProfile === true || inputs.useLinkedinProfile === "true";
+  const linkedinUrl = useLinkedinProfile && contact.linkedinUrl ? contact.linkedinUrl : undefined;
 
-  const accountId =
-    typeof inputs.accountId === "string" ? inputs.accountId : null;
+  const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
 
   let accountName: string | undefined;
   if (accountId) {
-    const [account] = await db
-      .select({ name: accounts.name })
-      .from(accounts)
-      .where(eq(accounts.id, accountId));
+    const [account] = await db.select({ name: accounts.name }).from(accounts).where(eq(accounts.id, accountId));
     accountName = account?.name;
   }
 
@@ -90,24 +77,19 @@ export async function POST(request: NextRequest) {
   );
 
   try {
-    const handle = await tasks.trigger<typeof linkedinPostGeneratorTask>(
-      "linkedin-post-generator",
-      {
-        runId: run.id,
-        posterName: contact.name,
-        posterRole,
-        sourceMaterial: inputs.sourceMaterial,
-        voiceContext: inputs.voiceContext,
-        linkedinUrl,
-        useLinkedinProfile,
-        model: inputs.model,
-        accountName,
-      }
-    );
+    const handle = await tasks.trigger<typeof linkedinPostGeneratorTask>("linkedin-post-generator", {
+      runId: run.id,
+      posterName: contact.name,
+      posterRole,
+      sourceMaterial: inputs.sourceMaterial,
+      voiceContext: inputs.voiceContext,
+      linkedinUrl,
+      useLinkedinProfile,
+      model: inputs.model,
+      accountName,
+    });
 
-    console.log(
-      `[linkedin-post-generator:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`
-    );
+    console.log(`[linkedin-post-generator:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
     await db
       .update(toolRuns)
@@ -120,10 +102,14 @@ export async function POST(request: NextRequest) {
       expirationTime: "1h",
     });
 
-    return NextResponse.json({ id: run.id, status: "running", triggerRunId: handle.id, publicAccessToken });
+    return NextResponse.json({
+      id: run.id,
+      status: "running",
+      triggerRunId: handle.id,
+      publicAccessToken,
+    });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await db
       .update(toolRuns)
@@ -131,13 +117,8 @@ export async function POST(request: NextRequest) {
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
 
-    console.log(
-      `[linkedin-post-generator:route][${run.id}] Failed to dispatch task: ${errorMessage}`
-    );
+    console.log(`[linkedin-post-generator:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
-    return NextResponse.json(
-      { id: run.id, error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ id: run.id, error: errorMessage }, { status: 500 });
   }
 }

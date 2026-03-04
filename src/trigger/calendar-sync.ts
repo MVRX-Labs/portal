@@ -73,19 +73,11 @@ export const calendarSyncTask = schedules.task({
         let [syncState] = await db
           .select()
           .from(calendarSyncState)
-          .where(
-            and(
-              eq(calendarSyncState.userId, user.id),
-              eq(calendarSyncState.calendarId, calendarId),
-            ),
-          )
+          .where(and(eq(calendarSyncState.userId, user.id), eq(calendarSyncState.calendarId, calendarId)))
           .limit(1);
 
         if (!syncState) {
-          [syncState] = await db
-            .insert(calendarSyncState)
-            .values({ userId: user.id, calendarId })
-            .returning();
+          [syncState] = await db.insert(calendarSyncState).values({ userId: user.id, calendarId }).returning();
         }
 
         // Sync: full or incremental
@@ -129,12 +121,7 @@ export const calendarSyncTask = schedules.task({
             await db
               .update(calendarEvents)
               .set({ status: "cancelled", updatedAt: new Date() })
-              .where(
-                and(
-                  eq(calendarEvents.googleEventId, event.id),
-                  eq(calendarEvents.calendarId, calendarId),
-                ),
-              );
+              .where(and(eq(calendarEvents.googleEventId, event.id), eq(calendarEvents.calendarId, calendarId)));
             continue;
           }
 
@@ -189,10 +176,7 @@ export const calendarSyncTask = schedules.task({
 
           for (const attendee of externalAttendees) {
             try {
-              const match = await matchOrCreateForAttendee(
-                attendee.email,
-                attendee.displayName,
-              );
+              const match = await matchOrCreateForAttendee(attendee.email, attendee.displayName);
 
               // null = personal email (gmail, etc.) — skip
               if (!match) continue;
@@ -232,7 +216,7 @@ export const calendarSyncTask = schedules.task({
                 });
                 totalEnrichmentTriggered++;
                 logger.info(
-                  `Triggered enrichment for new account ${match.accountId} (domain: ${match.newAccountDomain})`,
+                  `Triggered enrichment for new account ${match.accountId} (domain: ${match.newAccountDomain})`
                 );
               }
             } catch (matchErr) {
@@ -270,12 +254,7 @@ export const calendarSyncTask = schedules.task({
         await db
           .update(calendarSyncState)
           .set({ lastSyncError: errorMessage, updatedAt: new Date() })
-          .where(
-            and(
-              eq(calendarSyncState.userId, user.id),
-              eq(calendarSyncState.calendarId, calendarId),
-            ),
-          );
+          .where(and(eq(calendarSyncState.userId, user.id), eq(calendarSyncState.calendarId, calendarId)));
 
         sendSlackNotification({
           tool: "calendar-sync",
@@ -294,7 +273,7 @@ export const calendarSyncTask = schedules.task({
     });
 
     logger.info(
-      `Calendar sync complete: ${allUsers.length} users, ${totalEventsProcessed} events processed, ${totalNewEvents} upserted, ${totalEnrichmentTriggered} enrichments triggered, ${totalErrors} errors`,
+      `Calendar sync complete: ${allUsers.length} users, ${totalEventsProcessed} events processed, ${totalNewEvents} upserted, ${totalEnrichmentTriggered} enrichments triggered, ${totalErrors} errors`
     );
 
     return {
@@ -307,11 +286,7 @@ export const calendarSyncTask = schedules.task({
   },
 });
 
-async function updateAccountMeetingTimestamps(
-  accountId: string,
-  eventStartTime: Date,
-  now: Date,
-) {
+async function updateAccountMeetingTimestamps(accountId: string, eventStartTime: Date, now: Date) {
   const [acct] = await db
     .select({ nextMeetingAt: accounts.nextMeetingAt, lastMeetingAt: accounts.lastMeetingAt })
     .from(accounts)
@@ -336,11 +311,7 @@ async function updateAccountMeetingTimestamps(
   }
 }
 
-async function updateContactMeetingTimestamps(
-  contactId: string,
-  eventStartTime: Date,
-  now: Date,
-) {
+async function updateContactMeetingTimestamps(contactId: string, eventStartTime: Date, now: Date) {
   const [cont] = await db
     .select({ nextMeetingAt: contacts.nextMeetingAt, lastMeetingAt: contacts.lastMeetingAt })
     .from(contacts)

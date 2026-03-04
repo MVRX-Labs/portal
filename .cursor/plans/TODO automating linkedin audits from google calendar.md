@@ -124,11 +124,12 @@ Currently the scraping + dispatch logic lives inline in the route handler. Extra
 export async function dispatchLinkedInAudit(params: {
   linkedinUrl: string;
   companyName: string;
-  userId: string;  // system user for automated runs
-}): Promise<{ runId: string }>
+  userId: string; // system user for automated runs
+}): Promise<{ runId: string }>;
 ```
 
 This function:
+
 - Scrapes via Apify (existing `scrapeLinkedInProfile`)
 - Creates a `toolRuns` record
 - Dispatches to local-api
@@ -139,12 +140,14 @@ Used by both the manual route handler AND the automated callback.
 ### 7. System user for automated runs
 
 Automated audits need a `userId` for the `toolRuns` record. Options:
+
 - Create a "system" user in the `users` table on setup
 - Or use a designated admin user's ID via env var `SYSTEM_USER_ID`
 
 ### 8. Middleware updates (`src/middleware.ts`)
 
 Add to public paths (no session auth required):
+
 - `/api/cron/calendar-sync` (authenticated via CRON_SECRET)
 
 ### 9. Rate limiting / concurrency
@@ -157,22 +160,22 @@ Add to public paths (no session auth required):
 
 ## Files to Create
 
-| File | Purpose |
-|------|---------|
-| `src/lib/calendar.ts` | Google Calendar API client (auth, sync, event fetching) |
-| `src/app/api/cron/calendar-sync/route.ts` | Vercel Cron endpoint |
+| File                                      | Purpose                                                 |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `src/lib/calendar.ts`                     | Google Calendar API client (auth, sync, event fetching) |
+| `src/app/api/cron/calendar-sync/route.ts` | Vercel Cron endpoint                                    |
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/lib/schema.ts` | Add `contacts`, `calendarEvents`, `calendarEventContacts`, `calendarSyncState` tables |
-| `src/lib/linkedin-audit.ts` | Extract `dispatchLinkedInAudit()` function |
-| `src/app/api/tools/linkedin-audit/route.ts` | Use extracted dispatch function |
-| `src/app/api/hooks/job-complete/route.ts` | Chain resolution → audit, update contacts |
-| `src/middleware.ts` | Add cron path to public routes |
-| `local-api/src/routes/jobs.ts` | Add `contact-resolution` job endpoint |
-| `vercel.json` | Add cron schedule |
+| File                                        | Change                                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/lib/schema.ts`                         | Add `contacts`, `calendarEvents`, `calendarEventContacts`, `calendarSyncState` tables |
+| `src/lib/linkedin-audit.ts`                 | Extract `dispatchLinkedInAudit()` function                                            |
+| `src/app/api/tools/linkedin-audit/route.ts` | Use extracted dispatch function                                                       |
+| `src/app/api/hooks/job-complete/route.ts`   | Chain resolution → audit, update contacts                                             |
+| `src/middleware.ts`                         | Add cron path to public routes                                                        |
+| `local-api/src/routes/jobs.ts`              | Add `contact-resolution` job endpoint                                                 |
+| `vercel.json`                               | Add cron schedule                                                                     |
 
 ## Environment Variables
 

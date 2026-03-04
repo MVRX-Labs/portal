@@ -67,11 +67,11 @@ Define:
 
 Include two to three short "this, not that" examples:
 
-| Do this | Not this |
-|---|---|
-| "We shipped it in three days." | "We were delighted to announce the launch of our latest solution." |
-| "Most teams get this wrong." | "It's worth noting that many organisations face challenges in this area." |
-| "Here's what actually happened." | "I'd like to share some key takeaways from a recent experience." |
+| Do this                          | Not this                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| "We shipped it in three days."   | "We were delighted to announce the launch of our latest solution."        |
+| "Most teams get this wrong."     | "It's worth noting that many organisations face challenges in this area." |
+| "Here's what actually happened." | "I'd like to share some key takeaways from a recent experience."          |
 
 The voice section is non-negotiable. Without it, every post risks sounding generic.
 
@@ -118,23 +118,27 @@ For each style, note when to use it and how often (e.g. "Classic LinkedIn for 3 
 Every post follows a skeleton. Define the default structure here.
 
 **Hook** (first two to three lines, visible before "see more")
+
 - The hook decides whether anyone reads the rest
 - Should spark curiosity, challenge an assumption or promise a specific payoff
 - Write three hook options per post, pick the strongest
 - Separate each hook line with a blank line for visual breathing room
 
 **Body** (the substance)
+
 - Tell one story, make one point, share one insight
 - Use the chosen style from Section 6
 - Include a twist, a counterintuitive finding or a moment of tension
 - Keep total post length between 900 and 1,500 characters
 
 **CTA** (the close)
+
 - End with a clear ask: a question, a repost prompt, a follow nudge
 - Keep it to one CTA per post -- don't stack them
 - Match the CTA to the goal (engagement, follows, DMs, link clicks)
 
 Example CTA formats:
+
 - "What's your take? Drop it below."
 - "Repost if you've seen this play out in your team."
 - "Follow [Name] for more on [topic]."
@@ -153,6 +157,7 @@ For each post, decide which visual category fits:
 - **No image** -- text-only for maximum shareability on universal topics
 
 Key rules:
+
 - Crop to 4:5 ratio to maximise screen space
 - Client should be front and centre in any photo (75-85% of frame)
 - Natural lighting, no heavy filters
@@ -170,6 +175,7 @@ Define the rhythm:
 - **Content calendar cycle** -- weekly batching, fortnightly review, or rolling drafts
 
 Also note:
+
 - Who approves posts before publishing
 - Lead time required for approval
 - How far in advance posts should be drafted

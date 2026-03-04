@@ -72,11 +72,9 @@ function RunProgressInline({
     onComplete: () => onComplete(),
   });
 
-  const progress = (run?.metadata as { progress?: { step: string; percentage: number } } | undefined)
-    ?.progress;
+  const progress = (run?.metadata as { progress?: { step: string; percentage: number } } | undefined)?.progress;
 
-  const isFinished =
-    run?.status === "COMPLETED" || run?.status === "FAILED" || run?.status === "CANCELED";
+  const isFinished = run?.status === "COMPLETED" || run?.status === "FAILED" || run?.status === "CANCELED";
 
   if (isFinished) return null;
 
@@ -198,15 +196,9 @@ export default function AdminCalendarPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Calendar Sync</h1>
-          <p className="text-sm text-[var(--muted)]">
-            Google Calendar scraping for external meetings
-          </p>
+          <p className="text-sm text-[var(--muted)]">Google Calendar scraping for external meetings</p>
         </div>
-        <button
-          onClick={handleRunSync}
-          disabled={syncing}
-          className="btn-primary"
-        >
+        <button onClick={handleRunSync} disabled={syncing} className="btn-primary">
           {syncing ? "Syncing..." : "Run Sync Now"}
         </button>
       </div>
@@ -283,19 +275,12 @@ export default function AdminCalendarPage() {
             </div>
           ) : (
             events.map((event) => (
-              <div
-                key={event.id}
-                className={`card ${isPast(event.startTime) ? "opacity-60" : ""}`}
-              >
+              <div key={event.id} className={`card ${isPast(event.startTime) ? "opacity-60" : ""}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold truncate">
-                        {event.summary || "(No title)"}
-                      </h3>
-                      {event.status === "cancelled" && (
-                        <span className="badge badge-failed text-xs">Cancelled</span>
-                      )}
+                      <h3 className="text-sm font-semibold truncate">{event.summary || "(No title)"}</h3>
+                      {event.status === "cancelled" && <span className="badge badge-failed text-xs">Cancelled</span>}
                       {event.notifiedAt && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">
                           Notified
@@ -345,8 +330,7 @@ export default function AdminCalendarPage() {
                           {event.linkedContacts.map((c) => (
                             <div key={c.contactId} className="text-xs flex items-center gap-1.5">
                               <span>
-                                {c.contactName}{" "}
-                                <span className="text-[var(--muted)]">({c.attendeeEmail})</span>
+                                {c.contactName} <span className="text-[var(--muted)]">({c.attendeeEmail})</span>
                               </span>
                               <ConfidenceBadge confidence={c.matchConfidence} via={c.matchedVia} />
                             </div>
@@ -385,9 +369,7 @@ export default function AdminCalendarPage() {
                     <td className="py-2 pr-4">{s.userName}</td>
                     <td className="py-2 pr-4 text-[var(--muted)]">{s.calendarId}</td>
                     <td className="py-2 pr-4">
-                      <span
-                        className={`badge ${s.hasSyncToken ? "badge-completed" : "badge-pending"}`}
-                      >
+                      <span className={`badge ${s.hasSyncToken ? "badge-completed" : "badge-pending"}`}>
                         {s.hasSyncToken ? "Yes" : "No"}
                       </span>
                     </td>

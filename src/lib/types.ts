@@ -42,11 +42,10 @@ export interface ToolField {
 }
 
 export const TOOLS: ToolConfig[] = [
-{
+  {
     id: "linkedin-audit",
     name: "LinkedIn Profile Audit",
-    description:
-      "Analyze a LinkedIn profile and generate optimization recommendations.",
+    description: "Analyze a LinkedIn profile and generate optimization recommendations.",
     href: "/tools/linkedin-audit",
     fields: [
       {
@@ -60,8 +59,7 @@ export const TOOLS: ToolConfig[] = [
   {
     id: "linkedin-humanizer",
     name: "LinkedIn Post Humanizer",
-    description:
-      "Rewrite AI-generated LinkedIn posts to sound more authentic and human.",
+    description: "Rewrite AI-generated LinkedIn posts to sound more authentic and human.",
     href: "/tools/linkedin-humanizer",
     fields: [
       {
@@ -95,8 +93,7 @@ export const TOOLS: ToolConfig[] = [
   {
     id: "gtm-strategy",
     name: "GTM Strategy Generator",
-    description:
-      "Generate a comprehensive go-to-market strategy for a company or product.",
+    description: "Generate a comprehensive go-to-market strategy for a company or product.",
     href: "/tools/gtm-strategy",
     fields: [
       {
@@ -125,8 +122,7 @@ export const TOOLS: ToolConfig[] = [
   {
     id: "sentiment-analysis",
     name: "Product Sentiment Analysis",
-    description:
-      "Analyze product sentiment across reviews, social media, and forums.",
+    description: "Analyze product sentiment across reviews, social media, and forums.",
     href: "/tools/sentiment-analysis",
     fields: [
       {
@@ -185,8 +181,7 @@ export const TOOLS: ToolConfig[] = [
         name: "sourceMaterial",
         label: "Source Material",
         type: "textarea",
-        placeholder:
-          "Meeting notes, topic brief, news article, or brain dump of ideas...",
+        placeholder: "Meeting notes, topic brief, news article, or brain dump of ideas...",
         required: true,
       },
       {
@@ -201,8 +196,7 @@ export const TOOLS: ToolConfig[] = [
   {
     id: "outbound-sequence",
     name: "Outbound Sequence Generator",
-    description:
-      "Generate multi-step outbound sequences for email and LinkedIn outreach.",
+    description: "Generate multi-step outbound sequences for email and LinkedIn outreach.",
     href: "/tools/outbound-sequence",
     fields: [
       {

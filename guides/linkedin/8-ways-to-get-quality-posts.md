@@ -15,6 +15,7 @@ The focus is on building influence by showing your thinking, your journey and th
 Look through WhatsApp / Messenger chats, Instagram story archives, photos that your family and friends took of you, email attachments from years ago (include old emails you might not use anymore), physical photo albums, your current camera roll, etc.
 
 For each photo, write down:
+
 1. When was this?
 2. Where were you living + working at the time?
 3. What feelings come to the surface?

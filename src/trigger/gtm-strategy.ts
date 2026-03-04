@@ -11,19 +11,14 @@ import { sendSlackNotification } from "@/lib/slack";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import { buildGtmDocx } from "@/lib/gtm-docx-builder";
 import type { GTMStrategyContent } from "@/lib/gtm-schema";
-import {
-  resolveModel,
-  MODEL_MAP,
-  currentMonth,
-  extractJSON,
-} from "@/lib/audit-utils";
+import { resolveModel, MODEL_MAP, currentMonth, extractJSON } from "@/lib/audit-utils";
 
 const GTM_PROMPT = (
   companyName: string,
   industry: string,
   targetAudience: string,
   productDescription: string,
-  date: string,
+  date: string
 ) => `\
 You are a senior go-to-market strategist at MVRX Labs creating a comprehensive GTM launch strategy for "${companyName}".
 
@@ -172,14 +167,24 @@ export const gtmStrategyTask = task({
 
     try {
       const totalSteps = 4;
-      metadata.set("progress", { step: "Preparing research session", stepNumber: 1, totalSteps, percentage: 0 });
+      metadata.set("progress", {
+        step: "Preparing research session",
+        stepNumber: 1,
+        totalSteps,
+        percentage: 0,
+      });
 
       await mkdir(sessionDir, { recursive: true });
 
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.opus);
 
-      metadata.set("progress", { step: "Researching & generating strategy", stepNumber: 2, totalSteps, percentage: 10 });
+      metadata.set("progress", {
+        step: "Researching & generating strategy",
+        stepNumber: 2,
+        totalSteps,
+        percentage: 10,
+      });
       logger.info("Starting GTM strategy generation", { runId, companyName, model: resolvedModel });
 
       const abortController = new AbortController();
@@ -232,7 +237,12 @@ export const gtmStrategyTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      metadata.set("progress", { step: "Building document", stepNumber: 3, totalSteps, percentage: 65 });
+      metadata.set("progress", {
+        step: "Building document",
+        stepNumber: 3,
+        totalSteps,
+        percentage: 65,
+      });
 
       const json = extractJSON(output);
       const content: GTMStrategyContent = JSON.parse(json);
@@ -240,7 +250,12 @@ export const gtmStrategyTask = task({
       logger.info("Building DOCX");
       const buf = await buildGtmDocx(content);
 
-      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 4, totalSteps, percentage: 80 });
+      metadata.set("progress", {
+        step: "Uploading to Google Drive",
+        stepNumber: 4,
+        totalSteps,
+        percentage: 80,
+      });
 
       const rootFolderId = getGeneratedMaterialsFolderId();
 

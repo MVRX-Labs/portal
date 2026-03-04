@@ -29,18 +29,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!inputs.productName) {
-    return NextResponse.json(
-      { error: "productName is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "productName is required" }, { status: 400 });
   }
 
   let companyName = "Unknown";
   if (inputs.accountId) {
-    const [account] = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, inputs.accountId));
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
     if (account) companyName = account.name;
   }
 
@@ -62,22 +56,21 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
-  console.log(`[sentiment-analysis:route][${run.id}] Run created for "${inputs.productName}" (${companyName}) — source: ${sourceType}, user: ${userName}`);
+  console.log(
+    `[sentiment-analysis:route][${run.id}] Run created for "${inputs.productName}" (${companyName}) — source: ${sourceType}, user: ${userName}`
+  );
 
   try {
-    const handle = await tasks.trigger<typeof sentimentAnalysisTask>(
-      "sentiment-analysis-generation",
-      {
-        runId: run.id,
-        productName: inputs.productName,
-        companyName,
-        accountName: inputs.accountId ? companyName : undefined,
-        sources: sourceType,
-        additionalUrls,
-        keywords,
-        model: inputs.model,
-      }
-    );
+    const handle = await tasks.trigger<typeof sentimentAnalysisTask>("sentiment-analysis-generation", {
+      runId: run.id,
+      productName: inputs.productName,
+      companyName,
+      accountName: inputs.accountId ? companyName : undefined,
+      sources: sourceType,
+      additionalUrls,
+      keywords,
+      model: inputs.model,
+    });
 
     console.log(`[sentiment-analysis:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
@@ -92,10 +85,14 @@ export async function POST(request: NextRequest) {
       expirationTime: "1h",
     });
 
-    return NextResponse.json({ id: run.id, status: "running", triggerRunId: handle.id, publicAccessToken });
+    return NextResponse.json({
+      id: run.id,
+      status: "running",
+      triggerRunId: handle.id,
+      publicAccessToken,
+    });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await db
       .update(toolRuns)
@@ -105,9 +102,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[sentiment-analysis:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
-    return NextResponse.json(
-      { id: run.id, error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ id: run.id, error: errorMessage }, { status: 500 });
   }
 }

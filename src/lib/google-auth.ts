@@ -15,10 +15,7 @@ export function pemToArrayBuffer(pem: string): ArrayBuffer {
  * Get a Google access token using service account JWT bearer flow.
  * Supports domain-wide delegation via the `sub` parameter.
  */
-export async function getGoogleAccessToken(options: {
-  scope: string;
-  sub?: string;
-}): Promise<string> {
+export async function getGoogleAccessToken(options: { scope: string; sub?: string }): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
@@ -31,7 +28,7 @@ export async function getGoogleAccessToken(options: {
     pemToArrayBuffer(privateKey),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   );
 
   const now = Math.floor(Date.now() / 1000);
@@ -68,9 +65,7 @@ export async function getGoogleAccessToken(options: {
 
   const data = await resp.json();
   if (!data.access_token) {
-    throw new Error(
-      `Google auth failed${options.sub ? ` for ${options.sub}` : ""}: ${JSON.stringify(data)}`,
-    );
+    throw new Error(`Google auth failed${options.sub ? ` for ${options.sub}` : ""}: ${JSON.stringify(data)}`);
   }
   return data.access_token;
 }

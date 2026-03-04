@@ -107,7 +107,12 @@ export const linkedinHumanizerTask = task({
     const { runId, postContent, tone, writingExamples, model } = payload;
 
     try {
-      metadata.set("progress", { step: "Rewriting post", stepNumber: 1, totalSteps: 2, percentage: 10 });
+      metadata.set("progress", {
+        step: "Rewriting post",
+        stepNumber: 1,
+        totalSteps: 2,
+        percentage: 10,
+      });
 
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
       logger.info("Starting LinkedIn humanizer", { runId, tone, model: resolvedModel });

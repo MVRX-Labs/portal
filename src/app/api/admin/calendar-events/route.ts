@@ -41,19 +41,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (view === "stats") {
-    const [eventCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(calendarEvents);
+    const [eventCount] = await db.select({ count: sql<number>`count(*)` }).from(calendarEvents);
 
     const [upcomingCount] = await db
       .select({ count: sql<number>`count(*)` })
       .from(calendarEvents)
-      .where(
-        and(
-          gte(calendarEvents.startTime, new Date()),
-          eq(calendarEvents.status, "confirmed"),
-        ),
-      );
+      .where(and(gte(calendarEvents.startTime, new Date()), eq(calendarEvents.status, "confirmed")));
 
     const [accountLinkCount] = await db
       .select({ count: sql<number>`count(distinct ${calendarEventAccounts.accountId})` })
@@ -128,7 +121,7 @@ export async function GET(request: NextRequest) {
         linkedAccounts: linkedAccts,
         linkedContacts: linkedConts,
       };
-    }),
+    })
   );
 
   return NextResponse.json({ events: eventsWithLinks });

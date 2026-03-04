@@ -12,13 +12,7 @@ import { buildAuditDocx } from "@/lib/audit-docx-builder";
 import { sendSlackNotification } from "@/lib/slack";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import type { LinkedInAuditContent } from "@/lib/audit-schema";
-import {
-  resolveModel,
-  MODEL_MAP,
-  currentMonth,
-  extractJSON,
-  extractJSONFromSessionDir,
-} from "@/lib/audit-utils";
+import { resolveModel, MODEL_MAP, currentMonth, extractJSON, extractJSONFromSessionDir } from "@/lib/audit-utils";
 
 interface LinkedInAuditPayload {
   runId: string;
@@ -99,7 +93,12 @@ export const linkedinAuditTask = task({
 
     try {
       const totalSteps = 5;
-      metadata.set("progress", { step: "Scraping LinkedIn profile", stepNumber: 1, totalSteps, percentage: 0 });
+      metadata.set("progress", {
+        step: "Scraping LinkedIn profile",
+        stepNumber: 1,
+        totalSteps,
+        percentage: 0,
+      });
 
       logger.info("Starting LinkedIn scrape via Apify", { runId, linkedinUrl });
       const scrapeStart = Date.now();
@@ -107,17 +106,31 @@ export const linkedinAuditTask = task({
       const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
       logger.info(`Scrape finished in ${scrapeElapsed}s`, { slug: scrapedData.slug });
 
-      metadata.set("progress", { step: "Preparing data for analysis", stepNumber: 2, totalSteps, percentage: 20 });
+      metadata.set("progress", {
+        step: "Preparing data for analysis",
+        stepNumber: 2,
+        totalSteps,
+        percentage: 20,
+      });
 
       const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
       await mkdir(sessionDir, { recursive: true });
-      await writeFile(join(sessionDir, "scraped-profile.json"), JSON.stringify(scrapedData.profileData, null, 2), "utf-8");
+      await writeFile(
+        join(sessionDir, "scraped-profile.json"),
+        JSON.stringify(scrapedData.profileData, null, 2),
+        "utf-8"
+      );
       await writeFile(join(sessionDir, "scraped-posts.json"), JSON.stringify(scrapedData.postsData, null, 2), "utf-8");
 
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.opus);
 
-      metadata.set("progress", { step: "Running AI analysis", stepNumber: 3, totalSteps, percentage: 30 });
+      metadata.set("progress", {
+        step: "Running AI analysis",
+        stepNumber: 3,
+        totalSteps,
+        percentage: 30,
+      });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
       let output = "";
@@ -177,7 +190,12 @@ export const linkedinAuditTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      metadata.set("progress", { step: "Building document", stepNumber: 4, totalSteps, percentage: 70 });
+      metadata.set("progress", {
+        step: "Building document",
+        stepNumber: 4,
+        totalSteps,
+        percentage: 70,
+      });
 
       let json: string;
       try {
@@ -191,7 +209,12 @@ export const linkedinAuditTask = task({
       logger.info("Building DOCX");
       const buf = await buildAuditDocx(content);
 
-      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 5, totalSteps, percentage: 85 });
+      metadata.set("progress", {
+        step: "Uploading to Google Drive",
+        stepNumber: 5,
+        totalSteps,
+        percentage: 85,
+      });
 
       const rootFolderId = getGeneratedMaterialsFolderId();
 

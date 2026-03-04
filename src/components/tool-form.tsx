@@ -46,13 +46,16 @@ export function ToolForm({ tool }: ToolFormProps) {
       if (data.status === "running" || data.status === "pending") {
         setActiveRuns((prev) => {
           if (prev.some((r) => r.id === data.id)) return prev;
-          return [...prev, {
-            id: data.id,
-            status: data.status,
-            createdAt,
-            triggerRunId: data.triggerRunId,
-            publicAccessToken: data.publicAccessToken,
-          }];
+          return [
+            ...prev,
+            {
+              id: data.id,
+              status: data.status,
+              createdAt,
+              triggerRunId: data.triggerRunId,
+              publicAccessToken: data.publicAccessToken,
+            },
+          ];
         });
       }
     } catch {
@@ -80,20 +83,21 @@ export function ToolForm({ tool }: ToolFormProps) {
     }
   }, [tool.id, account?.id, reconnectToRun]);
 
-  const handleRunComplete = useCallback(async (completedRunId: string) => {
-    try {
-      const res = await fetch(`/api/runs/${completedRunId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setActiveRuns((prev) =>
-          prev.map((r) => (r.id === completedRunId ? { ...r, ...data } : r))
-        );
+  const handleRunComplete = useCallback(
+    async (completedRunId: string) => {
+      try {
+        const res = await fetch(`/api/runs/${completedRunId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setActiveRuns((prev) => prev.map((r) => (r.id === completedRunId ? { ...r, ...data } : r)));
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-    loadHistory();
-  }, [loadHistory]);
+      loadHistory();
+    },
+    [loadHistory]
+  );
 
   const dismissRun = useCallback((runId: string) => {
     setActiveRuns((prev) => prev.filter((r) => r.id !== runId));
@@ -141,12 +145,8 @@ export function ToolForm({ tool }: ToolFormProps) {
     }
   };
 
-  const inProgressRuns = activeRuns.filter(
-    (r) => r.status === "running" || r.status === "pending"
-  );
-  const finishedRuns = activeRuns.filter(
-    (r) => r.status === "completed" || r.status === "failed"
-  );
+  const inProgressRuns = activeRuns.filter((r) => r.status === "running" || r.status === "pending");
+  const finishedRuns = activeRuns.filter((r) => r.status === "completed" || r.status === "failed");
 
   return (
     <div>
@@ -162,17 +162,13 @@ export function ToolForm({ tool }: ToolFormProps) {
               <div key={field.name}>
                 <label className="block text-sm font-medium mb-1">
                   {field.label}
-                  {field.required && (
-                    <span className="text-[var(--destructive)]"> *</span>
-                  )}
+                  {field.required && <span className="text-[var(--destructive)]"> *</span>}
                 </label>
 
                 {field.type === "contact" ? (
                   <ContactPicker
                     value={values[field.name] || ""}
-                    onChange={(id) =>
-                      setValues({ ...values, [field.name]: id })
-                    }
+                    onChange={(id) => setValues({ ...values, [field.name]: id })}
                     required={field.required}
                   />
                 ) : field.type === "checkbox" ? (
@@ -187,16 +183,12 @@ export function ToolForm({ tool }: ToolFormProps) {
                         })
                       }
                     />
-                    <span className="text-[var(--muted)]">
-                      Enable LinkedIn profile scraping
-                    </span>
+                    <span className="text-[var(--muted)]">Enable LinkedIn profile scraping</span>
                   </label>
                 ) : field.type === "textarea" ? (
                   <textarea
                     value={values[field.name] || ""}
-                    onChange={(e) =>
-                      setValues({ ...values, [field.name]: e.target.value })
-                    }
+                    onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
                     placeholder={field.placeholder}
                     required={field.required}
                     rows={4}
@@ -204,9 +196,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                 ) : field.type === "select" ? (
                   <select
                     value={values[field.name] || ""}
-                    onChange={(e) =>
-                      setValues({ ...values, [field.name]: e.target.value })
-                    }
+                    onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
                     required={field.required}
                   >
                     <option value="">Select...</option>
@@ -220,9 +210,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                   <input
                     type={field.type}
                     value={values[field.name] || ""}
-                    onChange={(e) =>
-                      setValues({ ...values, [field.name]: e.target.value })
-                    }
+                    onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
                     placeholder={field.placeholder}
                     required={field.required}
                   />
@@ -233,23 +221,13 @@ export function ToolForm({ tool }: ToolFormProps) {
             <div className="flex items-center gap-4">
               {MODELS.map((m) => (
                 <label key={m} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="model"
-                    value={m}
-                    checked={model === m}
-                    onChange={() => setModel(m)}
-                  />
+                  <input type="radio" name="model" value={m} checked={model === m} onChange={() => setModel(m)} />
                   {m.charAt(0).toUpperCase() + m.slice(1)}
                 </label>
               ))}
             </div>
 
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={submitting}
-            >
+            <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? "Starting..." : "Run Tool"}
             </button>
 
@@ -264,9 +242,7 @@ export function ToolForm({ tool }: ToolFormProps) {
           {activeRuns.length > 0 && (
             <div className="space-y-3">
               {inProgressRuns.length > 0 && (
-                <h2 className="text-sm font-semibold">
-                  Running ({inProgressRuns.length})
-                </h2>
+                <h2 className="text-sm font-semibold">Running ({inProgressRuns.length})</h2>
               )}
               {inProgressRuns.map((run) => (
                 <div key={run.id}>
@@ -283,9 +259,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                       <p className="font-medium text-[var(--accent)]">Job in progress...</p>
                       <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
                       {run.createdAt && (
-                        <p className="text-[var(--muted)] mt-1">
-                          Started: {formatTimestamp(run.createdAt)}
-                        </p>
+                        <p className="text-[var(--muted)] mt-1">Started: {formatTimestamp(run.createdAt)}</p>
                       )}
                     </div>
                   )}
@@ -297,9 +271,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                   {run.status === "completed" && (
                     <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-[var(--success)]">
-                          Job completed successfully
-                        </p>
+                        <p className="font-medium text-[var(--success)]">Job completed successfully</p>
                         <button
                           type="button"
                           onClick={() => dismissRun(run.id)}
@@ -308,9 +280,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                           Dismiss
                         </button>
                       </div>
-                      <p className="text-[var(--muted)] mt-1">
-                        Run ID: {run.id}
-                      </p>
+                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
                       <div className="text-[var(--muted)] mt-1">
                         {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
                         {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
@@ -336,9 +306,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                         </button>
                       </div>
                       <p className="mt-1">{run.error}</p>
-                      <p className="text-[var(--muted)] mt-1">
-                        Run ID: {run.id}
-                      </p>
+                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
                       <div className="text-[var(--muted)] mt-1">
                         {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
                         {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
@@ -360,14 +328,9 @@ export function ToolForm({ tool }: ToolFormProps) {
           ) : (
             <div className="space-y-2">
               {history.map((run) => (
-                <div
-                  key={run.id}
-                  className="p-2 rounded bg-[var(--background)] text-xs"
-                >
+                <div key={run.id} className="p-2 rounded bg-[var(--background)] text-xs">
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`badge badge-${run.status}`}>
-                      {run.status}
-                    </span>
+                    <span className={`badge badge-${run.status}`}>{run.status}</span>
                   </div>
                   <div className="text-[var(--muted)] space-y-0.5 mb-1">
                     <div>Started: {formatTimestamp(run.createdAt)}</div>
@@ -387,9 +350,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                   )}
                   {!run.outputUrl && run.output && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[var(--accent)] hover:underline">
-                        View Output
-                      </summary>
+                      <summary className="cursor-pointer text-[var(--accent)] hover:underline">View Output</summary>
                       <pre className="mt-2 p-2 rounded bg-black/5 text-xs overflow-auto max-h-56 whitespace-pre-wrap">
                         {run.output}
                       </pre>

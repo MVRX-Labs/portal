@@ -45,16 +45,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     async jwt({ token, trigger }) {
       const shouldSync =
-        trigger === "signIn" || !token.userId || !token.userVerifiedAt ||
+        trigger === "signIn" ||
+        !token.userId ||
+        !token.userVerifiedAt ||
         Date.now() - (token.userVerifiedAt as number) > 60 * 60 * 1000;
 
       if (shouldSync && token.email) {
         const email = token.email;
-        const [existing] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+        const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (existing) {
           token.userId = existing.id;

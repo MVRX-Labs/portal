@@ -104,7 +104,7 @@ export const leads = pgTable(
   },
   (table) => ({
     uniqueAccountLead: unique().on(table.accountId, table.linkedinUrl),
-  }),
+  })
 );
 ```
 

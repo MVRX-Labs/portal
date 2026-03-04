@@ -59,7 +59,7 @@ const BULLET_REF = "gtm-bullets";
 
 function tr(
   text: string,
-  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string; break?: number },
+  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string; break?: number }
 ): TextRun {
   return new TextRun({
     text,
@@ -74,7 +74,7 @@ function tr(
 
 function textRuns(
   text: string,
-  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string },
+  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string }
 ): TextRun[] {
   const lines = text.split("\n");
   const runs: TextRun[] = [];
@@ -126,10 +126,7 @@ function bodyPara(text: string, opts?: { bold?: boolean; italics?: boolean }): P
 function labeledPara(label: string, text: string): Paragraph {
   return new Paragraph({
     spacing: { after: 120 },
-    children: [
-      tr(label + " ", { bold: true }),
-      ...textRuns(text),
-    ],
+    children: [tr(label + " ", { bold: true }), ...textRuns(text)],
   });
 }
 
@@ -149,7 +146,7 @@ function numberedItem(index: number, text: string): Paragraph {
 }
 
 function colWidth(pct: number): { size: number; type: typeof WidthType.DXA } {
-  return { size: Math.round(CONTENT_WIDTH * pct / 100), type: WidthType.DXA };
+  return { size: Math.round((CONTENT_WIDTH * pct) / 100), type: WidthType.DXA };
 }
 
 function headerCell(text: string, widthPct?: number): TableCell {
@@ -186,13 +183,11 @@ function dataTable(headers: string[], rows: string[][], colWidths?: number[]): T
   const widths = colWidths || headers.map(() => colPct);
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-    columnWidths: widths.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+    columnWidths: widths.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({ children: headers.map((h, i) => headerCell(h, widths[i])) }),
-      ...rows.map(
-        (row) => new TableRow({ children: row.map((cell, i) => bodyCell(cell, { widthPct: widths[i] })) }),
-      ),
+      ...rows.map((row) => new TableRow({ children: row.map((cell, i) => bodyCell(cell, { widthPct: widths[i] })) })),
     ],
   });
 }
@@ -258,7 +253,7 @@ function tableOfContents(): (Paragraph | Table)[] {
         new Paragraph({
           spacing: { after: 100 },
           children: [tr(s, { size: S.tocItem, color: C.darkNavy })],
-        }),
+        })
     ),
   ];
 }
@@ -309,15 +304,11 @@ function presenceAuditSection(pa: GTMStrategyContent["presenceAudit"]): (Paragra
   out.push(
     new Table({
       width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-      columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+      columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
       layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
-          children: [
-            headerCell("Area", 25),
-            headerCell("Score", 15),
-            headerCell("Assessment", 60),
-          ],
+          children: [headerCell("Area", 25), headerCell("Score", 15), headerCell("Assessment", 60)],
         }),
         ...scoreRows.map((row) => {
           const score = parseInt(row[1]);
@@ -330,7 +321,7 @@ function presenceAuditSection(pa: GTMStrategyContent["presenceAudit"]): (Paragra
           });
         }),
       ],
-    }),
+    })
   );
 
   out.push(emptyPara());
@@ -353,7 +344,7 @@ function competitiveLandscapeSection(cl: GTMStrategyContent["competitiveLandscap
       new Paragraph({
         spacing: { before: 120, after: 60 },
         children: [tr("Strengths:", { bold: true, color: C.green })],
-      }),
+      })
     );
     for (const s of comp.strengths) {
       out.push(bulletItem(s));
@@ -363,7 +354,7 @@ function competitiveLandscapeSection(cl: GTMStrategyContent["competitiveLandscap
       new Paragraph({
         spacing: { before: 120, after: 60 },
         children: [tr("Weaknesses:", { bold: true, color: C.red })],
-      }),
+      })
     );
     for (const w of comp.weaknesses) {
       out.push(bulletItem(w));
@@ -394,27 +385,24 @@ function channelOverviewSection(cs: GTMStrategyContent["channelStrategyOverview"
   out.push(
     new Table({
       width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-      columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+      columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
       layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
-          children: [
-            headerCell("Channel", 30),
-            headerCell("Fit Score", 15),
-            headerCell("Rationale", 55),
-          ],
+          children: [headerCell("Channel", 30), headerCell("Fit Score", 15), headerCell("Rationale", 55)],
         }),
-        ...cs.recommendedChannels.map((ch) =>
-          new TableRow({
-            children: [
-              bodyCell(ch.name, { bold: true, widthPct: 30 }),
-              bodyCell(`${ch.fitScore}/10`, { color: scoreColor(ch.fitScore), widthPct: 15 }),
-              bodyCell(ch.rationale, { widthPct: 55 }),
-            ],
-          }),
+        ...cs.recommendedChannels.map(
+          (ch) =>
+            new TableRow({
+              children: [
+                bodyCell(ch.name, { bold: true, widthPct: 30 }),
+                bodyCell(`${ch.fitScore}/10`, { color: scoreColor(ch.fitScore), widthPct: 15 }),
+                bodyCell(ch.rationale, { widthPct: 55 }),
+              ],
+            })
         ),
       ],
-    }),
+    })
   );
 
   out.push(emptyPara());
@@ -433,7 +421,7 @@ function channelOverviewSection(cs: GTMStrategyContent["channelStrategyOverview"
 
 function channelDetailSection(
   cd: GTMStrategyContent["channelDetails"][number],
-  sectionNum: number,
+  sectionNum: number
 ): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
 
@@ -444,8 +432,8 @@ function channelDetailSection(
     dataTable(
       ["Investment", "Time to Results", "Key Metric"],
       [[cd.investment, cd.timeToResults, cd.keyMetric]],
-      [33, 33, 34],
-    ),
+      [33, 33, 34]
+    )
   );
   out.push(emptyPara());
 
@@ -463,8 +451,8 @@ function channelDetailSection(
     dataTable(
       ["Week", "Actions"],
       cd.twelveWeekPlan.map((wp) => [wp.week, wp.actions.join("; ")]),
-      [20, 80],
-    ),
+      [20, 80]
+    )
   );
   out.push(emptyPara());
 
@@ -502,8 +490,8 @@ function successMetricsSection(sm: GTMStrategyContent["successMetrics"]): (Parag
     dataTable(
       ["Metric", "Current", "Day 30", "Day 60", "Day 90"],
       sm.growthTargets.map((gt) => [gt.metric, gt.current, gt.day30, gt.day60, gt.day90]),
-      [28, 18, 18, 18, 18],
-    ),
+      [28, 18, 18, 18, 18]
+    )
   );
   out.push(emptyPara());
 
@@ -549,15 +537,21 @@ function signOff(): Paragraph[] {
       children: [tr("For implementation support and go-to-market programmes:", { size: S.body })],
     }),
     new Paragraph({
-      children: [tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", { bold: true, size: S.body, color: C.brandBlue })],
+      children: [
+        tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", {
+          bold: true,
+          size: S.body,
+          color: C.brandBlue,
+        }),
+      ],
     }),
     emptyPara(),
     new Paragraph({
       children: [
-        tr(
-          "This report was generated by MVRX Labs\u2019 GTM Intelligence Platform.",
-          { size: S.signoffSmall, color: C.meta },
-        ),
+        tr("This report was generated by MVRX Labs\u2019 GTM Intelligence Platform.", {
+          size: S.signoffSmall,
+          color: C.meta,
+        }),
       ],
     }),
   ];

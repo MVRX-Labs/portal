@@ -47,7 +47,7 @@ async function getCalendarAccessToken(impersonateEmail: string): Promise<string>
 export async function fullCalendarSync(
   calendarEmail: string,
   timeMin: string,
-  timeMax: string,
+  timeMax: string
 ): Promise<{ events: CalendarEvent[]; syncToken: string }> {
   const token = await getCalendarAccessToken(calendarEmail);
   const allEvents: CalendarEvent[] = [];
@@ -66,7 +66,7 @@ export async function fullCalendarSync(
 
     const resp = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarEmail)}/events?${params}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     if (!resp.ok) {
@@ -89,7 +89,7 @@ export async function fullCalendarSync(
  */
 export async function incrementalCalendarSync(
   calendarEmail: string,
-  syncToken: string,
+  syncToken: string
 ): Promise<{ events: CalendarEvent[]; newSyncToken: string }> {
   const token = await getCalendarAccessToken(calendarEmail);
   const allEvents: CalendarEvent[] = [];
@@ -102,7 +102,7 @@ export async function incrementalCalendarSync(
 
     const resp = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarEmail)}/events?${params}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     if (resp.status === 410) {
@@ -123,13 +123,10 @@ export async function incrementalCalendarSync(
 }
 
 const INTERNAL_DOMAIN = "mvrxlabs.com";
-const IGNORED_DOMAIN_SUFFIXES = [
-  "resource.calendar.google.com",
-  "group.calendar.google.com",
-];
+const IGNORED_DOMAIN_SUFFIXES = ["resource.calendar.google.com", "group.calendar.google.com"];
 
 export function getExternalAttendees(
-  event: CalendarEvent,
+  event: CalendarEvent
 ): Array<{ email: string; displayName?: string; responseStatus?: string }> {
   if (!event.attendees || event.attendees.length === 0) return [];
 

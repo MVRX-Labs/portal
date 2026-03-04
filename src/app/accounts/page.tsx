@@ -248,21 +248,20 @@ function ExpandedView({
                     <p className="text-sm font-medium truncate flex items-center gap-1.5">
                       {contact.name}
                       {contact.autoCreated && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none" title="Auto-created from calendar sync">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
+                          title="Auto-created from calendar sync"
+                        >
                           Auto
                         </span>
                       )}
                     </p>
                     {contact.accountEmail && (
-                      <p className="text-xs text-[var(--muted)] truncate">
-                        {contact.accountEmail}
-                      </p>
+                      <p className="text-xs text-[var(--muted)] truncate">{contact.accountEmail}</p>
                     )}
                   </div>
                   <span className="badge badge-neutral ml-2 whitespace-nowrap shrink-0">
-                    {contact.lastMeetingAt
-                      ? relativeDate(contact.lastMeetingAt)
-                      : "No meetings"}
+                    {contact.lastMeetingAt ? relativeDate(contact.lastMeetingAt) : "No meetings"}
                   </span>
                 </div>
               ))}
@@ -279,9 +278,7 @@ function ExpandedView({
             <p className="text-sm text-[var(--muted)]">Loading...</p>
           ) : (
             <>
-              {actions.length === 0 && (
-                <p className="text-sm text-[var(--muted)] mb-3">No pending actions</p>
-              )}
+              {actions.length === 0 && <p className="text-sm text-[var(--muted)] mb-3">No pending actions</p>}
               <div className="space-y-2 mb-3">
                 {actions.map((action) => (
                   <div
@@ -340,7 +337,10 @@ function ExpandedView({
               <label className="block text-xs text-[var(--muted)] mb-1">Summary</label>
               <textarea
                 value={summary}
-                onChange={(e) => { setSummary(e.target.value); setDirty(true); }}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                  setDirty(true);
+                }}
                 placeholder="Describe the state of this account..."
                 rows={2}
                 className="w-full"
@@ -351,7 +351,10 @@ function ExpandedView({
                 <label className="block text-xs text-[var(--muted)] mb-1">Owner</label>
                 <select
                   value={ownerId}
-                  onChange={(e) => { setOwnerId(e.target.value); setDirty(true); }}
+                  onChange={(e) => {
+                    setOwnerId(e.target.value);
+                    setDirty(true);
+                  }}
                 >
                   <option value="">Unassigned</option>
                   {users.map((u) => (
@@ -366,7 +369,10 @@ function ExpandedView({
                 <div className="flex">
                   <button
                     type="button"
-                    onClick={() => { setMrrCurrency(mrrCurrency === "$" ? "£" : "$"); setDirty(true); }}
+                    onClick={() => {
+                      setMrrCurrency(mrrCurrency === "$" ? "£" : "$");
+                      setDirty(true);
+                    }}
                     className="shrink-0 w-8 text-center border border-r-0 border-[var(--border)] rounded-l bg-[var(--input)] text-sm hover:bg-[var(--border)] transition-colors"
                     title="Click to toggle currency"
                   >
@@ -375,7 +381,10 @@ function ExpandedView({
                   <input
                     type="number"
                     value={mrr}
-                    onChange={(e) => { setMrr(e.target.value); setDirty(true); }}
+                    onChange={(e) => {
+                      setMrr(e.target.value);
+                      setDirty(true);
+                    }}
                     placeholder="0"
                     min="0"
                     step="1"
@@ -387,11 +396,7 @@ function ExpandedView({
           </div>
           {dirty && (
             <div className="mt-3 flex justify-end">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="btn-primary text-sm"
-              >
+              <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
@@ -414,10 +419,7 @@ function AccountsContent() {
     setLoading(true);
     try {
       const params = showHidden ? "?includeHidden=true" : "";
-      const [acctRes, userRes] = await Promise.all([
-        fetch(`/api/accounts${params}`),
-        fetch("/api/admin/users"),
-      ]);
+      const [acctRes, userRes] = await Promise.all([fetch(`/api/accounts${params}`), fetch("/api/admin/users")]);
       if (acctRes.ok) {
         const data = await acctRes.json();
         setAccounts(data.accounts);
@@ -438,9 +440,7 @@ function AccountsContent() {
   }, [fetchAccounts]);
 
   const handleSave = (updated: AccountOverview) => {
-    setAccounts((prev) =>
-      prev.map((a) => (a.id === updated.id ? updated : a))
-    );
+    setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   };
 
   const handleToggleHidden = async (account: AccountOverview) => {
@@ -457,9 +457,7 @@ function AccountsContent() {
           setAccounts((prev) => prev.filter((a) => a.id !== account.id));
           if (expandedId === account.id) setExpandedId(null);
         } else {
-          setAccounts((prev) =>
-            prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a))
-          );
+          setAccounts((prev) => prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a)));
         }
       }
     } catch {
@@ -504,10 +502,12 @@ function AccountsContent() {
         </div>
       </div>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Overview of all accounts{!loading && ` \u2014 ${visibleCount} total${showHidden && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`}
+        Overview of all accounts
+        {!loading && ` \u2014 ${visibleCount} total${showHidden && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`}
         {!loading && Object.keys(mrrTotals).length > 0 && (
           <span className="ml-3 font-medium text-[var(--foreground)]">
-            Total MRR: {Object.entries(mrrTotals)
+            Total MRR:{" "}
+            {Object.entries(mrrTotals)
               .sort(([a], [b]) => a.localeCompare(b))
               .map(([cur, cents]) => formatMrr(cents, cur))
               .join(" + ")}
@@ -545,9 +545,7 @@ function AccountsContent() {
               accounts.map((account) => (
                 <React.Fragment key={account.id}>
                   <tr
-                    onClick={() =>
-                      setExpandedId(expandedId === account.id ? null : account.id)
-                    }
+                    onClick={() => setExpandedId(expandedId === account.id ? null : account.id)}
                     className={`border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--input)] ${
                       expandedId === account.id ? "bg-[var(--input)]" : ""
                     } ${account.hidden ? "opacity-50" : ""}`}
@@ -556,7 +554,10 @@ function AccountsContent() {
                       <div className="font-medium flex items-center gap-1.5">
                         {account.name}
                         {account.autoCreated && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none" title="Auto-created from calendar sync — review details">
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
+                            title="Auto-created from calendar sync — review details"
+                          >
                             Auto
                           </span>
                         )}
@@ -570,40 +571,33 @@ function AccountsContent() {
                         {account.contactCount} contact{account.contactCount !== 1 ? "s" : ""}
                         {account.pendingActionCount > 0 && (
                           <span className="ml-2 text-[var(--warning)]">
-                            {account.pendingActionCount} action{account.pendingActionCount !== 1 ? "s" : ""}
+                            {account.pendingActionCount} action
+                            {account.pendingActionCount !== 1 ? "s" : ""}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-3 py-1.5 max-w-xs">
-                      <span className="text-[var(--muted)] truncate block">
-                        {account.summary || "\u2014"}
-                      </span>
+                      <span className="text-[var(--muted)] truncate block">{account.summary || "\u2014"}</span>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      {account.ownerName || (
-                        <span className="text-[var(--muted)]">Unassigned</span>
-                      )}
+                      {account.ownerName || <span className="text-[var(--muted)]">Unassigned</span>}
                     </td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
-                      {account.mrr > 0 ? formatMrr(account.mrr, account.mrrCurrency) : (
+                      {account.mrr > 0 ? (
+                        formatMrr(account.mrr, account.mrrCurrency)
+                      ) : (
                         <span className="text-[var(--muted)]">{account.mrrCurrency || "$"}0</span>
                       )}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span
-                        className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}
-                      >
+                      <span className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}>
                         {relativeDate(account.lastMeetingAt)}
                       </span>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span
-                        className={`badge ${account.nextMeetingAt ? "badge-running" : "badge-neutral"}`}
-                      >
-                        {account.nextMeetingAt
-                          ? relativeDate(account.nextMeetingAt)
-                          : "None scheduled"}
+                      <span className={`badge ${account.nextMeetingAt ? "badge-running" : "badge-neutral"}`}>
+                        {account.nextMeetingAt ? relativeDate(account.nextMeetingAt) : "None scheduled"}
                       </span>
                     </td>
                     {editMode && (
@@ -622,16 +616,8 @@ function AccountsContent() {
                   </tr>
                   {expandedId === account.id && (
                     <tr>
-                      <td
-                        colSpan={editMode ? 7 : 6}
-                        className="border-b border-[var(--border)] bg-[var(--card)]"
-                      >
-                        <ExpandedView
-                          account={account}
-                          users={users}
-                          editMode={editMode}
-                          onSave={handleSave}
-                        />
+                      <td colSpan={editMode ? 7 : 6} className="border-b border-[var(--border)] bg-[var(--card)]">
+                        <ExpandedView account={account} users={users} editMode={editMode} onSave={handleSave} />
                       </td>
                     </tr>
                   )}
@@ -647,9 +633,7 @@ function AccountsContent() {
 
 export default function AccountsPage() {
   return (
-    <Suspense
-      fallback={<div className="text-[var(--muted)]">Loading...</div>}
-    >
+    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
       <AccountsContent />
     </Suspense>
   );

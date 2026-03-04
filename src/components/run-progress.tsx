@@ -20,11 +20,7 @@ interface ProgressMeta {
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
-  return (
-    d.toLocaleDateString() +
-    " " +
-    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  );
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function elapsed(iso: string): string {
@@ -35,13 +31,7 @@ function elapsed(iso: string): string {
   return `${mins}m ${secs}s`;
 }
 
-export function RunProgress({
-  triggerRunId,
-  publicAccessToken,
-  dbRunId,
-  createdAt,
-  onComplete,
-}: RunProgressProps) {
+export function RunProgress({ triggerRunId, publicAccessToken, dbRunId, createdAt, onComplete }: RunProgressProps) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -54,15 +44,11 @@ export function RunProgress({
     onComplete: () => onComplete(),
   });
 
-  const progress = (run?.metadata as { progress?: ProgressMeta } | undefined)
-    ?.progress;
+  const progress = (run?.metadata as { progress?: ProgressMeta } | undefined)?.progress;
 
   void tick;
 
-  const isFinished =
-    run?.status === "COMPLETED" ||
-    run?.status === "FAILED" ||
-    run?.status === "CANCELED";
+  const isFinished = run?.status === "COMPLETED" || run?.status === "FAILED" || run?.status === "CANCELED";
 
   if (error) {
     return (
@@ -78,12 +64,8 @@ export function RunProgress({
   return (
     <div className="p-4 rounded-md bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)] text-sm space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-medium text-[var(--accent)]">
-          {progress?.step || "Starting..."}
-        </p>
-        <span className="text-xs text-[var(--muted)] tabular-nums">
-          {elapsed(createdAt)}
-        </span>
+        <p className="font-medium text-[var(--accent)]">{progress?.step || "Starting..."}</p>
+        <span className="text-xs text-[var(--muted)] tabular-nums">{elapsed(createdAt)}</span>
       </div>
 
       {progress && (

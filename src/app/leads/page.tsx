@@ -40,9 +40,7 @@ function LeadsContent() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("q") || "");
-  const [contactFilter, setContactFilter] = useState(
-    searchParams.get("contactId") || ""
-  );
+  const [contactFilter, setContactFilter] = useState(searchParams.get("contactId") || "");
   const [scraping, setScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
   const [daysBack, setDaysBack] = useState(1);
@@ -64,9 +62,7 @@ function LeadsContent() {
     if (contactFilter) params.set("contactId", contactFilter);
 
     try {
-      const res = await fetch(
-        `/api/accounts/${account.id}/leads?${params}`
-      );
+      const res = await fetch(`/api/accounts/${account.id}/leads?${params}`);
       const data = await res.json();
       setLeads(data.leads || []);
       setPagination(data.pagination || null);
@@ -92,10 +88,7 @@ function LeadsContent() {
     const params = new URLSearchParams();
     if (contactFilter) params.set("contactId", contactFilter);
     const qs = params.toString();
-    window.open(
-      `/api/accounts/${account.id}/leads/export${qs ? `?${qs}` : ""}`,
-      "_blank"
-    );
+    window.open(`/api/accounts/${account.id}/leads/export${qs ? `?${qs}` : ""}`, "_blank");
   };
 
   const handleScrape = async () => {
@@ -105,17 +98,14 @@ function LeadsContent() {
     setScrapeStatus(null);
 
     try {
-      const res = await fetch(
-        `/api/accounts/${account.id}/leads/scrape`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...(contactFilter ? { contactId: contactFilter } : {}),
-            daysBack,
-          }),
-        }
-      );
+      const res = await fetch(`/api/accounts/${account.id}/leads/scrape`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(contactFilter ? { contactId: contactFilter } : {}),
+          daysBack,
+        }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -125,9 +115,7 @@ function LeadsContent() {
           (s: { sourceType: string; linkedinUrl: string }) =>
             `${s.sourceType === "company" ? "Company" : "Personal"}: ${s.linkedinUrl}`
         );
-        setScrapeStatus(
-          `Scraping ${labels.join(", ")}. Results will appear here shortly.`
-        );
+        setScrapeStatus(`Scraping ${labels.join(", ")}. Results will appear here shortly.`);
       }
     } catch {
       setScrapeStatus("Failed to trigger scrape");
@@ -141,9 +129,7 @@ function LeadsContent() {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-1">Leads</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Select an account from the sidebar to view leads.
-        </p>
+        <p className="text-sm text-[var(--muted)]">Select an account from the sidebar to view leads.</p>
       </div>
     );
   }
@@ -153,22 +139,14 @@ function LeadsContent() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">Leads</h1>
         <div className="flex gap-2 items-center">
-          <select
-            value={daysBack}
-            onChange={(e) => setDaysBack(Number(e.target.value))}
-            className="text-sm w-32"
-          >
+          <select value={daysBack} onChange={(e) => setDaysBack(Number(e.target.value))} className="text-sm w-32">
             <option value={1}>Last 1 day</option>
             <option value={3}>Last 3 days</option>
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>
             <option value={30}>Last 30 days</option>
           </select>
-          <button
-            onClick={handleScrape}
-            disabled={scraping}
-            className="btn-secondary text-sm"
-          >
+          <button onClick={handleScrape} disabled={scraping} className="btn-secondary text-sm">
             {scraping ? "Triggering..." : "Run Scrape"}
           </button>
           <button onClick={handleExport} className="btn-primary text-sm">
@@ -195,11 +173,7 @@ function LeadsContent() {
           placeholder="Search leads..."
           className="w-64"
         />
-        <select
-          value={contactFilter}
-          onChange={(e) => setContactFilter(e.target.value)}
-          className="w-48"
-        >
+        <select value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} className="w-48">
           <option value="">All Sources</option>
           {contacts.map((c) => (
             <option key={c.id} value={c.id}>
@@ -225,28 +199,19 @@ function LeadsContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="py-8 text-center text-[var(--muted)]"
-                >
+                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
                   Loading...
                 </td>
               </tr>
             ) : leads.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="py-8 text-center text-[var(--muted)]"
-                >
+                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
                   No leads found
                 </td>
               </tr>
             ) : (
               leads.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="border-b border-[var(--border)] last:border-0"
-                >
+                <tr key={lead.id} className="border-b border-[var(--border)] last:border-0">
                   <td className="py-2 pr-4">
                     <a
                       href={lead.linkedinUrl}
@@ -258,9 +223,7 @@ function LeadsContent() {
                       {lead.lastName ? ` ${lead.lastName}` : ""}
                     </a>
                   </td>
-                  <td className="py-2 pr-4 max-w-xs truncate">
-                    {lead.headline || "\u2014"}
-                  </td>
+                  <td className="py-2 pr-4 max-w-xs truncate">{lead.headline || "\u2014"}</td>
                   <td className="py-2 pr-4">{lead.company || "\u2014"}</td>
                   <td className="py-2 pr-4">
                     <div className="flex gap-1 flex-wrap">
@@ -274,15 +237,9 @@ function LeadsContent() {
                       ))}
                     </div>
                   </td>
-                  <td className="py-2 pr-4 text-[var(--muted)]">
-                    {lead.contactName || "Company Page"}
-                  </td>
-                  <td className="py-2 pr-4 whitespace-nowrap text-[var(--muted)]">
-                    {formatDate(lead.firstSeenAt)}
-                  </td>
-                  <td className="py-2 whitespace-nowrap text-[var(--muted)]">
-                    {formatDate(lead.lastSeenAt)}
-                  </td>
+                  <td className="py-2 pr-4 text-[var(--muted)]">{lead.contactName || "Company Page"}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.firstSeenAt)}</td>
+                  <td className="py-2 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.lastSeenAt)}</td>
                 </tr>
               ))
             )}
@@ -292,21 +249,13 @@ function LeadsContent() {
 
       {pagination && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <button
-            onClick={() => navigate(page - 1)}
-            disabled={page <= 1}
-            className="btn-secondary"
-          >
+          <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
             Previous
           </button>
           <span className="text-sm text-[var(--muted)]">
             Page {page} of {pagination.totalPages}
           </span>
-          <button
-            onClick={() => navigate(page + 1)}
-            disabled={page >= pagination.totalPages}
-            className="btn-secondary"
-          >
+          <button onClick={() => navigate(page + 1)} disabled={page >= pagination.totalPages} className="btn-secondary">
             Next
           </button>
         </div>
@@ -317,9 +266,7 @@ function LeadsContent() {
 
 export default function LeadsPage() {
   return (
-    <Suspense
-      fallback={<div className="text-[var(--muted)]">Loading...</div>}
-    >
+    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
       <LeadsContent />
     </Suspense>
   );

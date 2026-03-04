@@ -8,11 +8,7 @@ import { Sidebar } from "@/components/sidebar";
 import { AccountProvider } from "@/components/account-provider";
 import { AccountWarningBanner } from "@/components/account-warning-banner";
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/";
 

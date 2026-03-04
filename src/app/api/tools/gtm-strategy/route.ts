@@ -29,16 +29,13 @@ export async function POST(request: NextRequest) {
   if (!inputs.industry || !inputs.targetAudience || !inputs.productDescription) {
     return NextResponse.json(
       { error: "industry, targetAudience, and productDescription are required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   let companyName = "Unknown";
   if (inputs.accountId) {
-    const [account] = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, inputs.accountId));
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
     if (account) companyName = account.name;
   }
 
@@ -56,18 +53,15 @@ export async function POST(request: NextRequest) {
   console.log(`[gtm-strategy:route][${run.id}] Run created for "${companyName}" (user: ${userName})`);
 
   try {
-    const handle = await tasks.trigger<typeof gtmStrategyTask>(
-      "gtm-strategy-generation",
-      {
-        runId: run.id,
-        companyName,
-        accountName: inputs.accountId ? companyName : undefined,
-        industry: inputs.industry,
-        targetAudience: inputs.targetAudience,
-        productDescription: inputs.productDescription,
-        model: inputs.model,
-      }
-    );
+    const handle = await tasks.trigger<typeof gtmStrategyTask>("gtm-strategy-generation", {
+      runId: run.id,
+      companyName,
+      accountName: inputs.accountId ? companyName : undefined,
+      industry: inputs.industry,
+      targetAudience: inputs.targetAudience,
+      productDescription: inputs.productDescription,
+      model: inputs.model,
+    });
 
     console.log(`[gtm-strategy:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
@@ -82,7 +76,12 @@ export async function POST(request: NextRequest) {
       expirationTime: "1h",
     });
 
-    return NextResponse.json({ id: run.id, status: "running", triggerRunId: handle.id, publicAccessToken });
+    return NextResponse.json({
+      id: run.id,
+      status: "running",
+      triggerRunId: handle.id,
+      publicAccessToken,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
@@ -94,9 +93,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[gtm-strategy:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
-    return NextResponse.json(
-      { id: run.id, error: errorMessage },
-      { status: 500 },
-    );
+    return NextResponse.json({ id: run.id, error: errorMessage }, { status: 500 });
   }
 }

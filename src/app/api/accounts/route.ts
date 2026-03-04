@@ -37,8 +37,13 @@ export async function GET(request: NextRequest) {
       hidden: accounts.hidden,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
-      contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as("contact_count"),
-      pendingActionCount: sql<number>`(select count(*) from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as("pending_action_count"),
+      contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as(
+        "contact_count"
+      ),
+      pendingActionCount:
+        sql<number>`(select count(*) from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as(
+          "pending_action_count"
+        ),
     })
     .from(accounts)
     .leftJoin(users, eq(accounts.ownerId, users.id))

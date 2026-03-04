@@ -64,21 +64,13 @@ export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
   return `${prefix}_${createId()}` as PrefixToId[P];
 }
 
-export function isObjectId<P extends Prefix>(
-  value: string,
-  prefix: P
-): value is PrefixToId[P] {
+export function isObjectId<P extends Prefix>(value: string, prefix: P): value is PrefixToId[P] {
   return value.startsWith(`${prefix}_`) && value.length > prefix.length + 1;
 }
 
-export function assertObjectId<P extends Prefix>(
-  value: string,
-  prefix: P
-): PrefixToId[P] {
+export function assertObjectId<P extends Prefix>(value: string, prefix: P): PrefixToId[P] {
   if (!isObjectId(value, prefix)) {
-    throw new Error(
-      `Invalid ${prefix} ID: expected "${prefix}_..." but got "${value}"`
-    );
+    throw new Error(`Invalid ${prefix} ID: expected "${prefix}_..." but got "${value}"`);
   }
   return value;
 }

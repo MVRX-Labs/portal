@@ -97,14 +97,14 @@ Replace the 5-line `createToolHandler` stub. Follow the LinkedIn audit route pat
 
 ## Key Technical Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Model | `claude-opus-4-6` | Research + long-form strategy needs strong reasoning |
-| Max turns | 25 | ~7 web searches + fetches + JSON generation |
-| Allowed tools | WebSearch, WebFetch, Read | Full web research capability |
-| JSON extraction | Reuse existing `extractJSON()` | Handles fenced/bare JSON, with session dir fallback |
-| Docx builder | Independent from audit builder | Copies tokens/helpers but no shared imports; GTM sections are structurally different |
-| Output filename | `MVRX | {companyName} | GTM Strategy.docx` | Matches existing naming pattern |
+| Decision        | Choice                         | Rationale                                                                            |
+| --------------- | ------------------------------ | ------------------------------------------------------------------------------------ | ------------------ | ------------------------------- |
+| Model           | `claude-opus-4-6`              | Research + long-form strategy needs strong reasoning                                 |
+| Max turns       | 25                             | ~7 web searches + fetches + JSON generation                                          |
+| Allowed tools   | WebSearch, WebFetch, Read      | Full web research capability                                                         |
+| JSON extraction | Reuse existing `extractJSON()` | Handles fenced/bare JSON, with session dir fallback                                  |
+| Docx builder    | Independent from audit builder | Copies tokens/helpers but no shared imports; GTM sections are structurally different |
+| Output filename | `MVRX                          | {companyName}                                                                        | GTM Strategy.docx` | Matches existing naming pattern |
 
 ## Verification
 

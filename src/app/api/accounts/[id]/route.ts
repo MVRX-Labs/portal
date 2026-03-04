@@ -26,17 +26,11 @@ async function ensureDriveFolder(account: typeof accounts.$inferSelect) {
   }
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
-  let [account] = await db
-    .select()
-    .from(accounts)
-    .where(eq(column, id));
+  let [account] = await db.select().from(accounts).where(eq(column, id));
 
   if (!account) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
@@ -47,13 +41,11 @@ export async function GET(
   return NextResponse.json({ account });
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden } = body;
+  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden } =
+    body;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -68,11 +60,7 @@ export async function PUT(
   if (mrrCurrency !== undefined) updates.mrrCurrency = mrrCurrency;
   if (hidden !== undefined) updates.hidden = hidden;
 
-  const [account] = await db
-    .update(accounts)
-    .set(updates)
-    .where(eq(column, id))
-    .returning();
+  const [account] = await db.update(accounts).set(updates).where(eq(column, id)).returning();
 
   if (!account) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });

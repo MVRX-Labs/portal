@@ -16,7 +16,9 @@
     "db:push-prod": "drizzle-kit push --config drizzle-prod.config.ts",
     "deploy:prod": "npm run db:push-prod && npx trigger.dev@latest deploy",
     "setup": "docker compose up -d && sleep 2 && npm run db:push && npm run db:seed",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.63",
@@ -42,6 +44,7 @@
     "eslint": "^9.39.3",
     "eslint-config-next": "^16.1.6",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

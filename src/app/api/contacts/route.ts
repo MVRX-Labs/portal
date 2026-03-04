@@ -16,11 +16,7 @@ export async function GET(request: NextRequest) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const results = await db
-    .select()
-    .from(contacts)
-    .where(where)
-    .orderBy(contacts.name);
+  const results = await db.select().from(contacts).where(where).orderBy(contacts.name);
 
   return NextResponse.json({ contacts: results });
 }
@@ -30,10 +26,7 @@ export async function POST(request: NextRequest) {
   const { name, accountId, accountEmail, personalEmail, linkedinUrl, engagementScrapeEnabled } = body;
 
   if (!name || !accountId) {
-    return NextResponse.json(
-      { error: "Name and accountId are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Name and accountId are required" }, { status: 400 });
   }
 
   const [contact] = await db

@@ -16,11 +16,7 @@ function requiredEnv(name: string): string {
   return val;
 }
 
-async function runApifyActor(
-  actorId: string,
-  input: unknown,
-  signal?: AbortSignal
-): Promise<unknown> {
+async function runApifyActor(actorId: string, input: unknown, signal?: AbortSignal): Promise<unknown> {
   const token = requiredEnv("APIFY_API_TOKEN");
   const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
 
@@ -36,9 +32,7 @@ async function runApifyActor(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(
-      `Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`
-    );
+    throw new Error(`Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`);
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -84,18 +78,11 @@ async function scrapeGoogleSearch(
   return { platform: "google-search", data };
 }
 
-async function scrapeReddit(
-  productName: string,
-  signal?: AbortSignal
-): Promise<ScrapedSource> {
+async function scrapeReddit(productName: string, signal?: AbortSignal): Promise<ScrapedSource> {
   const data = await runApifyActor(
     REDDIT_SCRAPER_ACTOR,
     {
-      searches: [
-        `${productName} review`,
-        `${productName} experience`,
-        `${productName} alternative`,
-      ],
+      searches: [`${productName} review`, `${productName} experience`, `${productName} alternative`],
       maxItems: 30,
       sort: "relevance",
       time: "year",
@@ -124,10 +111,7 @@ async function scrapeGoogleReviews(
   return { platform: "google-reviews", data };
 }
 
-async function scrapeWebUrls(
-  urls: string[],
-  signal?: AbortSignal
-): Promise<ScrapedSource> {
+async function scrapeWebUrls(urls: string[], signal?: AbortSignal): Promise<ScrapedSource> {
   const startUrls = urls.map((url) => ({ url }));
 
   const data = await runApifyActor(
@@ -143,10 +127,7 @@ async function scrapeWebUrls(
   return { platform: "web", data };
 }
 
-async function scrapeReviewSites(
-  productName: string,
-  signal?: AbortSignal
-): Promise<ScrapedSource> {
+async function scrapeReviewSites(productName: string, signal?: AbortSignal): Promise<ScrapedSource> {
   const reviewUrls = [
     `https://www.g2.com/search?utf8=%E2%9C%93&query=${encodeURIComponent(productName)}`,
     `https://www.capterra.com/search/?query=${encodeURIComponent(productName)}`,
@@ -212,9 +193,7 @@ export async function scrapeSentimentSources(
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(
-    `Sentiment scrape complete in ${elapsed}s — ${sources.length} source(s) collected`
-  );
+  log(`Sentiment scrape complete in ${elapsed}s — ${sources.length} source(s) collected`);
 
   return { productName, companyName, sources };
 }

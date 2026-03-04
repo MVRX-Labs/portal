@@ -221,7 +221,7 @@ export function withTimeoutGuard<T>(
     routeName: string; // for Slack notification context, e.g. "linkedin-audit"
     runId?: string; // optional toolRun ID if applicable
     userName?: string; // optional user name for Slack
-  },
+  }
 ): Promise<T> {
   const timeoutMs = (opts.maxDuration - TIMEOUT_BUFFER_SECONDS) * 1000;
   const controller = new AbortController();
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         routeName: "linkedin-audit",
         runId: run.id,
         userName,
-      },
+      }
     );
     return NextResponse.json({ id: run.id, status: "running" });
   } catch (error) {

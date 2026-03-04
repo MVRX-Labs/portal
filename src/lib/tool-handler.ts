@@ -49,8 +49,7 @@ export function createToolHandler(toolId: string) {
         message: `${toolId} job started`,
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
       try {
         const [failedRun] = await db
@@ -75,10 +74,7 @@ export function createToolHandler(toolId: string) {
         // Best effort logging
       }
 
-      return NextResponse.json(
-        { error: "Failed to start tool run" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to start tool run" }, { status: 500 });
     }
   };
 }

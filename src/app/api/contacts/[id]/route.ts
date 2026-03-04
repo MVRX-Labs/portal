@@ -5,10 +5,7 @@ import { eq } from "drizzle-orm";
 
 export const maxDuration = 300;
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
   const { name, accountEmail, personalEmail, linkedinUrl, engagementScrapeEnabled } = body;
@@ -20,11 +17,7 @@ export async function PUT(
   if (linkedinUrl !== undefined) updates.linkedinUrl = linkedinUrl;
   if (engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = engagementScrapeEnabled;
 
-  const [contact] = await db
-    .update(contacts)
-    .set(updates)
-    .where(eq(contacts.id, id))
-    .returning();
+  const [contact] = await db.update(contacts).set(updates).where(eq(contacts.id, id)).returning();
 
   if (!contact) {
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });

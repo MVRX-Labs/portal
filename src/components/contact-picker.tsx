@@ -52,9 +52,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
       try {
         const res = await fetch(`/api/contacts?accountId=${account?.id}`);
         const data = await res.json();
-        const contact = (data.contacts || []).find(
-          (c: Contact) => c.id === value
-        );
+        const contact = (data.contacts || []).find((c: Contact) => c.id === value);
         if (contact) setSelectedContact(contact);
       } catch {
         // ignore
@@ -64,10 +62,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -110,9 +105,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
             <div>
               <span className="font-medium">{selectedContact.name}</span>
               {selectedContact.linkedinUrl && (
-                <span className="text-[var(--muted)] ml-2 text-xs">
-                  {selectedContact.linkedinUrl}
-                </span>
+                <span className="text-[var(--muted)] ml-2 text-xs">{selectedContact.linkedinUrl}</span>
               )}
             </div>
           ) : (
@@ -156,17 +149,13 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
               >
                 <div className="font-medium">{contact.name}</div>
                 {contact.linkedinUrl && (
-                  <div className="text-xs text-[var(--muted)] truncate">
-                    {contact.linkedinUrl}
-                  </div>
+                  <div className="text-xs text-[var(--muted)] truncate">{contact.linkedinUrl}</div>
                 )}
               </button>
             ))}
 
             {results.length === 0 && query && (
-              <div className="px-3 py-2 text-xs text-[var(--muted)]">
-                No contacts found
-              </div>
+              <div className="px-3 py-2 text-xs text-[var(--muted)]">No contacts found</div>
             )}
 
             <button
@@ -181,11 +170,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
       </div>
 
       {showCreate && (
-        <CreateContactModal
-          accountId={account.id}
-          onCreated={handleCreated}
-          onClose={() => setShowCreate(false)}
-        />
+        <CreateContactModal accountId={account.id} onCreated={handleCreated} onClose={() => setShowCreate(false)} />
       )}
     </>
   );

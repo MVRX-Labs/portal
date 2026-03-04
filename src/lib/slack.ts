@@ -1,9 +1,4 @@
-export async function sendSlackNotification(message: {
-  tool: string;
-  userName: string;
-  error: string;
-  runId: string;
-}) {
+export async function sendSlackNotification(message: { tool: string; userName: string; error: string; runId: string }) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
     console.warn("SLACK_WEBHOOK_URL not configured, skipping notification");

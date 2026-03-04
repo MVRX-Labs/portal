@@ -18,10 +18,7 @@ async function getAccessToken(): Promise<string> {
   return getGoogleAccessToken({ scope: "https://www.googleapis.com/auth/drive" });
 }
 
-async function throwIfNotOk(
-  resp: Response,
-  prefix = "Drive API"
-): Promise<never> {
+async function throwIfNotOk(resp: Response, prefix = "Drive API"): Promise<never> {
   const body = await resp.text();
   let detail = "";
   try {
@@ -49,27 +46,21 @@ export function getGeneratedMaterialsFolderId(): string {
   return folderId;
 }
 
-export async function createFolder(
-  name: string,
-  parentFolderId: string
-): Promise<string> {
+export async function createFolder(name: string, parentFolderId: string): Promise<string> {
   const token = await getAccessToken();
 
-  const resp = await fetch(
-    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name,
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [parentFolderId],
-      }),
-    }
-  );
+  const resp = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parentFolderId],
+    }),
+  });
 
   if (!resp.ok) await throwIfNotOk(resp, "Drive API createFolder");
 
@@ -77,10 +68,7 @@ export async function createFolder(
   return data.id;
 }
 
-export async function findOrCreateFolder(
-  name: string,
-  parentFolderId: string
-): Promise<string> {
+export async function findOrCreateFolder(name: string, parentFolderId: string): Promise<string> {
   const token = await getAccessToken();
 
   const query = `name = '${name.replace(/'/g, "\\'")}' and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
@@ -92,10 +80,9 @@ export async function findOrCreateFolder(
     pageSize: "1",
   });
 
-  const searchResp = await fetch(
-    `https://www.googleapis.com/drive/v3/files?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const searchResp = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   if (searchResp.ok) {
     const data: DriveListResponse = await searchResp.json();
@@ -161,7 +148,7 @@ export async function uploadFile(
   name: string,
   content: Buffer,
   mimeType: string,
-  parentFolderId: string,
+  parentFolderId: string
 ): Promise<DriveFile> {
   const token = await getAccessToken();
 
@@ -199,11 +186,7 @@ export async function uploadFile(
   return resp.json();
 }
 
-export async function createGoogleDoc(
-  name: string,
-  textContent: string,
-  parentFolderId: string,
-): Promise<DriveFile> {
+export async function createGoogleDoc(name: string, textContent: string, parentFolderId: string): Promise<DriveFile> {
   const token = await getAccessToken();
 
   const boundary = `----trigger${Date.now()}`;

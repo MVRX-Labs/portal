@@ -127,35 +127,20 @@ export default function AdminUsersPage() {
               </tr>
             ) : (
               users.map((user) => (
-                <tr
-                  key={user.id}
-                  className="border-b border-[var(--border)] last:border-0"
-                >
+                <tr key={user.id} className="border-b border-[var(--border)] last:border-0">
                   <td className="py-2 pr-4">{user.name}</td>
                   <td className="py-2 pr-4">{user.email}</td>
                   <td className="py-2 pr-4">
-                    <span
-                      className={`badge ${
-                        user.isAdmin ? "badge-running" : "badge-completed"
-                      }`}
-                    >
+                    <span className={`badge ${user.isAdmin ? "badge-running" : "badge-completed"}`}>
                       {user.isAdmin ? "Admin" : "User"}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 text-[var(--muted)]">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
+                  <td className="py-2 pr-4 text-[var(--muted)]">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">
-                    <button
-                      onClick={() => openEdit(user)}
-                      className="btn-secondary mr-2 text-xs"
-                    >
+                    <button onClick={() => openEdit(user)} className="btn-secondary mr-2 text-xs">
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="btn-danger text-xs"
-                    >
+                    <button onClick={() => handleDelete(user.id)} className="btn-danger text-xs">
                       Delete
                     </button>
                   </td>
@@ -169,34 +154,23 @@ export default function AdminUsersPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="card w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">
-              {editing ? "Edit User" : "Create User"}
-            </h2>
+            <h2 className="text-lg font-semibold mb-4">{editing ? "Edit User" : "Create User"}</h2>
 
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
+                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="isAdmin"
                   checked={form.isAdmin}
-                  onChange={(e) =>
-                    setForm({ ...form, isAdmin: e.target.checked })
-                  }
+                  onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
                   className="w-4 h-4"
                 />
                 <label htmlFor="isAdmin" className="text-sm">
@@ -204,16 +178,11 @@ export default function AdminUsersPage() {
                 </label>
               </div>
 
-              {error && (
-                <p className="text-sm text-[var(--destructive)]">{error}</p>
-              )}
+              {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn-secondary"
-              >
+              <button onClick={() => setShowModal(false)} className="btn-secondary">
                 Cancel
               </button>
               <button onClick={handleSave} className="btn-primary">

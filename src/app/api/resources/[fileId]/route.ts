@@ -3,10 +3,7 @@ import { getFile, exportFileContent, getPreviewUrl } from "@/lib/gdrive";
 
 export const maxDuration = 300;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ fileId: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params;
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
@@ -22,8 +19,7 @@ export async function GET(
 
     return NextResponse.json({ file, previewUrl });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to get file";
+    const message = error instanceof Error ? error.message : "Failed to get file";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

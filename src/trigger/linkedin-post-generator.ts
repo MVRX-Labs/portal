@@ -38,7 +38,7 @@ function buildPrompt(
   posterRole: string,
   hasScrapedData: boolean,
   hasVoiceContext: boolean,
-  sourceUrls: string[],
+  sourceUrls: string[]
 ): string {
   const hasSourceUrls = sourceUrls.length > 0;
   const hasGranolaUrl = sourceUrls.some((url) => url.toLowerCase().includes("granola"));
@@ -325,12 +325,12 @@ export const linkedinPostGeneratorTask = task({
           await writeFile(
             join(sessionDir, "scraped-profile.json"),
             JSON.stringify(scrapedData.profileData, null, 2),
-            "utf-8",
+            "utf-8"
           );
           await writeFile(
             join(sessionDir, "scraped-posts.json"),
             JSON.stringify(scrapedData.postsData, null, 2),
-            "utf-8",
+            "utf-8"
           );
           hasScrapedData = true;
           const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
@@ -418,7 +418,12 @@ export const linkedinPostGeneratorTask = task({
       const driveFile = await createGoogleDoc(filename, output, targetFolderId);
       logger.info(`Google Doc created: ${driveFile.webViewLink}`);
 
-      metadata.set("progress", { step: "Complete", stepNumber: totalSteps, totalSteps, percentage: 100 });
+      metadata.set("progress", {
+        step: "Complete",
+        stepNumber: totalSteps,
+        totalSteps,
+        percentage: 100,
+      });
 
       const outputMessage = `Posts document saved: ${filename}`;
       await db

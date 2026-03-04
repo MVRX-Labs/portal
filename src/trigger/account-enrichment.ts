@@ -103,9 +103,7 @@ export const accountEnrichmentTask = task({
         if (message.type === "result") {
           if (message.subtype === "success") {
             output = message.result;
-            logger.info(
-              `Enrichment completed: ${message.num_turns} turns, $${message.total_cost_usd.toFixed(4)}`,
-            );
+            logger.info(`Enrichment completed: ${message.num_turns} turns, $${message.total_cost_usd.toFixed(4)}`);
           } else {
             const errorMsg = message.errors.join("; ") || message.subtype;
             logger.error(`Enrichment failed: ${errorMsg}`);
@@ -147,9 +145,7 @@ export const accountEnrichmentTask = task({
 
       await db.update(accounts).set(updates).where(eq(accounts.id, accountId));
 
-      logger.info(
-        `Enriched account ${accountId}: "${account.name}" -> "${result.companyName}"`,
-      );
+      logger.info(`Enriched account ${accountId}: "${account.name}" -> "${result.companyName}"`);
 
       return {
         accountId,

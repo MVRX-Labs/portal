@@ -19,12 +19,8 @@ function HistoryContent() {
 
   const [runs, setRuns] = useState<ToolRun[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toolFilter, setToolFilter] = useState(
-    searchParams.get("tool") || ""
-  );
-  const [statusFilter, setStatusFilter] = useState(
-    searchParams.get("status") || ""
-  );
+  const [toolFilter, setToolFilter] = useState(searchParams.get("tool") || "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -55,17 +51,11 @@ function HistoryContent() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Run History</h1>
       <p className="text-sm text-[var(--muted)] mb-4">
-        {account
-          ? `Showing runs for ${account.name}`
-          : "All tool runs across the organization"}
+        {account ? `Showing runs for ${account.name}` : "All tool runs across the organization"}
       </p>
 
       <div className="flex gap-3 mb-4">
-        <select
-          value={toolFilter}
-          onChange={(e) => setToolFilter(e.target.value)}
-          className="w-48"
-        >
+        <select value={toolFilter} onChange={(e) => setToolFilter(e.target.value)} className="w-48">
           <option value="">All Tools</option>
           {TOOLS.map((t) => (
             <option key={t.id} value={t.id}>
@@ -74,11 +64,7 @@ function HistoryContent() {
           ))}
         </select>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-40"
-        >
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-40">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="running">Running</option>
@@ -116,13 +102,8 @@ function HistoryContent() {
               </tr>
             ) : (
               runs.map((run) => (
-                <tr
-                  key={run.id}
-                  className="border-b border-[var(--border)] last:border-0"
-                >
-                  <td className="py-2 pr-4 whitespace-nowrap">
-                    {formatTimestamp(run.createdAt)}
-                  </td>
+                <tr key={run.id} className="border-b border-[var(--border)] last:border-0">
+                  <td className="py-2 pr-4 whitespace-nowrap">{formatTimestamp(run.createdAt)}</td>
                   <td className="py-2 pr-4 whitespace-nowrap">
                     {(run.status === "completed" || run.status === "failed") && run.updatedAt
                       ? formatTimestamp(run.updatedAt)
@@ -130,13 +111,9 @@ function HistoryContent() {
                   </td>
                   <td className="py-2 pr-4">{run.userName || "—"}</td>
                   <td className="py-2 pr-4">{run.accountName || "—"}</td>
+                  <td className="py-2 pr-4">{TOOLS.find((t) => t.id === run.tool)?.name || run.tool}</td>
                   <td className="py-2 pr-4">
-                    {TOOLS.find((t) => t.id === run.tool)?.name || run.tool}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <span className={`badge badge-${run.status}`}>
-                      {run.status}
-                    </span>
+                    <span className={`badge badge-${run.status}`}>{run.status}</span>
                   </td>
                   <td className="py-2 pr-4 max-w-xs truncate text-[var(--muted)]">
                     {JSON.stringify(run.inputs).slice(0, 80)}
@@ -153,9 +130,7 @@ function HistoryContent() {
                       </a>
                     ) : run.output ? (
                       <details>
-                        <summary className="cursor-pointer text-[var(--accent)] hover:underline">
-                          View text
-                        </summary>
+                        <summary className="cursor-pointer text-[var(--accent)] hover:underline">View text</summary>
                         <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-[var(--muted)]">
                           {run.output}
                         </pre>
@@ -172,19 +147,11 @@ function HistoryContent() {
       </div>
 
       <div className="flex items-center justify-between mt-4">
-        <button
-          onClick={() => navigate(page - 1)}
-          disabled={page <= 1}
-          className="btn-secondary"
-        >
+        <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
           Previous
         </button>
         <span className="text-sm text-[var(--muted)]">Page {page}</span>
-        <button
-          onClick={() => navigate(page + 1)}
-          disabled={runs.length < 100}
-          className="btn-secondary"
-        >
+        <button onClick={() => navigate(page + 1)} disabled={runs.length < 100} className="btn-secondary">
           Next
         </button>
       </div>
@@ -194,9 +161,7 @@ function HistoryContent() {
 
 export default function HistoryPage() {
   return (
-    <Suspense
-      fallback={<div className="text-[var(--muted)]">Loading...</div>}
-    >
+    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
       <HistoryContent />
     </Suspense>
   );

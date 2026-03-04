@@ -12,11 +12,7 @@ function requiredEnv(name: string): string {
   return val;
 }
 
-async function runApifyActor(
-  actorId: string,
-  input: unknown,
-  signal?: AbortSignal
-): Promise<unknown> {
+async function runApifyActor(actorId: string, input: unknown, signal?: AbortSignal): Promise<unknown> {
   const token = requiredEnv("APIFY_API_TOKEN");
   const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
 
@@ -32,9 +28,7 @@ async function runApifyActor(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(
-      `Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`
-    );
+    throw new Error(`Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`);
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -46,9 +40,7 @@ async function runApifyActor(
 export function extractSlug(linkedinUrl: string): string {
   const match = linkedinUrl.match(/linkedin\.com\/in\/([^/?#]+)/);
   if (!match) {
-    throw new Error(
-      `Could not extract LinkedIn slug from URL: ${linkedinUrl}`
-    );
+    throw new Error(`Could not extract LinkedIn slug from URL: ${linkedinUrl}`);
   }
   return match[1];
 }
@@ -59,10 +51,7 @@ export interface ScrapedLinkedInData {
   postsData: unknown;
 }
 
-export async function scrapeLinkedInProfile(
-  linkedinUrl: string,
-  signal?: AbortSignal
-): Promise<ScrapedLinkedInData> {
+export async function scrapeLinkedInProfile(linkedinUrl: string, signal?: AbortSignal): Promise<ScrapedLinkedInData> {
   const slug = extractSlug(linkedinUrl);
   log(`Scraping profile for slug "${slug}" — running profile + posts actors in parallel...`);
   const start = Date.now();

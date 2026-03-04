@@ -5,10 +5,7 @@ import { accounts, contacts, toolRuns } from "@/lib/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 import type { linkedinEngagementScrapeTask } from "@/trigger/linkedin-engagement-scrape";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
   const userId = request.headers.get("x-user-id");
   const body = await request.json().catch(() => ({}));
@@ -33,16 +30,10 @@ export async function POST(
 
   if (contactId) {
     // Scrape a specific contact
-    const [contact] = await db
-      .select()
-      .from(contacts)
-      .where(eq(contacts.id, contactId));
+    const [contact] = await db.select().from(contacts).where(eq(contacts.id, contactId));
 
     if (!contact?.linkedinUrl) {
-      return NextResponse.json(
-        { error: "Contact not found or has no LinkedIn URL" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Contact not found or has no LinkedIn URL" }, { status: 400 });
     }
 
     const [run] = await db
@@ -50,7 +41,13 @@ export async function POST(
       .values({
         tool: "linkedin-engagement-scrape",
         status: "running",
-        inputs: { accountId, contactId: contact.id, linkedinUrl: contact.linkedinUrl, sourceType: "personal", daysBack: days },
+        inputs: {
+          accountId,
+          contactId: contact.id,
+          linkedinUrl: contact.linkedinUrl,
+          sourceType: "personal",
+          daysBack: days,
+        },
         userId,
         accountId,
       })
@@ -68,16 +65,10 @@ export async function POST(
     });
   } else {
     // Scrape all opted-in sources for this account
-    const [account] = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, accountId));
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, accountId));
 
     if (!account) {
-      return NextResponse.json(
-        { error: "Account not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
     // Account company page
@@ -87,7 +78,12 @@ export async function POST(
         .values({
           tool: "linkedin-engagement-scrape",
           status: "running",
-          inputs: { accountId, linkedinUrl: account.linkedinUrl, sourceType: "company", daysBack: days },
+          inputs: {
+            accountId,
+            linkedinUrl: account.linkedinUrl,
+            sourceType: "company",
+            daysBack: days,
+          },
           userId,
           accountId,
         })
@@ -109,9 +105,7 @@ export async function POST(
     const accountContacts = await db
       .select()
       .from(contacts)
-      .where(
-        and(eq(contacts.accountId, accountId), isNotNull(contacts.linkedinUrl))
-      );
+      .where(and(eq(contacts.accountId, accountId), isNotNull(contacts.linkedinUrl)));
 
     // Normalize URLs for dedup (strip trailing slash)
     const accountUrlNorm = account.linkedinUrl?.replace(/\/$/, "") ?? "";
@@ -126,7 +120,13 @@ export async function POST(
         .values({
           tool: "linkedin-engagement-scrape",
           status: "running",
-          inputs: { accountId, contactId: c.id, linkedinUrl: c.linkedinUrl, sourceType: "personal", daysBack: days },
+          inputs: {
+            accountId,
+            contactId: c.id,
+            linkedinUrl: c.linkedinUrl,
+            sourceType: "personal",
+            daysBack: days,
+          },
           userId,
           accountId,
         })
@@ -148,8 +148,7 @@ export async function POST(
   if (items.length === 0) {
     return NextResponse.json(
       {
-        error:
-          "No sources to scrape. Add a LinkedIn URL to the account or its contacts first.",
+        error: "No sources to scrape. Add a LinkedIn URL to the account or its contacts first.",
       },
       { status: 400 }
     );

@@ -3,10 +3,7 @@ import { db } from "@/lib/db";
 import { accountActions, users } from "@/lib/schema";
 import { eq, ne, and } from "drizzle-orm";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const includeCompleted = searchParams.get("includeCompleted") === "true";
@@ -37,10 +34,7 @@ export async function GET(
   return NextResponse.json({ actions });
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
   const { title, description, dueDate, assigneeId } = body;

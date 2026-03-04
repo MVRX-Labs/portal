@@ -50,7 +50,7 @@ async function runApifyActorPaginated(
   baseInput: Record<string, unknown>,
   signal?: AbortSignal,
   maxPages = 5, // Note this is a cost-safety feature. We don't want to run forever.
-  runId?: string,
+  runId?: string
 ): Promise<unknown[]> {
   const allResults: unknown[] = [];
   let page = 1;
@@ -189,7 +189,11 @@ export interface ScrapedPost {
  * Discover recent posts for a LinkedIn profile/company page.
  * Returns post URLs and metadata only — reactions/comments/reshares are scraped separately.
  */
-export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSignal, hoursBack = 25): Promise<ScrapedPost[]> {
+export async function scrapeRecentPosts(
+  linkedinUrl: string,
+  signal?: AbortSignal,
+  hoursBack = 25
+): Promise<ScrapedPost[]> {
   const results = await runApifyActor(
     POSTS_ACTOR_ID,
     {
@@ -197,7 +201,7 @@ export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSigna
       limitPerSource: 20,
       deepScrape: true,
     },
-    signal,
+    signal
   );
 
   log(`Posts actor returned ${results.length} total items`);
@@ -258,7 +262,7 @@ export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSigna
 
   log(
     `Found ${posts.length} original posts from the last ${hoursBack} hours (out of ${results.length} total). ` +
-      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedTooOld} older than ${hoursBack} hours`,
+      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedTooOld} older than ${hoursBack} hours`
   );
   return posts;
 }
@@ -266,7 +270,12 @@ export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSigna
 /**
  * Scrape ALL reactions for a post. Handles pagination (100 per page).
  */
-export async function scrapePostReactions(postUrl: string, signal?: AbortSignal, runId?: string, engagedAt?: Date): Promise<EngagedPerson[]> {
+export async function scrapePostReactions(
+  postUrl: string,
+  signal?: AbortSignal,
+  runId?: string,
+  engagedAt?: Date
+): Promise<EngagedPerson[]> {
   const allResults = await runApifyActorPaginated(REACTIONS_ACTOR_ID, { post_urls: [postUrl] }, signal, 5, runId);
 
   if (allResults.length > 0) {
@@ -281,7 +290,12 @@ export async function scrapePostReactions(postUrl: string, signal?: AbortSignal,
 /**
  * Scrape ALL comments for a post. Handles pagination (100 per page).
  */
-export async function scrapePostComments(postUrl: string, signal?: AbortSignal, runId?: string, engagedAt?: Date): Promise<EngagedPerson[]> {
+export async function scrapePostComments(
+  postUrl: string,
+  signal?: AbortSignal,
+  runId?: string,
+  engagedAt?: Date
+): Promise<EngagedPerson[]> {
   const allResults = await runApifyActorPaginated(COMMENTS_ACTOR_ID, { postIds: [postUrl] }, signal, 5, runId);
 
   if (allResults.length > 0) {
@@ -295,7 +309,12 @@ export async function scrapePostComments(postUrl: string, signal?: AbortSignal, 
 /**
  * Scrape ALL reshares/reposts for a post. Handles pagination (100 per page).
  */
-export async function scrapePostReshares(postUrl: string, signal?: AbortSignal, runId?: string, engagedAt?: Date): Promise<EngagedPerson[]> {
+export async function scrapePostReshares(
+  postUrl: string,
+  signal?: AbortSignal,
+  runId?: string,
+  engagedAt?: Date
+): Promise<EngagedPerson[]> {
   const allResults = await runApifyActorPaginated(RESHARES_ACTOR_ID, { post_urls: [postUrl] }, signal, 5, runId);
 
   if (allResults.length > 0) {
@@ -338,7 +357,7 @@ export function normalizeEngagers(
   rawResults: unknown[],
   engagementType: "reaction" | "comment" | "repost",
   postUrl: string,
-  engagedAt: Date,
+  engagedAt: Date
 ): EngagedPerson[] {
   const people: EngagedPerson[] = [];
 
@@ -359,7 +378,7 @@ export function normalizeEngagers(
       "linkedin_url",
       "actorUrl",
       "url",
-      "link",
+      "link"
     );
     if (!profileUrl) {
       if (skippedNoUrl === 0) {
@@ -415,7 +434,7 @@ export function normalizeEngagers(
         "profile_image_url",
         "avatar",
         "image",
-        "picture",
+        "picture"
       ),
       engagementType,
       postUrl,
@@ -425,7 +444,7 @@ export function normalizeEngagers(
 
   log(
     `Normalized ${people.length} engagers from ${rawResults.length} results (${engagementType}). ` +
-      `Skipped: ${skippedNoUrl} no URL, ${skippedNotPersonal} not personal profile, ${skippedNoName} no name`,
+      `Skipped: ${skippedNoUrl} no URL, ${skippedNotPersonal} not personal profile, ${skippedNoName} no name`
   );
   return people;
 }

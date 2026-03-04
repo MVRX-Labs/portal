@@ -67,10 +67,7 @@ function extractDomain(website: string): string | null {
  *
  * Returns null for personal email addresses (gmail, outlook, etc.)
  */
-export async function matchOrCreateForAttendee(
-  email: string,
-  displayName?: string,
-): Promise<MatchResult | null> {
+export async function matchOrCreateForAttendee(email: string, displayName?: string): Promise<MatchResult | null> {
   const emailLower = email.toLowerCase().trim();
   const domain = emailLower.split("@")[1];
   const domainBase = domain.replace(/^www\./, "");
@@ -84,19 +81,11 @@ export async function matchOrCreateForAttendee(
   const [existingContact] = await db
     .select()
     .from(contacts)
-    .where(
-      or(
-        eq(contacts.accountEmail, emailLower),
-        eq(contacts.personalEmail, emailLower),
-      ),
-    )
+    .where(or(eq(contacts.accountEmail, emailLower), eq(contacts.personalEmail, emailLower)))
     .limit(1);
 
   if (existingContact) {
-    const matchedVia =
-      existingContact.accountEmail === emailLower
-        ? "account_email"
-        : "personal_email";
+    const matchedVia = existingContact.accountEmail === emailLower ? "account_email" : "personal_email";
     return {
       accountId: existingContact.accountId,
       contactId: existingContact.id,
@@ -146,8 +135,7 @@ export async function matchOrCreateForAttendee(
   // Step 3: No match — create account + contact, flagged as auto-created
   // Use the full domain as the account name (will be refined later)
   const accountName = domainBase.split(".")[0];
-  const capitalizedName =
-    accountName.charAt(0).toUpperCase() + accountName.slice(1);
+  const capitalizedName = accountName.charAt(0).toUpperCase() + accountName.slice(1);
   const slug = await uniqueSlug(capitalizedName);
 
   const [newAccount] = await db

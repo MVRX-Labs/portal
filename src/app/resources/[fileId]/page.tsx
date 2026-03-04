@@ -60,9 +60,7 @@ export default function ResourceViewerPage() {
     return <div className="text-[var(--destructive)]">{error || "File not found"}</div>;
   }
 
-  const isGoogleDoc = data.file.mimeType.startsWith(
-    "application/vnd.google-apps."
-  );
+  const isGoogleDoc = data.file.mimeType.startsWith("application/vnd.google-apps.");
 
   return (
     <div>
@@ -75,31 +73,19 @@ export default function ResourceViewerPage() {
         </div>
         <div className="flex gap-2">
           {isGoogleDoc && (
-            <button
-              onClick={handleCopyContent}
-              className="btn-secondary"
-              disabled={copying}
-            >
+            <button onClick={handleCopyContent} className="btn-secondary" disabled={copying}>
               {copied ? "Copied!" : copying ? "Copying..." : "Copy Content"}
             </button>
           )}
           {data.file.webViewLink && (
-            <a
-              href={data.file.webViewLink}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-primary inline-block"
-            >
+            <a href={data.file.webViewLink} target="_blank" rel="noreferrer" className="btn-primary inline-block">
               Open in Drive
             </a>
           )}
         </div>
       </div>
 
-      <ResourceViewer
-        previewUrl={data.previewUrl}
-        fileName={data.file.name}
-      />
+      <ResourceViewer previewUrl={data.previewUrl} fileName={data.file.name} />
     </div>
   );
 }

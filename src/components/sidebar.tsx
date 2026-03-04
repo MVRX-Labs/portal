@@ -17,7 +17,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/accounts", label: "Accounts", icon: "🏢" },
-{ href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
+  { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
   { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequence", icon: "📨", dev: true },
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
@@ -80,7 +80,7 @@ export function Sidebar() {
                   </span>
                 )}
               </Link>
-            ),
+            )
           )}
 
         {user?.isAdmin && (
@@ -118,10 +118,7 @@ export function Sidebar() {
             <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
           </div>
         )}
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="btn-secondary w-full text-xs"
-        >
+        <button onClick={() => signOut({ callbackUrl: "/" })} className="btn-secondary w-full text-xs">
           Sign Out
         </button>
       </div>

@@ -11,12 +11,7 @@ import { sendSlackNotification } from "@/lib/slack";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import { buildSentimentDocx } from "@/lib/sentiment-docx-builder";
 import { scrapeSentimentSources, type SourceType } from "@/lib/sentiment-scraper";
-import {
-  resolveModel,
-  MODEL_MAP,
-  currentMonth,
-  extractJSON,
-} from "@/lib/audit-utils";
+import { resolveModel, MODEL_MAP, currentMonth, extractJSON } from "@/lib/audit-utils";
 
 const SENTIMENT_PROMPT = (productName: string, companyName: string, keywords: string, date: string) => `\
 You are a product sentiment analyst at MVRX Labs. Your task is to analyse scraped data about "${productName}" by ${companyName} and produce a comprehensive sentiment analysis report.
@@ -155,23 +150,32 @@ export const sentimentAnalysisTask = task({
 
     try {
       const totalSteps = 5;
-      metadata.set("progress", { step: "Scraping sentiment sources", stepNumber: 1, totalSteps, percentage: 0 });
+      metadata.set("progress", {
+        step: "Scraping sentiment sources",
+        stepNumber: 1,
+        totalSteps,
+        percentage: 0,
+      });
 
-      logger.info("Starting sentiment scrape via Apify", { runId, productName, companyName, sources });
-      const scrapeStart = Date.now();
-
-      const scrapedData = await scrapeSentimentSources(
+      logger.info("Starting sentiment scrape via Apify", {
+        runId,
         productName,
         companyName,
         sources,
-        additionalUrls,
-        signal,
-      );
+      });
+      const scrapeStart = Date.now();
+
+      const scrapedData = await scrapeSentimentSources(productName, companyName, sources, additionalUrls, signal);
 
       const scrapeElapsed = ((Date.now() - scrapeStart) / 1000).toFixed(1);
       logger.info(`Scrape finished in ${scrapeElapsed}s (${scrapedData.sources.length} sources)`);
 
-      metadata.set("progress", { step: "Preparing data for analysis", stepNumber: 2, totalSteps, percentage: 20 });
+      metadata.set("progress", {
+        step: "Preparing data for analysis",
+        stepNumber: 2,
+        totalSteps,
+        percentage: 20,
+      });
 
       await mkdir(sessionDir, { recursive: true });
 
@@ -184,7 +188,12 @@ export const sentimentAnalysisTask = task({
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
 
-      metadata.set("progress", { step: "Running AI analysis", stepNumber: 3, totalSteps, percentage: 30 });
+      metadata.set("progress", {
+        step: "Running AI analysis",
+        stepNumber: 3,
+        totalSteps,
+        percentage: 30,
+      });
       logger.info("Starting Claude Agent SDK", { model: resolvedModel });
       const claudeStart = Date.now();
 
@@ -237,7 +246,12 @@ export const sentimentAnalysisTask = task({
       const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
       logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
 
-      metadata.set("progress", { step: "Building document", stepNumber: 4, totalSteps, percentage: 70 });
+      metadata.set("progress", {
+        step: "Building document",
+        stepNumber: 4,
+        totalSteps,
+        percentage: 70,
+      });
 
       const json = extractJSON(output);
       const content = JSON.parse(json);
@@ -245,7 +259,12 @@ export const sentimentAnalysisTask = task({
       logger.info("Building DOCX");
       const buf = await buildSentimentDocx(content);
 
-      metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 5, totalSteps, percentage: 85 });
+      metadata.set("progress", {
+        step: "Uploading to Google Drive",
+        stepNumber: 5,
+        totalSteps,
+        percentage: 85,
+      });
 
       const rootFolderId = getGeneratedMaterialsFolderId();
 

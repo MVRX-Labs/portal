@@ -3,10 +3,7 @@ import { db } from "@/lib/db";
 import { accountActions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; actionId: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string; actionId: string }> }) {
   const { id, actionId } = await params;
   const body = await request.json();
   const { title, description, status, dueDate, assigneeId } = body;
@@ -31,10 +28,7 @@ export async function PUT(
   return NextResponse.json({ action });
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string; actionId: string }> }
-) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string; actionId: string }> }) {
   const { id, actionId } = await params;
 
   const [deleted] = await db

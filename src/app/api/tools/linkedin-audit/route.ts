@@ -21,34 +21,22 @@ export async function POST(request: NextRequest) {
   }
 
   if (!inputs.contactId) {
-    return NextResponse.json(
-      { error: "A contact is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "A contact is required" }, { status: 400 });
   }
 
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, inputs.contactId));
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, inputs.contactId));
 
   if (!contact) {
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
   if (!contact.linkedinUrl) {
-    return NextResponse.json(
-      { error: "Selected contact has no LinkedIn URL" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Selected contact has no LinkedIn URL" }, { status: 400 });
   }
 
   let companyName = "Unknown";
   if (inputs.accountId) {
-    const [account] = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, inputs.accountId));
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
     if (account) companyName = account.name;
   }
 
@@ -65,18 +53,17 @@ export async function POST(request: NextRequest) {
     })
     .returning();
 
-  console.log(`[linkedin-audit:route][${run.id}] Run created for "${linkedinUrl}" (contact: ${contact.name}, account: ${companyName}, user: ${userName})`);
+  console.log(
+    `[linkedin-audit:route][${run.id}] Run created for "${linkedinUrl}" (contact: ${contact.name}, account: ${companyName}, user: ${userName})`
+  );
 
   try {
-    const handle = await tasks.trigger<typeof linkedinAuditTask>(
-      "linkedin-audit-generation",
-      {
-        runId: run.id,
-        linkedinUrl,
-        accountName: inputs.accountId ? companyName : undefined,
-        model: inputs.model,
-      }
-    );
+    const handle = await tasks.trigger<typeof linkedinAuditTask>("linkedin-audit-generation", {
+      runId: run.id,
+      linkedinUrl,
+      accountName: inputs.accountId ? companyName : undefined,
+      model: inputs.model,
+    });
 
     console.log(`[linkedin-audit:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
@@ -91,10 +78,14 @@ export async function POST(request: NextRequest) {
       expirationTime: "1h",
     });
 
-    return NextResponse.json({ id: run.id, status: "running", triggerRunId: handle.id, publicAccessToken });
+    return NextResponse.json({
+      id: run.id,
+      status: "running",
+      triggerRunId: handle.id,
+      publicAccessToken,
+    });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await db
       .update(toolRuns)
@@ -104,9 +95,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[linkedin-audit:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
-    return NextResponse.json(
-      { id: run.id, error: errorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ id: run.id, error: errorMessage }, { status: 500 });
   }
 }

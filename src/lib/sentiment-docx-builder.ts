@@ -55,7 +55,7 @@ const BULLET_REF = "sentiment-bullets";
 
 function tr(
   text: string,
-  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string; break?: number },
+  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string; break?: number }
 ): TextRun {
   return new TextRun({
     text,
@@ -124,15 +124,12 @@ function bulletItem(text: string, opts?: { bold?: boolean }): Paragraph {
 function labeledPara(label: string, text: string): Paragraph {
   return new Paragraph({
     spacing: { after: 120 },
-    children: [
-      tr(label + " ", { bold: true }),
-      tr(text),
-    ],
+    children: [tr(label + " ", { bold: true }), tr(text)],
   });
 }
 
 function colWidth(pct: number): { size: number; type: typeof WidthType.DXA } {
-  return { size: Math.round(CONTENT_WIDTH * pct / 100), type: WidthType.DXA };
+  return { size: Math.round((CONTENT_WIDTH * pct) / 100), type: WidthType.DXA };
 }
 
 function headerCell(text: string, widthPct?: number): TableCell {
@@ -222,7 +219,12 @@ export interface SentimentAnalysisContent {
 
 function coverPage(c: SentimentAnalysisContent): Paragraph[] {
   return [
-    emptyPara(), emptyPara(), emptyPara(), emptyPara(), emptyPara(), emptyPara(),
+    emptyPara(),
+    emptyPara(),
+    emptyPara(),
+    emptyPara(),
+    emptyPara(),
+    emptyPara(),
     new Paragraph({
       alignment: AlignmentType.LEFT,
       children: [tr("MVRX LABS", { bold: true, size: S.brand, color: C.brandBlue })],
@@ -231,14 +233,17 @@ function coverPage(c: SentimentAnalysisContent): Paragraph[] {
       alignment: AlignmentType.LEFT,
       children: [tr("Product Sentiment Analysis", { size: S.docTitle, color: C.darkNavy })],
     }),
-    emptyPara(), emptyPara(),
+    emptyPara(),
+    emptyPara(),
     new Paragraph({
       children: [tr(c.productName, { bold: true, size: S.productName, color: C.darkNavy })],
     }),
     new Paragraph({
       children: [tr(c.companyName, { size: S.company, color: C.body })],
     }),
-    emptyPara(), emptyPara(), emptyPara(),
+    emptyPara(),
+    emptyPara(),
+    emptyPara(),
     new Paragraph({
       children: [tr(`Prepared: ${c.preparedDate}`, { size: S.meta, color: C.meta })],
     }),
@@ -278,7 +283,7 @@ function platformTable(platforms: SentimentAnalysisContent["platformBreakdown"])
   const cols = [25, 15, 15, 45];
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-    columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+    columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
@@ -289,15 +294,16 @@ function platformTable(platforms: SentimentAnalysisContent["platformBreakdown"])
           headerCell("Summary", 45),
         ],
       }),
-      ...platforms.map((p) =>
-        new TableRow({
-          children: [
-            bodyCell(p.platform, { bold: true }),
-            bodyCell(`${p.sentimentScore}/10`, { color: sentimentColor(p.sentimentScore) }),
-            bodyCell(`${p.sampleSize}`),
-            bodyCell(p.summary),
-          ],
-        })
+      ...platforms.map(
+        (p) =>
+          new TableRow({
+            children: [
+              bodyCell(p.platform, { bold: true }),
+              bodyCell(`${p.sentimentScore}/10`, { color: sentimentColor(p.sentimentScore) }),
+              bodyCell(`${p.sampleSize}`),
+              bodyCell(p.summary),
+            ],
+          })
       ),
     ],
   });
@@ -307,7 +313,7 @@ function themeTable(themes: SentimentAnalysisContent["themeAnalysis"]): Table {
   const cols = [20, 12, 12, 12, 44];
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-    columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+    columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
@@ -319,16 +325,17 @@ function themeTable(themes: SentimentAnalysisContent["themeAnalysis"]): Table {
           headerCell("Summary", 44),
         ],
       }),
-      ...themes.map((t) =>
-        new TableRow({
-          children: [
-            bodyCell(t.theme, { bold: true }),
-            bodyCell(sentimentLabel(t.sentiment), { color: sentimentColor(t.score) }),
-            bodyCell(`${t.score}/10`, { color: sentimentColor(t.score) }),
-            bodyCell(`${t.mentionCount}`),
-            bodyCell(t.summary),
-          ],
-        })
+      ...themes.map(
+        (t) =>
+          new TableRow({
+            children: [
+              bodyCell(t.theme, { bold: true }),
+              bodyCell(sentimentLabel(t.sentiment), { color: sentimentColor(t.score) }),
+              bodyCell(`${t.score}/10`, { color: sentimentColor(t.score) }),
+              bodyCell(`${t.mentionCount}`),
+              bodyCell(t.summary),
+            ],
+          })
       ),
     ],
   });
@@ -338,7 +345,7 @@ function recommendationsTable(recs: SentimentAnalysisContent["recommendations"])
   const cols = [12, 15, 38, 35];
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-    columnWidths: cols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+    columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({
@@ -366,7 +373,8 @@ function recommendationsTable(recs: SentimentAnalysisContent["recommendations"])
 
 function signOff(): Paragraph[] {
   return [
-    emptyPara(), emptyPara(),
+    emptyPara(),
+    emptyPara(),
     new Paragraph({
       spacing: { before: 600 },
       children: [tr("MVRX Labs", { bold: true, size: S.signoffBrand, color: C.brandBlue })],
@@ -379,15 +387,21 @@ function signOff(): Paragraph[] {
       children: [tr("For implementation support and growth programmes:", { size: S.body })],
     }),
     new Paragraph({
-      children: [tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", { bold: true, size: S.body, color: C.brandBlue })],
+      children: [
+        tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", {
+          bold: true,
+          size: S.body,
+          color: C.brandBlue,
+        }),
+      ],
     }),
     emptyPara(),
     new Paragraph({
       children: [
-        tr(
-          "This report was generated by MVRX Labs\u2019 Sentiment Intelligence Platform.",
-          { size: S.signoffSmall, color: C.meta },
-        ),
+        tr("This report was generated by MVRX Labs\u2019 Sentiment Intelligence Platform.", {
+          size: S.signoffSmall,
+          color: C.meta,
+        }),
       ],
     }),
   ];
@@ -519,24 +533,21 @@ export async function buildSentimentDocx(content: SentimentAnalysisContent): Pro
     children.push(
       new Table({
         width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-        columnWidths: compCols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+        columnWidths: compCols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
         layout: TableLayoutType.FIXED,
         rows: [
           new TableRow({
-            children: [
-              headerCell("Competitor", 25),
-              headerCell("Mentions", 15),
-              headerCell("Context", 60),
-            ],
+            children: [headerCell("Competitor", 25), headerCell("Mentions", 15), headerCell("Context", 60)],
           }),
-          ...content.competitiveContext.competitorMentions.map((cm) =>
-            new TableRow({
-              children: [
-                bodyCell(cm.competitor, { bold: true }),
-                bodyCell(`${cm.mentionCount}`),
-                bodyCell(cm.context),
-              ],
-            })
+          ...content.competitiveContext.competitorMentions.map(
+            (cm) =>
+              new TableRow({
+                children: [
+                  bodyCell(cm.competitor, { bold: true }),
+                  bodyCell(`${cm.mentionCount}`),
+                  bodyCell(cm.context),
+                ],
+              })
           ),
         ],
       })
@@ -557,7 +568,7 @@ export async function buildSentimentDocx(content: SentimentAnalysisContent): Pro
     children.push(
       new Table({
         width: { size: CONTENT_WIDTH, type: WidthType.DXA },
-        columnWidths: srcCols.map((p) => Math.round(CONTENT_WIDTH * p / 100)),
+        columnWidths: srcCols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
         layout: TableLayoutType.FIXED,
         rows: [
           new TableRow({
@@ -568,15 +579,16 @@ export async function buildSentimentDocx(content: SentimentAnalysisContent): Pro
               headerCell("Items", 20),
             ],
           }),
-          ...content.sourceAppendix.map((s) =>
-            new TableRow({
-              children: [
-                bodyCell(s.platform, { bold: true }),
-                bodyCell(s.description),
-                bodyCell(s.url || "N/A"),
-                bodyCell(`${s.itemsAnalysed}`),
-              ],
-            })
+          ...content.sourceAppendix.map(
+            (s) =>
+              new TableRow({
+                children: [
+                  bodyCell(s.platform, { bold: true }),
+                  bodyCell(s.description),
+                  bodyCell(s.url || "N/A"),
+                  bodyCell(`${s.itemsAnalysed}`),
+                ],
+              })
           ),
         ],
       })

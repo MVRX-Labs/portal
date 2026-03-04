@@ -1,12 +1,6 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
-import {
-  calendarEvents,
-  calendarEventAccounts,
-  calendarEventContacts,
-  accounts,
-  contacts,
-} from "@/lib/schema";
+import { calendarEvents, calendarEventAccounts, calendarEventContacts, accounts, contacts } from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
 
 export const calendarMeetingNotifier = schedules.task({
@@ -38,8 +32,8 @@ export const calendarMeetingNotifier = schedules.task({
           gte(calendarEvents.startTime, now),
           lt(calendarEvents.startTime, in30Min),
           eq(calendarEvents.status, "confirmed"),
-          isNull(calendarEvents.notifiedAt),
-        ),
+          isNull(calendarEvents.notifiedAt)
+        )
       );
 
     logger.info(`Found ${upcomingEvents.length} upcoming meetings to notify about`);
@@ -116,10 +110,7 @@ export const calendarMeetingNotifier = schedules.task({
         });
 
         // Mark as notified to prevent duplicates
-        await db
-          .update(calendarEvents)
-          .set({ notifiedAt: new Date() })
-          .where(eq(calendarEvents.id, event.id));
+        await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));
 
         notified++;
       } catch (err) {

@@ -3,10 +3,7 @@ import { db } from "@/lib/db";
 import { leads } from "@/lib/schema";
 import { eq, and, desc } from "drizzle-orm";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
   const searchParams = request.nextUrl.searchParams;
   const contactId = searchParams.get("contactId") || null;

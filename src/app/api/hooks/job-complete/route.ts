@@ -24,10 +24,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!body.runId || !body.status) {
-    return NextResponse.json(
-      { error: "runId and status are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "runId and status are required" }, { status: 400 });
   }
 
   const durationStr = body.durationMs ? ` (${(body.durationMs / 1000).toFixed(1)}s)` : "";

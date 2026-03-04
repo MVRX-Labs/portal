@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import type { ToolConfig, ToolRun } from "@/lib/types";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
@@ -30,7 +29,6 @@ interface ActiveRun {
 }
 
 export function ToolForm({ tool }: ToolFormProps) {
-  const { data: session } = useSession();
   const { account } = useAccount();
   const [values, setValues] = useState<Record<string, string>>({});
   const [model, setModel] = useState("opus");
@@ -64,9 +62,8 @@ export function ToolForm({ tool }: ToolFormProps) {
 
   const loadHistory = useCallback(async () => {
     try {
-      const userId = session?.user?.id || "";
       const params = new URLSearchParams({ tool: tool.id, limit: "10" });
-      if (userId) params.set("user", userId);
+      if (account?.id) params.set("account", account.id);
       const res = await fetch(`/api/history?${params}`);
       const data = await res.json();
       const runs: ToolRun[] = data.runs || [];
@@ -81,7 +78,7 @@ export function ToolForm({ tool }: ToolFormProps) {
     } catch {
       // ignore
     }
-  }, [tool.id, session?.user?.id, reconnectToRun]);
+  }, [tool.id, account?.id, reconnectToRun]);
 
   const handleRunComplete = useCallback(async (completedRunId: string) => {
     try {
@@ -355,7 +352,7 @@ export function ToolForm({ tool }: ToolFormProps) {
         </div>
 
         <div className="card">
-          <h2 className="text-sm font-semibold mb-3">Your Recent Runs</h2>
+          <h2 className="text-sm font-semibold mb-3">Recent runs</h2>
           {!historyLoaded ? (
             <p className="text-xs text-[var(--muted)]">Loading...</p>
           ) : history.length === 0 ? (

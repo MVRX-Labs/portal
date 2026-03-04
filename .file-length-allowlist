@@ -11,3 +11,4 @@ checking-process.md
 10-top-linkedin-post-examples.md
 src/components/tool\-form.tsx
 *_snapshot.json
+src/trigger/linkedin-post-generator.ts

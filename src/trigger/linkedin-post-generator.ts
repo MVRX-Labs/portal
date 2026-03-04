@@ -69,6 +69,7 @@ The source material includes URL(s). Before writing, use WebFetch on each URL fr
 
 - Treat link content as primary source material, especially if source-material.txt mostly contains links.
 - If a URL is inaccessible (auth/paywall/expired), continue with available content and do not invent details.
+- If a page returns empty, minimal, or placeholder content (e.g. a dynamically-rendered SPA), do NOT keep retrying the same URL or variations of it. Instead, do a WebSearch for the article title or topic to find alternative sources or summaries, then go from there.
 - Prefer specific evidence from fetched pages: names, numbers, timestamps, direct phrasing.
 ${hasGranolaUrl ? "- At least one URL appears to be a Granola meeting-notes link. Prioritize extracting meeting summary, decisions, key quotes, owners, and next steps from that page." : ""}
 `
@@ -262,7 +263,7 @@ Present your output in exactly this structure:
 
 export const linkedinPostGeneratorTask = task({
   id: "linkedin-post-generator",
-  maxDuration: 600,
+  maxDuration: 1800,
   retry: {
     maxAttempts: 3,
     minTimeoutInMs: 2000,
@@ -368,7 +369,7 @@ export const linkedinPostGeneratorTask = task({
           allowedTools: ["Read", "WebFetch"],
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          maxTurns: 15,
+          maxTurns: 25,
           persistSession: false,
         },
       })) {

@@ -133,6 +133,14 @@ Make it its own sentence or cut it entirely.
 **RULE 6: Zero em-dashes.**
 Use commas, full stops, parentheses, or colons instead. Zero em-dashes anywhere including hooks.
 
+**RULE 7: No premature company or product name-drops.**
+The company name, product name, or brand being promoted must NEVER appear in the hook or the first half of the post body. Readers are ad-averse: if they spot a company name in the first few sentences, they recognize it as advertising and scroll past. Lead with narrative, insight, or conflict. The reader must be emotionally invested in the story before encountering anything commercial.
+- BANNED in hooks: Any company name, product name, or branded term.
+- BANNED in first 60% of body: Direct company/product mentions, "we built", "our platform", "at [Company]", "[Company]'s latest".
+- ALLOWED (final third only, maximum once): A natural, earned mention after the reader is already invested in the story. Even then, prefer an indirect reference ("wrote more about this here" with a link) over a direct brand name.
+- The goal: readers click because the story pulled them in, then discover the brand through the linked content (blog post, article, case study). The post itself should never feel like it exists to promote a company.
+Zero company/product mentions in the first 60% of any post body. Maximum one mention total, and only if it feels organic.
+
 ### BANNED VOCABULARY
 Never use: delve, tapestry, moreover, furthermore, comprehensive, robust, utilize, leverage, nuanced, crucial, significant, transformative, testament, enhance, ever-evolving, game-changer, landscape, navigate, realm, embark, foster, facilitate, streamline, underscore, commendable, meticulous, adept, pivotal, vital, vibrant, intricate, multifaceted, profound, compelling, poignant, visceral, palpable, enduring, seemingly, arguably, notably, importantly, ultimately, fundamentally, inherently, undeniably.
 
@@ -170,10 +178,12 @@ Pick any of the 3 hooks to open with. Then write the body:
 - Include a "disruption" moment mid-post (a shift, twist, or unexpected detail)
 - Narrative arc: setup, tension, resolution/insight
 - Reference specific details from the source material (names, numbers, timeframes, quotes)
-- Clear CTA at the end that invites engagement (not "What do you think?" which is overused)
+- The post must read as a genuine story or insight first. The reader should be hooked by the narrative, not a product pitch. Any company or product reference belongs in the final third only and must feel like a natural part of the story, not the reason for the post.
+- CTA should direct readers toward a piece of content (blog post, article, case study, video) that happens to live on the company's domain, rather than toward the company itself. Frame it as "wrote about this in more detail here" or "full breakdown in the link below", never "check out [Company]" or "learn more about [Product]". The reader clicks because the story compelled them, then encounters the brand through the destination.
 - 3-5 relevant hashtags at the end
 - Never start with "I'm" or "We're"
 - No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
+- Never frame the post as an announcement or advertisement. The reader should feel they stumbled on something valuable from a real person, not that they are being marketed to.
 
 ### BODY B: Humanised (200-400 words)
 
@@ -184,7 +194,8 @@ Pick any of the 3 hooks to open with (can be the same or different from Body A).
 - Let the ending be quieter. End on something smaller: a specific detail, an open question, or a soft invitation. Not a polished takeaway.
 - Some roughness is the point. A sentence that trails off, an informal aside.
 - Fewer or no hashtags.
-- Soft CTA or none.
+- Soft CTA or none. If linking to something, make it feel like sharing a resource with a friend, not promoting a brand. "Wrote more about this here" or "someone put together a good breakdown of this" beats "Check out our latest post on [Company] blog."
+- The company or product, if mentioned at all, should feel incidental to the story, never the point of it. The reader clicks because the experience resonated, then discovers the brand through the linked content. If you remove the company name entirely and the post still works, that is the right balance.
 
 ### WHAT HUMAN WRITING LOOKS LIKE (positive guidance)
 
@@ -194,6 +205,7 @@ Pick any of the 3 hooks to open with (can be the same or different from Body A).
 - Let logic be slightly imperfect. One or two moments of genuine hedging per post.
 - Include at least one throwaway detail that only someone who was there would mention.
 - Use dry, observational humour sparingly (not puns, not enthusiasm, just a small aside that signals experience).
+- Tell the story first, sell nothing. The best-performing LinkedIn posts pull readers in with a narrative or insight that stands entirely on its own. If there's a company or product behind the story, let the reader discover it by clicking through to linked content. A post that reads like a personal story with a useful link at the end outperforms a post that name-drops a brand in the third sentence, because humans scroll past anything that smells like advertising.
 
 ### DRY WIT (use sparingly, max 1-2 instances across the whole post)
 
@@ -222,8 +234,9 @@ After writing each body, scan line by line and FIX any violations:
 6. Em-dash scan: replace every single one with comma, full stop, colon, or parenthesis. Target: ZERO.
 7. Interchangeability test: could this sentence appear unchanged in a different post about a different company? Rewrite with details specific to THIS story.
 8. Sentence length distribution: scan each paragraph. If three consecutive sentences are similar in length, break the pattern.
+9. Premature promotion scan: does the company name, product name, or any branded term appear in the hook or first 60% of the body? Move it to the final third or remove it entirely. Count total brand mentions: if more than one, cut to one or zero. Read the post as a stranger would: does it feel like an ad? If yes, rewrite so the story leads and any brand reference feels incidental and earned. Target: ZERO brand mentions before the final third, maximum ONE total.
 
-Do not present output that violates rules 1-6. These are hard failures.
+Do not present output that violates rules 1-7. These are hard failures.
 
 ## STEP 5: HUMANIZATION PASS (mandatory for Body B, strongly recommended for Body A)
 

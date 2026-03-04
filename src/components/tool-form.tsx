@@ -35,6 +35,10 @@ export function ToolForm({ tool }: ToolFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [activeRuns, setActiveRuns] = useState<ActiveRun[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestDescription, setSuggestDescription] = useState("");
+  const [suggestSubmitting, setSuggestSubmitting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
@@ -145,6 +149,41 @@ export function ToolForm({ tool }: ToolFormProps) {
     }
   };
 
+  const handleSuggestSubmit = async () => {
+    if (!suggestDescription.trim()) return;
+    setSuggestSubmitting(true);
+    setSuggestError(null);
+
+    try {
+      const res = await fetch("/api/tools/suggestion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolId: tool.id, description: suggestDescription }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to submit suggestion");
+      }
+
+      setSuggestDescription("");
+      setSuggestOpen(false);
+      const newRun: ActiveRun = {
+        id: data.id,
+        status: data.status,
+        createdAt: new Date().toISOString(),
+        triggerRunId: data.triggerRunId,
+        publicAccessToken: data.publicAccessToken,
+      };
+      setActiveRuns((prev) => [newRun, ...prev]);
+    } catch (err) {
+      setSuggestError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSuggestSubmitting(false);
+    }
+  };
+
   const inProgressRuns = activeRuns.filter((r) => r.status === "running" || r.status === "pending");
   const finishedRuns = activeRuns.filter((r) => r.status === "completed" || r.status === "failed");
 
@@ -227,9 +266,21 @@ export function ToolForm({ tool }: ToolFormProps) {
               ))}
             </div>
 
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? "Starting..." : "Run Tool"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? "Starting..." : "Run Tool"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setSuggestOpen(true);
+                  setSuggestError(null);
+                }}
+              >
+                Suggest improvement
+              </button>
+            </div>
 
             {error && (
               <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
@@ -237,6 +288,49 @@ export function ToolForm({ tool }: ToolFormProps) {
               </div>
             )}
           </form>
+
+          {suggestOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setSuggestOpen(false)} />
+              <div className="relative card w-full max-w-lg mx-4 space-y-4">
+                <h2 className="text-lg font-semibold">Suggest improvement for {tool.name}</h2>
+                <p className="text-sm text-[var(--muted)]">
+                  Describe what you&apos;d like changed. An AI agent will implement it and create a PR.
+                </p>
+                <textarea
+                  value={suggestDescription}
+                  onChange={(e) => setSuggestDescription(e.target.value)}
+                  placeholder="e.g. Add better error messages when the contact has no LinkedIn URL"
+                  rows={6}
+                  className="w-full"
+                  autoFocus
+                />
+                {suggestError && (
+                  <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+                    {suggestError}
+                  </div>
+                )}
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setSuggestOpen(false)}
+                    disabled={suggestSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleSuggestSubmit}
+                    disabled={suggestSubmitting || !suggestDescription.trim()}
+                  >
+                    {suggestSubmitting ? "Submitting..." : "Submit suggestion"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Active runs */}
           {activeRuns.length > 0 && (

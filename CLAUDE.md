@@ -4,4 +4,4 @@ For any long running jobs, remember to send slack notifications on failure
 
 Where possible, reduce coupling. Eg the calendar sync must operate independently of the linkedin audit.
 
-Don't expect accounts/contacts to always be accurate.
+Do not expect accounts/contacts to always be accurate.

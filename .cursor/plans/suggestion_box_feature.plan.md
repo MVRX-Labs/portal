@@ -1,35 +1,29 @@
 ---
 name: Suggestion Box
-overview: Add a floating "Suggest" button to the UI that lets any team member describe a codebase change. On submit, a Trigger.dev job clones the repo, uses Claude Agent SDK to implement the suggestion, creates a GitHub PR, and sends a Slack notification for review.
+overview: Add a "Suggest improvement" button to each tool page that lets a team member describe a code change scoped to that tool/job. On submit, a Trigger.dev task clones the repo, uses Claude Agent SDK (Opus) to implement the suggestion, creates a GitHub PR, and sends a Slack notification. Tracks progress via the existing toolRuns table — PR URL surfaces as outputUrl (same pattern as Google Docs links).
 todos:
-  - id: ids-prefix
-    content: Add `suggestion` prefix to src/lib/ids.ts -- add to PREFIXES, create SuggestionId type, wire into PrefixToId, ObjectId, prefixForTable
-    status: pending
-  - id: db-schema
-    content: Add `suggestions` table to src/lib/schema.ts -- id (suggestion_*), title, description, status (pending/cloning/implementing/pushing/creating_pr/completed/failed), prUrl, branchName, error, userId (FK users), triggerRunId, createdAt, updatedAt
-    status: pending
-  - id: db-migration
-    content: Run `npx drizzle-kit generate` then `npx drizzle-kit push` to create and apply the migration
-    status: pending
   - id: slack-notification
     content: Add `sendSlackSuggestionNotification()` to src/lib/slack.ts -- handles pr_created (with PR link) and failed (with error) types. Keep existing function untouched.
     status: pending
   - id: trigger-task
-    content: Create src/trigger/implement-suggestion.ts -- Trigger.dev task that clones repo, creates branch, runs Claude Agent SDK query() with Bash/Read/Write/Edit/Glob/Grep tools, commits, pushes, creates PR via GitHub API, sends Slack notification
+    content: Create src/trigger/implement-suggestion.ts -- Trigger.dev task that clones repo, creates branch, runs Claude Agent SDK query() with Opus and Bash/Read/Write/Edit/Glob/Grep tools, commits, pushes, creates PR via GitHub API, updates toolRuns with PR URL, sends Slack notification
     status: pending
-  - id: api-routes
-    content: Create src/app/api/suggestions/route.ts (POST create + GET list) and src/app/api/suggestions/[id]/route.ts (GET detail with token refresh). Follow pattern from tools/system-test route.
+  - id: api-route
+    content: Create src/app/api/tools/suggestion/route.ts (POST). Follow existing tool route pattern -- insert toolRuns row, dispatch trigger task, return publicAccessToken.
     status: pending
-  - id: ui-component
-    content: Create src/components/suggestion-button.tsx -- floating button (fixed bottom-right), modal with title+description form, status toast with RunProgress for real-time tracking
-    status: pending
-  - id: layout-integration
-    content: Add <SuggestionButton /> to src/app/layout.tsx inside the AccountProvider block
+  - id: ui-integration
+    content: Modify src/components/tool-form.tsx -- add "Suggest improvement" button that opens a modal with description textarea. On submit, POST to /api/tools/suggestion with toolId context. Track as an activeRun with RunProgress. PR link shows via existing outputUrl pattern.
     status: pending
 isProject: false
 ---
 
 # Suggestion Box
+
+## Key Design Decisions
+
+1. **Per-job scoping**: The suggest button lives on each tool page (inside `ToolForm`). The suggestion is scoped to the specific tool — Claude gets context like "You are improving the LinkedIn Post Generator" and focuses on that tool's trigger task and related files.
+2. **No new table**: Uses existing `toolRuns` with `tool: "suggestion"`. The `inputs` JSONB stores `{ toolId, description }`. PR URL goes in `outputUrl` — automatically renders as "View Output" link in history and recent runs (same as Google Docs).
+3. **Opus model**: Claude agent uses Opus for maximum quality.
 
 ## Environment Variables Required
 
@@ -46,101 +40,60 @@ GITHUB_REPO_NAME=mvrx         # Repository name
 ## Architecture
 
 ```
-User clicks "Suggest" → Modal (title + description)
-  → POST /api/suggestions
-    → Insert suggestions row (status: pending)
+User on tool page (e.g. LinkedIn Post Generator) clicks "Suggest improvement"
+  → Modal with description textarea (tool context is implicit)
+  → POST /api/tools/suggestion { toolId: "linkedin-post-generator", description: "..." }
+    → Insert toolRuns row (tool: "suggestion", inputs: { toolId, description }, status: "running")
     → tasks.trigger("implement-suggestion", payload)
     → Return { id, triggerRunId, publicAccessToken }
-  → Status toast with RunProgress (real-time via Trigger.dev hooks)
+  → ActiveRun with RunProgress (real-time tracking, same as other tools)
+  → On completion: outputUrl = PR URL, shows as "View Output" link
 
 Trigger.dev task (implement-suggestion):
   1. Clone repo (shallow, HTTPS + GITHUB_TOKEN)
-  2. Create branch: suggestion/{suggestion_id}
+  2. Create branch: suggestion/{run_id}/{toolId}
   3. Claude Agent SDK query() with tools: Bash, Read, Write, Edit, Glob, Grep
-     - Sonnet model, maxTurns: 50, bypassPermissions
-     - Prompt: explore codebase, implement suggestion, no git/npm commands
+     - Opus model, maxTurns: 50, bypassPermissions
+     - Prompt: scoped to the specific tool — explore its trigger task, API route, UI, and related code
   4. git add -A && git commit (fail if no changes)
   5. git push origin branch
   6. GitHub REST API: POST /repos/{owner}/{repo}/pulls
-  7. Update DB (status: completed, prUrl), send Slack notification
+  7. Update toolRuns (status: completed, outputUrl: PR URL), send Slack notification
 ```
 
-## Step 1: IDs (`src/lib/ids.ts`)
-
-Add to PREFIXES:
-
-```typescript
-suggestion: "suggestion",
-```
-
-Add type:
-
-```typescript
-export type SuggestionId = `suggestion_${string}`;
-```
-
-Wire into `PrefixToId`, `ObjectId` union, and `prefixForTable` map (`suggestions: "suggestion"`).
-
-## Step 2: Schema (`src/lib/schema.ts`)
-
-```typescript
-export const suggestions = pgTable("suggestions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => createObjectId("suggestion")),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  status: text("status").notNull().default("pending"),
-  prUrl: text("pr_url"),
-  branchName: text("branch_name"),
-  error: text("error"),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  triggerRunId: text("trigger_run_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-```
-
-## Step 3: Migration
-
-```bash
-npx drizzle-kit generate
-npx drizzle-kit push
-```
-
-## Step 4: Slack (`src/lib/slack.ts`)
+## Step 1: Slack (`src/lib/slack.ts`)
 
 Add new function (keep existing `sendSlackNotification` unchanged):
 
 ```typescript
 export async function sendSlackSuggestionNotification(message: {
   type: "pr_created" | "failed";
-  title: string;
+  toolId: string;
+  description: string;
   userName: string;
   prUrl?: string;
   branchName?: string;
   error?: string;
-  suggestionId: string;
+  runId: string;
 }) {
   // Same webhook pattern as existing function
-  // pr_created: shows PR link, branch name, submitter
-  // failed: shows error, submitter
+  // pr_created: "🔧 Suggestion PR created for {toolId} by {userName}" + PR link
+  // failed: "❌ Suggestion failed for {toolId} by {userName}" + error
 }
 ```
 
-## Step 5: Trigger.dev Task (`src/trigger/implement-suggestion.ts`)
+## Step 2: Trigger.dev Task (`src/trigger/implement-suggestion.ts`)
 
 Key design decisions:
 
-- `**retry.maxAttempts: 1**` -- no retries (each attempt creates git state that would conflict)
-- `**maxDuration: 3600**` -- 1 hour max for complex suggestions
+- `**retry.maxAttempts: 1**` — no retries (each attempt creates git state that would conflict)
+- `**maxDuration: 3600**` — 1 hour max for complex suggestions
 - **Shallow clone** (`--depth 50`) for speed
-- `**GIT_TERMINAL_PROMPT=0`\*\* env var to prevent git from hanging
+- `**GIT_TERMINAL_PROMPT=0` env var to prevent git from hanging
 - **GitHub REST API** for PR creation (more portable than `gh` CLI in containers)
-- **Sonnet model** for speed+quality balance
-- **Empty diff detection** -- fail gracefully if Claude makes no changes
+- **Opus model** for maximum quality
+- **Empty diff detection** — fail gracefully if Claude makes no changes
+- **Tool-scoped prompt** — Claude is told which tool the suggestion targets and focuses on related files
 
 Helper: `exec()` wrapper around `execSync` with 2-min timeout per command.
 
@@ -154,100 +107,82 @@ Progress steps:
 6. Creating pull request (80%)
 7. Sending notifications (90% → 100%)
 
-Claude prompt rules:
+Claude prompt structure:
 
-- Explore codebase with Glob/Read first
+```
+You are improving the "{toolName}" tool in this codebase.
+
+The user has requested:
+{description}
+
+Key files for this tool:
+- Trigger task: src/trigger/{taskFile}
+- API route: src/app/api/tools/{toolId}/route.ts
+- UI: src/components/tool-form.tsx (shared) and src/app/tools/{toolId}/page.tsx
+
+Rules:
+- Explore the codebase with Glob/Read first to understand patterns
 - Use Write for new files, Edit for modifications
-- Follow existing patterns
-- NO git commands, NO npm commands, NO config file changes
-- Make changes complete (no TODOs/placeholders)
+- Follow existing patterns and conventions
+- NO git commands, NO npm/package install commands, NO config file changes
+- Make changes complete (no TODOs or placeholders)
+```
 
-PR body includes: suggestion title, description, submitter, Claude's summary (truncated to 2000 chars).
+PR body includes: tool name, suggestion description, submitter name, Claude's summary (truncated to 2000 chars).
 
-Error handling (matches existing pattern):
+Error handling (matches existing task pattern):
 
-- Update DB status to `failed` with error message
+- Update toolRuns status to `failed` with error message
 - Send Slack failure notification
 - Clean up temp directory
 - Rethrow error
 
-## Step 6: API Routes
+## Step 3: API Route (`src/app/api/tools/suggestion/route.ts`)
 
-### `src/app/api/suggestions/route.ts`
-
-**POST** -- follows `src/app/api/tools/system-test/route.ts` pattern:
+**POST** — follows existing tool route pattern (e.g. `linkedin-post-generator/route.ts`):
 
 1. Auth via `x-user-id` header
-2. Validate title + description
-3. Insert suggestions row
-4. `tasks.trigger("implement-suggestion", payload)`
-5. `auth.createPublicToken({ scopes: { read: { runs: [handle.id] } }, expirationTime: "2h" })`
-6. Return `{ id, status, triggerRunId, publicAccessToken }`
+2. Parse `{ toolId, description }` from body
+3. Validate toolId exists in TOOLS array, description is non-empty
+4. Insert toolRuns row: `{ tool: "suggestion", status: "running", inputs: { toolId, description }, userId }`
+5. `tasks.trigger("implement-suggestion", { runId, toolId, description, userName })`
+6. Store `triggerRunId` on the toolRuns row
+7. `auth.createPublicToken({ scopes: { read: { runs: [handle.id] } }, expirationTime: "2h" })`
+8. Return `{ id, status: "running", triggerRunId, publicAccessToken }`
 
-**GET** -- list user's suggestions, ordered by `createdAt desc`, limit 20.
+## Step 4: UI Integration (`src/components/tool-form.tsx`)
 
-### `src/app/api/suggestions/[id]/route.ts`
+Add to the existing `ToolForm` component:
 
-**GET** -- return suggestion detail. If still active, refresh public access token.
+**"Suggest improvement" button** — secondary style, placed below the submit button or in the card header area. Shows for all authenticated users.
 
-## Step 7: UI Component (`src/components/suggestion-button.tsx`)
+**Modal** (inline state, no portal needed — matches existing component patterns):
 
-Single `"use client"` component with three parts:
+- Backdrop overlay
+- Card with description textarea (6 rows), pre-filled context: "Improvement for {tool.name}"
+- Cancel + Submit buttons
+- On submit: POST `/api/tools/suggestion` with `{ toolId: tool.id, description }`
+- On success: add to `activeRuns` array — gets RunProgress tracking automatically
+- On error: show error message
 
-**Floating button** -- `position: fixed`, bottom-right (bottom-6 right-6, z-40), "Suggest" label, accent background. Only renders if `useSession()` returns a user.
-
-**Modal** (via `createPortal`):
-
-- Backdrop (black/60, click to close)
-- Card with title input + description textarea (6 rows)
-- Cancel (btn-secondary) + Submit (btn-primary) buttons
-- Error display
-- On submit: POST /api/suggestions, set activeSuggestion state, close modal, show toast
-
-**Status toast** (via `createPortal`):
-
-- Fixed position above the floating button (bottom-16 right-6)
-- Shows suggestion ID, `<RunProgress>` component for real-time tracking
-- On complete: fetch `/api/suggestions/{id}` to get final status
-- Success state: green badge + "View Pull Request" link
-- Failed state: red badge + error message
-- "Hide" button to dismiss
-
-## Step 8: Layout (`src/app/layout.tsx`)
-
-Add import and render `<SuggestionButton />` after the flex container, inside `<AccountProvider>`:
-
-```tsx
-<AccountProvider>
-  <div className="flex min-h-screen">
-    <Sidebar />
-    <main className="flex-1 p-6 overflow-auto">
-      <AccountWarningBanner />
-      {children}
-    </main>
-  </div>
-  <SuggestionButton />
-</AccountProvider>
-```
+**No new components needed** — the existing `activeRuns` + `RunProgress` pattern handles real-time tracking. When complete, the run appears in "Recent runs" with `outputUrl` linking to the PR (rendered as "View Output" link, same as Google Docs).
 
 ## Files Summary
 
-| File                                    | Action                                         |
-| --------------------------------------- | ---------------------------------------------- |
-| `src/lib/ids.ts`                        | Modify -- add suggestion prefix                |
-| `src/lib/schema.ts`                     | Modify -- add suggestions table                |
-| `src/lib/slack.ts`                      | Modify -- add suggestion notification function |
-| `src/trigger/implement-suggestion.ts`   | Create -- core Trigger.dev task                |
-| `src/app/api/suggestions/route.ts`      | Create -- POST + GET                           |
-| `src/app/api/suggestions/[id]/route.ts` | Create -- GET detail                           |
-| `src/components/suggestion-button.tsx`  | Create -- floating button + modal + toast      |
-| `src/app/layout.tsx`                    | Modify -- add SuggestionButton                 |
+| File                                    | Action                                        |
+| --------------------------------------- | --------------------------------------------- |
+| `src/lib/slack.ts`                      | Modify — add suggestion notification function |
+| `src/trigger/implement-suggestion.ts`   | Create — core Trigger.dev task                |
+| `src/app/api/tools/suggestion/route.ts` | Create — POST handler                         |
+| `src/components/tool-form.tsx`          | Modify — add suggest button + modal           |
 
 ## Testing
 
 1. Set `GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME` env vars
 2. Start dev server (`npm run dev`) and Trigger.dev dev worker (`npx trigger.dev@latest dev`)
-3. Click "Suggest" button, submit: title="Add file header comment", description="Add a comment to the top of src/lib/ids.ts explaining what the file does"
-4. Watch progress in status toast
-5. Verify PR appears on GitHub with correct branch name and body
-6. Verify Slack notification received with PR link
+3. Go to any tool page (e.g. LinkedIn Post Generator)
+4. Click "Suggest improvement", enter: "Add better error messages when the contact has no LinkedIn URL"
+5. Watch progress via RunProgress in the active runs area
+6. Verify PR appears on GitHub with correct branch name and body
+7. Verify PR URL shows as "View Output" link in recent runs
+8. Verify Slack notification received with PR link

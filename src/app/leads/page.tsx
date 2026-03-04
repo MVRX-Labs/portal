@@ -183,17 +183,17 @@ function LeadsContent() {
         </select>
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-              <th className="pb-2 pr-4 font-medium">Name</th>
-              <th className="pb-2 pr-4 font-medium">Headline</th>
-              <th className="pb-2 pr-4 font-medium">Company</th>
-              <th className="pb-2 pr-4 font-medium">Engagement</th>
-              <th className="pb-2 pr-4 font-medium">Source</th>
-              <th className="pb-2 pr-4 font-medium">First Seen</th>
-              <th className="pb-2 font-medium">Last Seen</th>
+              <th className="px-3 py-2 font-medium">Name</th>
+              <th className="px-3 py-2 font-medium">Headline</th>
+              <th className="px-3 py-2 font-medium">Company</th>
+              <th className="px-3 py-2 font-medium">Engagement</th>
+              <th className="px-3 py-2 font-medium">Source</th>
+              <th className="px-3 py-2 font-medium">First Seen</th>
+              <th className="px-3 py-2 font-medium">Last Seen</th>
             </tr>
           </thead>
           <tbody>
@@ -212,7 +212,7 @@ function LeadsContent() {
             ) : (
               leads.map((lead) => (
                 <tr key={lead.id} className="border-b border-[var(--border)] last:border-0">
-                  <td className="py-2 pr-4">
+                  <td className="px-3 py-1.5">
                     <a
                       href={lead.linkedinUrl}
                       target="_blank"
@@ -223,9 +223,9 @@ function LeadsContent() {
                       {lead.lastName ? ` ${lead.lastName}` : ""}
                     </a>
                   </td>
-                  <td className="py-2 pr-4 max-w-xs truncate">{lead.headline || "\u2014"}</td>
-                  <td className="py-2 pr-4">{lead.company || "\u2014"}</td>
-                  <td className="py-2 pr-4">
+                  <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
+                  <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
+                  <td className="px-3 py-1.5">
                     <div className="flex gap-1 flex-wrap">
                       {(lead.engagementTypes || []).map((type) => (
                         <span
@@ -237,9 +237,9 @@ function LeadsContent() {
                       ))}
                     </div>
                   </td>
-                  <td className="py-2 pr-4 text-[var(--muted)]">{lead.contactName || "Company Page"}</td>
-                  <td className="py-2 pr-4 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.firstSeenAt)}</td>
-                  <td className="py-2 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.lastSeenAt)}</td>
+                  <td className="px-3 py-1.5 text-[var(--muted)]">{lead.contactName || "Company Page"}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.firstSeenAt)}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.lastSeenAt)}</td>
                 </tr>
               ))
             )}

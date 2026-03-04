@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAccount } from "@/components/account-provider";
 
@@ -46,6 +46,7 @@ function LeadsContent() {
   const [scraping, setScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
   const [daysBack, setDaysBack] = useState(1);
+  const scrapingRef = useRef(false);
 
   const fetchLeads = useCallback(async () => {
     if (!account) {
@@ -98,7 +99,8 @@ function LeadsContent() {
   };
 
   const handleScrape = async () => {
-    if (!account || scraping) return;
+    if (!account || scraping || scrapingRef.current) return;
+    scrapingRef.current = true;
     setScraping(true);
     setScrapeStatus(null);
 
@@ -126,6 +128,7 @@ function LeadsContent() {
     } catch {
       setScrapeStatus("Failed to trigger scrape");
     } finally {
+      scrapingRef.current = false;
       setScraping(false);
     }
   };

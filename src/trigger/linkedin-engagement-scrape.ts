@@ -52,7 +52,7 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 0,
       });
 
-      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal, hoursBack);
+      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal, hoursBack ?? 25);
       logger.info(`Found ${recentPosts.length} recent posts`);
 
       if (recentPosts.length === 0) {

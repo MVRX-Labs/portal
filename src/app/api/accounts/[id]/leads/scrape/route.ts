@@ -13,7 +13,9 @@ export async function POST(
   const userId = request.headers.get("x-user-id");
   const body = await request.json().catch(() => ({}));
   const { contactId, daysBack } = body as { contactId?: string; daysBack?: number };
-  const hoursBack = daysBack ? daysBack * 24 : undefined;
+  // Always use daysBack from UI; default to 1 day when missing so we never fall back to 25h
+  const days = daysBack != null && Number(daysBack) > 0 ? Number(daysBack) : 1;
+  const hoursBack = days * 24;
 
   // Collect scrape targets
   type ScrapeItem = {
@@ -23,7 +25,7 @@ export async function POST(
       linkedinUrl: string;
       sourceType: "company" | "personal";
       runId: string;
-      hoursBack?: number;
+      hoursBack: number;
     };
   };
 
@@ -48,7 +50,7 @@ export async function POST(
       .values({
         tool: "linkedin-engagement-scrape",
         status: "running",
-        inputs: { accountId, contactId: contact.id, linkedinUrl: contact.linkedinUrl, sourceType: "personal" },
+        inputs: { accountId, contactId: contact.id, linkedinUrl: contact.linkedinUrl, sourceType: "personal", daysBack: days },
         userId,
         accountId,
       })
@@ -85,7 +87,7 @@ export async function POST(
         .values({
           tool: "linkedin-engagement-scrape",
           status: "running",
-          inputs: { accountId, linkedinUrl: account.linkedinUrl, sourceType: "company" },
+          inputs: { accountId, linkedinUrl: account.linkedinUrl, sourceType: "company", daysBack: days },
           userId,
           accountId,
         })
@@ -111,13 +113,20 @@ export async function POST(
         and(eq(contacts.accountId, accountId), isNotNull(contacts.linkedinUrl))
       );
 
+    // Normalize URLs for dedup (strip trailing slash)
+    const accountUrlNorm = account.linkedinUrl?.replace(/\/$/, "") ?? "";
+
     for (const c of accountContacts) {
+      const contactUrlNorm = (c.linkedinUrl ?? "").replace(/\/$/, "");
+      if (accountUrlNorm && contactUrlNorm === accountUrlNorm) {
+        continue; // Skip contact — same LinkedIn URL as account (already scraped above)
+      }
       const [run] = await db
         .insert(toolRuns)
         .values({
           tool: "linkedin-engagement-scrape",
           status: "running",
-          inputs: { accountId, contactId: c.id, linkedinUrl: c.linkedinUrl, sourceType: "personal" },
+          inputs: { accountId, contactId: c.id, linkedinUrl: c.linkedinUrl, sourceType: "personal", daysBack: days },
           userId,
           accountId,
         })

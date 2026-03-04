@@ -17,9 +17,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/accounts", label: "Accounts", icon: "🏢" },
-  { href: "/tools/system-test", label: "System Test", icon: "🧪", adminOnly: true },
-  { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
-  { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝", beta: true },
+{ href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
+  { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
   { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequence", icon: "📨", dev: true },
   { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },

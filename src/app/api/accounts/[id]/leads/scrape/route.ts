@@ -12,7 +12,8 @@ export async function POST(
   const { id: accountId } = await params;
   const userId = request.headers.get("x-user-id");
   const body = await request.json().catch(() => ({}));
-  const { contactId } = body as { contactId?: string };
+  const { contactId, daysBack } = body as { contactId?: string; daysBack?: number };
+  const hoursBack = daysBack ? daysBack * 24 : undefined;
 
   // Collect scrape targets
   type ScrapeItem = {
@@ -22,6 +23,7 @@ export async function POST(
       linkedinUrl: string;
       sourceType: "company" | "personal";
       runId: string;
+      hoursBack?: number;
     };
   };
 
@@ -59,6 +61,7 @@ export async function POST(
         linkedinUrl: contact.linkedinUrl,
         sourceType: "personal",
         runId: run.id,
+        hoursBack,
       },
     });
   } else {
@@ -95,6 +98,7 @@ export async function POST(
           linkedinUrl: account.linkedinUrl,
           sourceType: "company",
           runId: run.id,
+          hoursBack,
         },
       });
     }
@@ -126,6 +130,7 @@ export async function POST(
           linkedinUrl: c.linkedinUrl!,
           sourceType: "personal",
           runId: run.id,
+          hoursBack,
         },
       });
     }

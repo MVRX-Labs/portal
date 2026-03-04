@@ -189,7 +189,7 @@ export interface ScrapedPost {
  * Discover recent posts for a LinkedIn profile/company page.
  * Returns post URLs and metadata only — reactions/comments/reshares are scraped separately.
  */
-export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSignal): Promise<ScrapedPost[]> {
+export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSignal, hoursBack = 25): Promise<ScrapedPost[]> {
   const results = await runApifyActor(
     POSTS_ACTOR_ID,
     {
@@ -242,7 +242,7 @@ export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSigna
       continue;
     }
 
-    if (!isRecentPost(parsedDate, 25)) {
+    if (!isRecentPost(parsedDate, hoursBack)) {
       skippedTooOld++;
       continue;
     }
@@ -257,8 +257,8 @@ export async function scrapeRecentPosts(linkedinUrl: string, signal?: AbortSigna
   }
 
   log(
-    `Found ${posts.length} original posts from the last 25 hours (out of ${results.length} total). ` +
-      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedTooOld} older than 25 hours`,
+    `Found ${posts.length} original posts from the last ${hoursBack} hours (out of ${results.length} total). ` +
+      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedTooOld} older than ${hoursBack} hours`,
   );
   return posts;
 }

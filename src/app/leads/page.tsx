@@ -45,6 +45,7 @@ function LeadsContent() {
   );
   const [scraping, setScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
+  const [daysBack, setDaysBack] = useState(1);
 
   const fetchLeads = useCallback(async () => {
     if (!account) {
@@ -107,9 +108,10 @@ function LeadsContent() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            contactFilter ? { contactId: contactFilter } : {}
-          ),
+          body: JSON.stringify({
+            ...(contactFilter ? { contactId: contactFilter } : {}),
+            daysBack,
+          }),
         }
       );
       const data = await res.json();
@@ -143,7 +145,18 @@ function LeadsContent() {
     <div>
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">Leads</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <select
+            value={daysBack}
+            onChange={(e) => setDaysBack(Number(e.target.value))}
+            className="text-sm w-32"
+          >
+            <option value={1}>Last 1 day</option>
+            <option value={3}>Last 3 days</option>
+            <option value={7}>Last 7 days</option>
+            <option value={14}>Last 14 days</option>
+            <option value={30}>Last 30 days</option>
+          </select>
           <button
             onClick={handleScrape}
             disabled={scraping}

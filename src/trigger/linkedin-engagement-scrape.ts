@@ -22,6 +22,7 @@ interface ScrapePayload {
   linkedinUrl: string;
   sourceType: "company" | "personal";
   runId?: string;
+  hoursBack?: number;
 }
 
 export const linkedinEngagementScrapeTask = task({
@@ -33,7 +34,7 @@ export const linkedinEngagementScrapeTask = task({
     minTimeoutInMs: 2000,
   },
   run: async (payload: ScrapePayload, { signal }) => {
-    const { accountId, contactId, linkedinUrl, sourceType, runId } = payload;
+    const { accountId, contactId, linkedinUrl, sourceType, runId, hoursBack } = payload;
 
     try {
       logger.info("Starting engagement scrape", {
@@ -51,7 +52,7 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 0,
       });
 
-      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal);
+      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal, hoursBack);
       logger.info(`Found ${recentPosts.length} recent posts`);
 
       if (recentPosts.length === 0) {

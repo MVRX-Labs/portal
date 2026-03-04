@@ -90,11 +90,6 @@ curl -X POST -H "x-api-key: $AGENT_API_KEY" -H "Content-Type: application/json" 
 All tool endpoints return `{ id, status: "running", triggerRunId, publicAccessToken }`.
 
 ```bash
-# System test (health check)
-curl -X POST -H "x-api-key: $AGENT_API_KEY" -H "Content-Type: application/json" \
-  -d '{}' \
-  http://localhost:3000/api/tools/system-test
-
 # LinkedIn audit
 curl -X POST -H "x-api-key: $AGENT_API_KEY" -H "Content-Type: application/json" \
   -d '{"contactId": "<id>"}' \
@@ -196,7 +191,6 @@ You can also trigger background jobs directly via the Trigger.dev MCP or SDK, by
 
 | Task ID                         | Payload                                                                                                                     |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `system-test`                   | `{ runId, model? }`                                                                                                         |
 | `gtm-strategy-generation`       | `{ runId, companyName, industry, targetAudience, productDescription, model?, accountName? }`                                |
 | `linkedin-audit-generation`     | `{ runId, linkedinUrl, model?, accountName? }`                                                                              |
 | `linkedin-post-generator`       | `{ runId, posterName, posterRole, sourceMaterial, voiceContext?, linkedinUrl?, useLinkedinProfile?, model?, accountName? }` |
@@ -213,7 +207,7 @@ You can also trigger background jobs directly via the Trigger.dev MCP or SDK, by
 If you have the Trigger.dev MCP server configured, you can trigger tasks directly:
 
 ```
-trigger_task(taskId: "system-test", payload: { runId: "test-123" }, environment: "dev")
+trigger_task(taskId: "linkedin-audit-generation", payload: { runId: "test-123", linkedinUrl: "https://linkedin.com/in/example" }, environment: "dev")
 ```
 
 ### Via Trigger.dev SDK (in scripts)

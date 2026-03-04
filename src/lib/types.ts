@@ -42,15 +42,7 @@ export interface ToolField {
 }
 
 export const TOOLS: ToolConfig[] = [
-  {
-    id: "system-test",
-    name: "System Test",
-    description:
-      "Test the full job pipeline — dispatches to local-api, runs a simple Claude task, and reports back via callback.",
-    href: "/tools/system-test",
-    fields: [],
-  },
-  {
+{
     id: "linkedin-audit",
     name: "LinkedIn Profile Audit",
     description:

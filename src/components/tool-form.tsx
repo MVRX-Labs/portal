@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { ToolConfig, ToolRun } from "@/lib/types";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
@@ -41,6 +42,7 @@ export function ToolForm({ tool }: ToolFormProps) {
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [history, setHistory] = useState<ToolRun[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [viewingInputRunId, setViewingInputRunId] = useState<string | null>(null);
 
   const reconnectToRun = useCallback(async (runId: string, createdAt: string) => {
     try {
@@ -425,6 +427,14 @@ export function ToolForm({ tool }: ToolFormProps) {
                 <div key={run.id} className="p-2 rounded bg-[var(--background)] text-xs">
                   <div className="flex items-center justify-between mb-1">
                     <span className={`badge badge-${run.status}`}>{run.status}</span>
+                    {run.inputs && Object.keys(run.inputs).length > 0 && (
+                      <button
+                        onClick={() => setViewingInputRunId(run.id)}
+                        className="text-[var(--accent)] hover:underline text-xs"
+                      >
+                        View Input
+                      </button>
+                    )}
                   </div>
                   <div className="text-[var(--muted)] space-y-0.5 mb-1">
                     <div>Started: {formatTimestamp(run.createdAt)}</div>
@@ -456,6 +466,32 @@ export function ToolForm({ tool }: ToolFormProps) {
           )}
         </div>
       </div>
+
+      {viewingInputRunId &&
+        (() => {
+          const run = history.find((r) => r.id === viewingInputRunId);
+          if (!run) return null;
+          return createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setViewingInputRunId(null)} />
+              <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 w-full max-w-lg shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold">Run Input</h2>
+                  <button
+                    onClick={() => setViewingInputRunId(null)}
+                    className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <pre className="p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                  {JSON.stringify(run.inputs, null, 2)}
+                </pre>
+              </div>
+            </div>,
+            document.body
+          );
+        })()}
     </div>
   );
 }

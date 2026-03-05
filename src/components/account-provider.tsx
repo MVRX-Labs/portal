@@ -18,6 +18,7 @@ export interface Account {
   mrrCurrency: string;
   lastMeetingAt: string | null;
   nextMeetingAt: string | null;
+  engagementSlackChannel: string | null;
   createdAt: string;
   updatedAt: string;
 }

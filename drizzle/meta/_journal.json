@@ -92,6 +92,20 @@
       "when": 1772639082220,
       "tag": "0012_eager_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1772706085025,
+      "tag": "0013_omniscient_blindfold",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1772711573058,
+      "tag": "0014_military_penance",
+      "breakpoints": true
     }
   ]
 }

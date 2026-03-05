@@ -32,6 +32,7 @@ export const accounts = pgTable("accounts", {
   lastMeetingAt: timestamp("last_meeting_at"),
   autoCreated: boolean("auto_created").notNull().default(false),
   hidden: boolean("hidden").notNull().default(false),
+  engagementSlackChannel: text("engagement_slack_channel"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -222,5 +223,94 @@ export const calendarEventContacts = pgTable(
   },
   (table) => ({
     uniqueEventContact: unique().on(table.eventId, table.contactId),
+  })
+);
+
+// --- Engagement bot tables ---
+
+export const engagementProfiles = pgTable(
+  "engagement_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("engprof")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    linkedinUrl: text("linkedin_url").notNull(),
+    displayName: text("display_name").notNull().default(""),
+    engagementPersona: text("engagement_persona").notNull().default(""),
+    lastScrapedAt: timestamp("last_scraped_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueAccountUrl: unique().on(table.accountId, table.linkedinUrl),
+  })
+);
+
+export const engagementPosts = pgTable(
+  "engagement_posts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("engpost")),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => engagementProfiles.id),
+    apifyPostId: text("apify_post_id").notNull(),
+    content: text("content").notNull().default(""),
+    postUrl: text("post_url").notNull().default(""),
+    likesCount: integer("likes_count").notNull().default(0),
+    commentsCount: integer("comments_count").notNull().default(0),
+    postedAt: timestamp("posted_at"),
+    engagementStatus: text("engagement_status").notNull().default("pending"),
+    slackMessageTs: text("slack_message_ts"),
+    agentComment: text("agent_comment"),
+    engagedAt: timestamp("engaged_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueProfilePost: unique().on(table.profileId, table.apifyPostId),
+  })
+);
+
+export const engagementJobs = pgTable("engagement_jobs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("engjob")),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => engagementProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  status: text("status").notNull().default("queued"),
+  postsFound: integer("posts_found").notNull().default(0),
+  postsNew: integer("posts_new").notNull().default(0),
+  errorMessage: text("error_message"),
+  apifyRunId: text("apify_run_id"),
+  triggerRunId: text("trigger_run_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const engagementRawResults = pgTable(
+  "engagement_raw_results",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("engraw")),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => engagementJobs.id),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => engagementProfiles.id),
+    apifyItemId: text("apify_item_id").notNull(),
+    rawData: jsonb("raw_data").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueProfileItem: unique().on(table.profileId, table.apifyItemId),
   })
 );

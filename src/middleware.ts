@@ -73,5 +73,7 @@ export const config = {
     "/api/runs/:path*",
     "/api/accounts/:path*",
     "/api/contacts/:path*",
+    "/linkedin-engagement/:path*",
+    "/leads/:path*",
   ],
 };

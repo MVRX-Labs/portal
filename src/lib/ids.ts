@@ -21,6 +21,10 @@ const PREFIXES = {
   calevtacct: "calevtacct",
   calevtcont: "calevtcont",
   action: "action",
+  engprof: "engprof",
+  engpost: "engpost",
+  engjob: "engjob",
+  engraw: "engraw",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -35,6 +39,10 @@ export type CalendarSyncId = `calsync_${string}`;
 export type CalendarEventAccountId = `calevtacct_${string}`;
 export type CalendarEventContactId = `calevtcont_${string}`;
 export type ActionId = `action_${string}`;
+export type EngagementProfileId = `engprof_${string}`;
+export type EngagementPostId = `engpost_${string}`;
+export type EngagementJobId = `engjob_${string}`;
+export type EngagementRawResultId = `engraw_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -45,7 +53,11 @@ export type ObjectId =
   | CalendarSyncId
   | CalendarEventAccountId
   | CalendarEventContactId
-  | ActionId;
+  | ActionId
+  | EngagementProfileId
+  | EngagementPostId
+  | EngagementJobId
+  | EngagementRawResultId;
 
 type PrefixToId = {
   user: UserId;
@@ -58,6 +70,10 @@ type PrefixToId = {
   calevtacct: CalendarEventAccountId;
   calevtcont: CalendarEventContactId;
   action: ActionId;
+  engprof: EngagementProfileId;
+  engpost: EngagementPostId;
+  engjob: EngagementJobId;
+  engraw: EngagementRawResultId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -87,6 +103,10 @@ export function prefixForTable(table: string): Prefix {
     calendar_event_accounts: "calevtacct",
     calendar_event_contacts: "calevtcont",
     account_actions: "action",
+    engagement_profiles: "engprof",
+    engagement_posts: "engpost",
+    engagement_jobs: "engjob",
+    engagement_raw_results: "engraw",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

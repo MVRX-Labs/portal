@@ -1,14 +1,17 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
-import { accounts, contacts, toolRuns } from "@/lib/schema";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { accounts, contacts, toolRuns, engagementProfiles } from "@/lib/schema";
+import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { linkedinEngagementScrapeTask } from "./linkedin-engagement-scrape";
+import { outboundEngagementScrapeTask } from "./outbound-engagement-scrape";
 
 export const linkedinEngagementScheduler = schedules.task({
   id: "linkedin-engagement-scheduler",
   cron: "0 5 * * *", // 5 AM UTC daily
   run: async () => {
     logger.info("Starting LinkedIn engagement scheduler");
+
+    // --- Inbound engagement (existing) ---
 
     // Collect opted-in accounts with a LinkedIn company page
     const optedInAccounts = await db
@@ -30,11 +33,6 @@ export const linkedinEngagementScheduler = schedules.task({
       .where(and(eq(contacts.engagementScrapeEnabled, true), isNotNull(contacts.linkedinUrl)));
 
     logger.info(`Found ${optedInAccounts.length} accounts and ${optedInContacts.length} contacts to scrape`);
-
-    if (optedInAccounts.length === 0 && optedInContacts.length === 0) {
-      logger.info("No sources to scrape, exiting");
-      return { accountSources: 0, contactSources: 0 };
-    }
 
     // Build payloads for batch trigger, creating toolRuns records for each
     type ScrapePayload = {
@@ -100,15 +98,45 @@ export const linkedinEngagementScheduler = schedules.task({
       });
     }
 
-    await linkedinEngagementScrapeTask.batchTrigger(items);
+    if (items.length > 0) {
+      await linkedinEngagementScrapeTask.batchTrigger(items);
+      logger.info(
+        `Batch triggered ${items.length} inbound scrape tasks (${optedInAccounts.length} accounts, ${optedInContacts.length} contacts)`,
+      );
+    }
 
-    logger.info(
-      `Batch triggered ${items.length} scrape tasks (${optedInAccounts.length} accounts, ${optedInContacts.length} contacts)`
-    );
+    // --- Outbound engagement (new — replaces FastAPI proxy) ---
+
+    const engagementAccounts = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(isNotNull(accounts.engagementSlackChannel), ne(accounts.engagementSlackChannel, "")));
+
+    let outboundCount = 0;
+    for (const acct of engagementAccounts) {
+      const profiles = await db
+        .select()
+        .from(engagementProfiles)
+        .where(eq(engagementProfiles.accountId, acct.id));
+
+      if (profiles.length === 0) continue;
+
+      await outboundEngagementScrapeTask.batchTrigger(
+        profiles.map((p) => ({
+          payload: { accountId: acct.id, profileId: p.id, maxPosts: 10 },
+        })),
+      );
+      outboundCount += profiles.length;
+    }
+
+    if (outboundCount > 0) {
+      logger.info(`Batch triggered ${outboundCount} outbound engagement scrape tasks`);
+    }
 
     return {
       accountSources: optedInAccounts.length,
       contactSources: optedInContacts.length,
+      outboundProfiles: outboundCount,
     };
   },
 });

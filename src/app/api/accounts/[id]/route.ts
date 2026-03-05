@@ -44,7 +44,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden } =
+  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden, engagementSlackChannel } =
     body;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
@@ -59,6 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (mrr !== undefined) updates.mrr = mrr;
   if (mrrCurrency !== undefined) updates.mrrCurrency = mrrCurrency;
   if (hidden !== undefined) updates.hidden = hidden;
+  if (engagementSlackChannel !== undefined) updates.engagementSlackChannel = engagementSlackChannel;
 
   const [account] = await db.update(accounts).set(updates).where(eq(column, id)).returning();
 

@@ -91,6 +91,7 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7:22am-7:22pm London)
 - `calendar-meeting-notifier` — Meeting prep notifications
 - `linkedin-engagement-scheduler` — Periodic engagement scraping
+- `code-quality-scan` — Weekly doc gardening: Claude audits docs vs code, opens PR for drift
 
 **Patterns:**
 

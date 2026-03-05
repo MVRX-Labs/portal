@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
+import { MODEL_MAP } from "@/lib/audit-utils";
 
 interface EnrichmentPayload {
   accountId: string;
@@ -92,7 +93,7 @@ export const accountEnrichmentTask = task({
       for await (const message of query({
         prompt: ENRICHMENT_PROMPT(domain),
         options: {
-          model: "claude-haiku-4-5-20251001",
+          model: MODEL_MAP.haiku,
           cwd: sessionDir,
           allowedTools: ["WebSearch", "WebFetch"],
           maxTurns: 10,

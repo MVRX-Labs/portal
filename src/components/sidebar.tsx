@@ -38,10 +38,10 @@ export function Sidebar() {
   const qs = accountParam ? `?account=${accountParam}` : "";
 
   return (
-    <aside className="flex flex-col w-56 min-h-screen border-r border-[var(--border)] bg-black">
-      <div className="p-4 border-b border-[var(--border)]">
+    <aside className="flex flex-col w-56 min-h-screen border-r border-(--border) bg-black">
+      <div className="p-4 border-b border-(--border)">
         <h1 className="text-lg font-bold tracking-tight">MVRX Labs</h1>
-        <p className="text-xs text-[var(--muted)]">Internal Portal</p>
+        <p className="text-xs text-(--muted)">Internal Portal</p>
       </div>
 
       <AccountSelector />
@@ -53,7 +53,7 @@ export function Sidebar() {
             item.dev ? (
               <span
                 key={item.href}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--muted)] opacity-50 cursor-not-allowed select-none"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-(--muted) opacity-50 cursor-not-allowed select-none"
                 title="Under development"
               >
                 <span className="text-base">{item.icon}</span>
@@ -68,8 +68,8 @@ export function Sidebar() {
                 href={`${item.href}${qs}`}
                 className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                   pathname.startsWith(item.href)
-                    ? "bg-[var(--input)] text-white"
-                    : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+                    ? "bg-(--input) text-white"
+                    : "text-(--muted) hover:text-white hover:bg-(--input)"
                 }`}
               >
                 <span className="text-base">{item.icon}</span>
@@ -89,8 +89,8 @@ export function Sidebar() {
               href={`/admin/calendar${qs}`}
               className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                 pathname.startsWith("/admin/calendar")
-                  ? "bg-[var(--input)] text-white"
-                  : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+                  ? "bg-(--input) text-white"
+                  : "text-(--muted) hover:text-white hover:bg-(--input)"
               }`}
             >
               <span className="text-base">📅</span>
@@ -100,8 +100,8 @@ export function Sidebar() {
               href={`/admin/users${qs}`}
               className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                 pathname.startsWith("/admin/users")
-                  ? "bg-[var(--input)] text-white"
-                  : "text-[var(--muted)] hover:text-white hover:bg-[var(--input)]"
+                  ? "bg-(--input) text-white"
+                  : "text-(--muted) hover:text-white hover:bg-(--input)"
               }`}
             >
               <span className="text-base">⚙</span>
@@ -111,11 +111,11 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="p-4 border-t border-[var(--border)]">
+      <div className="p-4 border-t border-(--border)">
         {user && (
           <div className="mb-2">
             <p className="text-sm font-medium truncate">{user.name}</p>
-            <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
+            <p className="text-xs text-(--muted) truncate">{user.email}</p>
           </div>
         )}
         <button onClick={() => signOut({ callbackUrl: "/" })} className="btn-secondary w-full text-xs">

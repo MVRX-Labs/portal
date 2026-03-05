@@ -90,18 +90,18 @@ export function AccountSelector() {
   };
 
   return (
-    <div ref={wrapperRef} className="relative px-4 py-3 border-b border-[var(--border)]">
-      <label className="block text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">Account</label>
+    <div ref={wrapperRef} className="relative px-4 py-3 border-b border-(--border)">
+      <label className="block text-[10px] uppercase tracking-wider text-(--muted) mb-1">Account</label>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full text-left text-sm px-2 py-1.5 rounded bg-[var(--input)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors truncate"
+        className="w-full text-left text-sm px-2 py-1.5 rounded bg-(--input) border border-(--border) hover:border-(--accent) transition-colors truncate"
       >
         {account ? account.name : "Select account..."}
       </button>
 
       {open && (
-        <div className="absolute left-2 right-2 top-full mt-1 z-50 bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg max-h-64 overflow-auto">
-          <div className="p-2 border-b border-[var(--border)]">
+        <div className="absolute left-2 right-2 top-full mt-1 z-50 bg-(--card) border border-(--border) rounded-md shadow-lg max-h-64 overflow-auto">
+          <div className="p-2 border-b border-(--border)">
             <input
               type="text"
               value={query}
@@ -116,38 +116,36 @@ export function AccountSelector() {
             <button
               key={acc.id}
               onClick={() => handleSelect(acc)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--input)] transition-colors ${
-                account?.id === acc.id ? "text-[var(--accent)]" : ""
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-(--input) transition-colors ${
+                account?.id === acc.id ? "text-(--accent)" : ""
               }`}
             >
               <div className="font-medium truncate">{acc.name}</div>
-              {acc.industry && <div className="text-xs text-[var(--muted)]">{acc.industry}</div>}
+              {acc.industry && <div className="text-xs text-(--muted)">{acc.industry}</div>}
             </button>
           ))}
 
-          {results.length === 0 && query && (
-            <div className="px-3 py-2 text-xs text-[var(--muted)]">No accounts found</div>
-          )}
+          {results.length === 0 && query && <div className="px-3 py-2 text-xs text-(--muted)">No accounts found</div>}
 
-          <div className="border-t border-[var(--border)]">
+          <div className="border-t border-(--border)">
             {account && (
               <button
                 onClick={handleClear}
-                className="w-full text-left px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--input)] transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-(--muted) hover:bg-(--input) transition-colors"
               >
                 Clear selection
               </button>
             )}
             <button
               onClick={() => setShowCreate(!showCreate)}
-              className="w-full text-left px-3 py-2 text-sm text-[var(--accent)] hover:bg-[var(--input)] transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-(--accent) hover:bg-(--input) transition-colors"
             >
               + Create Account
             </button>
           </div>
 
           {showCreate && (
-            <form onSubmit={handleCreate} className="p-3 border-t border-[var(--border)] space-y-2">
+            <form onSubmit={handleCreate} className="p-3 border-t border-(--border) space-y-2">
               <input
                 type="text"
                 value={newName}
@@ -177,7 +175,7 @@ export function AccountSelector() {
                 placeholder="LinkedIn Company URL"
                 className="w-full text-xs px-2 py-1"
               />
-              <label className="flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-(--muted) cursor-pointer">
                 <input
                   type="checkbox"
                   checked={newEngagementScrape}

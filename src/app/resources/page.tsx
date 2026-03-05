@@ -70,19 +70,19 @@ export default function ResourcesPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">Resources</h1>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-(--muted) mb-4">
         {account ? `Resources for ${account.name}` : "Browse generated resources from Google Drive"}
       </p>
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-1 text-sm mb-4">
-        <button onClick={() => navigateBack(0)} className="text-[var(--accent)] hover:underline">
+        <button onClick={() => navigateBack(0)} className="text-(--accent) hover:underline">
           Root
         </button>
         {folderStack.map((folder, i) => (
           <span key={folder.id} className="flex items-center gap-1">
-            <span className="text-[var(--muted)]">/</span>
-            <button onClick={() => navigateBack(i + 1)} className="text-[var(--accent)] hover:underline">
+            <span className="text-(--muted)">/</span>
+            <button onClick={() => navigateBack(i + 1)} className="text-(--accent) hover:underline">
               {folder.name}
             </button>
           </span>
@@ -90,11 +90,11 @@ export default function ResourcesPage() {
       </div>
 
       {error ? (
-        <div className="card text-[var(--destructive)]">{error}</div>
+        <div className="card text-(--destructive)">{error}</div>
       ) : loading ? (
-        <div className="card text-[var(--muted)]">Loading files...</div>
+        <div className="card text-(--muted)">Loading files...</div>
       ) : files.length === 0 ? (
-        <div className="card text-[var(--muted)]">No files found</div>
+        <div className="card text-(--muted)">No files found</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {files.map((file) => {
@@ -106,13 +106,13 @@ export default function ResourcesPage() {
                 <button
                   key={file.id}
                   onClick={() => openFolder(file)}
-                  className="card text-left hover:border-[var(--accent)] transition-colors"
+                  className="card text-left hover:border-(--accent) transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{icon}</span>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-xs text-[var(--muted)]">{new Date(file.modifiedTime).toLocaleDateString()}</p>
+                      <p className="text-xs text-(--muted)">{new Date(file.modifiedTime).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </button>
@@ -121,12 +121,12 @@ export default function ResourcesPage() {
 
             return (
               <Link key={file.id} href={`/resources/${file.id}`}>
-                <div className="card hover:border-[var(--accent)] transition-colors cursor-pointer">
+                <div className="card hover:border-(--accent) transition-colors cursor-pointer">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{icon}</span>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-xs text-[var(--muted)]">{new Date(file.modifiedTime).toLocaleDateString()}</p>
+                      <p className="text-xs text-(--muted)">{new Date(file.modifiedTime).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -136,13 +136,13 @@ export default function ResourcesPage() {
         </div>
       )}
 
-      <div className="mt-6 p-4 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm text-[var(--muted)]">
-        <strong className="text-[var(--foreground)]">Tip:</strong> Install{" "}
+      <div className="mt-6 p-4 rounded-lg bg-(--card) border border-(--border) text-sm text-(--muted)">
+        <strong className="text-(--foreground)">Tip:</strong> Install{" "}
         <a
           href="https://www.google.com/drive/download/"
           target="_blank"
           rel="noreferrer"
-          className="text-[var(--accent)] hover:underline"
+          className="text-(--accent) hover:underline"
         >
           Google Drive for Desktop
         </a>{" "}

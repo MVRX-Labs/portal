@@ -80,18 +80,18 @@ function RunProgressInline({
 
   return (
     <div className="p-3 rounded-md bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)] text-sm space-y-2">
-      <p className="font-medium text-[var(--accent)]">{progress?.step || "Starting sync..."}</p>
+      <p className="font-medium text-(--accent)">{progress?.step || "Starting sync..."}</p>
       {progress && (
         <div className="h-2 rounded-full bg-[rgba(59,130,246,0.15)] overflow-hidden">
           <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all duration-500"
+            className="h-full rounded-full bg-(--accent) transition-all duration-500"
             style={{ width: `${Math.max(progress.percentage, 3)}%` }}
           />
         </div>
       )}
       {!progress && (
         <div className="h-2 rounded-full bg-[rgba(59,130,246,0.15)] overflow-hidden">
-          <div className="h-full w-1/3 rounded-full bg-[var(--accent)] animate-pulse" />
+          <div className="h-full w-1/3 rounded-full bg-(--accent) animate-pulse" />
         </div>
       )}
     </div>
@@ -196,7 +196,7 @@ export default function AdminCalendarPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Calendar Sync</h1>
-          <p className="text-sm text-[var(--muted)]">Google Calendar scraping for external meetings</p>
+          <p className="text-sm text-(--muted)">Google Calendar scraping for external meetings</p>
         </div>
         <button onClick={handleRunSync} disabled={syncing} className="btn-primary">
           {syncing ? "Syncing..." : "Run Sync Now"}
@@ -204,9 +204,7 @@ export default function AdminCalendarPage() {
       </div>
 
       {syncMessage && (
-        <div className="text-sm px-3 py-2 mb-4 rounded bg-[var(--input)] border border-[var(--border)]">
-          {syncMessage}
-        </div>
+        <div className="text-sm px-3 py-2 mb-4 rounded bg-(--input) border border-(--border)">{syncMessage}</div>
       )}
 
       {activeSync && (
@@ -224,31 +222,29 @@ export default function AdminCalendarPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="card text-center">
             <div className="text-2xl font-bold">{stats.totalEvents}</div>
-            <div className="text-xs text-[var(--muted)]">Total Events</div>
+            <div className="text-xs text-(--muted)">Total Events</div>
           </div>
           <div className="card text-center">
             <div className="text-2xl font-bold">{stats.upcomingEvents}</div>
-            <div className="text-xs text-[var(--muted)]">Upcoming</div>
+            <div className="text-xs text-(--muted)">Upcoming</div>
           </div>
           <div className="card text-center">
             <div className="text-2xl font-bold">{stats.linkedAccounts}</div>
-            <div className="text-xs text-[var(--muted)]">Linked Accounts</div>
+            <div className="text-xs text-(--muted)">Linked Accounts</div>
           </div>
           <div className="card text-center">
             <div className="text-2xl font-bold">{stats.linkedContacts}</div>
-            <div className="text-xs text-[var(--muted)]">Linked Contacts</div>
+            <div className="text-xs text-(--muted)">Linked Contacts</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-[var(--border)]">
+      <div className="flex gap-1 mb-4 border-b border-(--border)">
         <button
           onClick={() => setTab("events")}
           className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "events"
-              ? "border-[var(--accent)] text-white"
-              : "border-transparent text-[var(--muted)] hover:text-white"
+            tab === "events" ? "border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-white"
           }`}
         >
           Events ({events.length})
@@ -256,9 +252,7 @@ export default function AdminCalendarPage() {
         <button
           onClick={() => setTab("sync")}
           className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            tab === "sync"
-              ? "border-[var(--accent)] text-white"
-              : "border-transparent text-[var(--muted)] hover:text-white"
+            tab === "sync" ? "border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-white"
           }`}
         >
           Sync State ({syncStates.length})
@@ -266,11 +260,11 @@ export default function AdminCalendarPage() {
       </div>
 
       {loading ? (
-        <div className="card text-center py-8 text-[var(--muted)]">Loading...</div>
+        <div className="card text-center py-8 text-(--muted)">Loading...</div>
       ) : tab === "events" ? (
         <div className="space-y-3">
           {events.length === 0 ? (
-            <div className="card text-center py-8 text-[var(--muted)]">
+            <div className="card text-center py-8 text-(--muted)">
               No calendar events yet. Run a sync to get started.
             </div>
           ) : (
@@ -287,7 +281,7 @@ export default function AdminCalendarPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-[var(--muted)] space-y-0.5">
+                    <div className="text-xs text-(--muted) space-y-0.5">
                       <div>
                         {formatTime(event.startTime)} - {formatTime(event.endTime)}
                       </div>
@@ -300,7 +294,7 @@ export default function AdminCalendarPage() {
                       href={event.htmlLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-[var(--accent)] hover:underline whitespace-nowrap"
+                      className="text-xs text-(--accent) hover:underline whitespace-nowrap"
                     >
                       Open
                     </a>
@@ -309,7 +303,7 @@ export default function AdminCalendarPage() {
 
                 {/* Linked accounts & contacts */}
                 {(event.linkedAccounts.length > 0 || event.linkedContacts.length > 0) && (
-                  <div className="mt-3 pt-3 border-t border-[var(--border)] grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="mt-3 pt-3 border-t border-(--border) grid grid-cols-1 md:grid-cols-2 gap-3">
                     {event.linkedAccounts.length > 0 && (
                       <div>
                         <div className="text-xs font-medium mb-1">Accounts</div>
@@ -330,7 +324,7 @@ export default function AdminCalendarPage() {
                           {event.linkedContacts.map((c) => (
                             <div key={c.contactId} className="text-xs flex items-center gap-1.5">
                               <span>
-                                {c.contactName} <span className="text-[var(--muted)]">({c.attendeeEmail})</span>
+                                {c.contactName} <span className="text-(--muted)">({c.attendeeEmail})</span>
                               </span>
                               <ConfidenceBadge confidence={c.matchConfidence} via={c.matchedVia} />
                             </div>
@@ -359,15 +353,15 @@ export default function AdminCalendarPage() {
             <tbody>
               {syncStates.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[var(--muted)]">
+                  <td colSpan={5} className="py-8 text-center text-(--muted)">
                     No sync state yet. Run a sync to initialize.
                   </td>
                 </tr>
               ) : (
                 syncStates.map((s) => (
-                  <tr key={s.id} className="border-b border-[var(--border)]">
+                  <tr key={s.id} className="border-b border-(--border)">
                     <td className="py-2 pr-4">{s.userName}</td>
-                    <td className="py-2 pr-4 text-[var(--muted)]">{s.calendarId}</td>
+                    <td className="py-2 pr-4 text-(--muted)">{s.calendarId}</td>
                     <td className="py-2 pr-4">
                       <span className={`badge ${s.hasSyncToken ? "badge-completed" : "badge-pending"}`}>
                         {s.hasSyncToken ? "Yes" : "No"}
@@ -376,11 +370,9 @@ export default function AdminCalendarPage() {
                     <td className="py-2 pr-4">{formatDate(s.lastSyncedAt)}</td>
                     <td className="py-2">
                       {s.lastSyncError ? (
-                        <span className="text-[var(--destructive)] text-xs truncate block max-w-xs">
-                          {s.lastSyncError}
-                        </span>
+                        <span className="text-(--destructive) text-xs truncate block max-w-xs">{s.lastSyncError}</span>
                       ) : (
-                        <span className="text-[var(--muted)]">-</span>
+                        <span className="text-(--muted)">-</span>
                       )}
                     </td>
                   </tr>

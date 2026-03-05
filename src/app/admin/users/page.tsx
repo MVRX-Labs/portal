@@ -98,7 +98,7 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="text-sm text-[var(--muted)]">
+          <p className="text-sm text-(--muted)">
             Manage portal users. New users are auto-created on first Google sign-in.
           </p>
         </div>
@@ -110,7 +110,7 @@ export default function AdminUsersPage() {
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
+            <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="pb-2 pr-4 font-medium">Name</th>
               <th className="pb-2 pr-4 font-medium">Email</th>
               <th className="pb-2 pr-4 font-medium">Role</th>
@@ -121,13 +121,13 @@ export default function AdminUsersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={5} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.id} className="border-b border-[var(--border)] last:border-0">
+                <tr key={user.id} className="border-b border-(--border) last:border-0">
                   <td className="py-2 pr-4">{user.name}</td>
                   <td className="py-2 pr-4">{user.email}</td>
                   <td className="py-2 pr-4">
@@ -135,7 +135,7 @@ export default function AdminUsersPage() {
                       {user.isAdmin ? "Admin" : "User"}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 text-[var(--muted)]">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="py-2 pr-4 text-(--muted)">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">
                     <button onClick={() => openEdit(user)} className="btn-secondary mr-2 text-xs">
                       Edit
@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
                 </label>
               </div>
 
-              {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+              {error && <p className="text-sm text-(--destructive)">{error}</p>}
             </div>
 
             <div className="flex justify-end gap-2 mt-4">

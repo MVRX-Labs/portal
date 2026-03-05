@@ -18,10 +18,10 @@ export default function LoginPage() {
       <div className="card w-full max-w-sm">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold">MVRX Labs</h1>
-          <p className="text-sm text-[var(--muted)] mt-1">Sign in to the internal portal</p>
+          <p className="text-sm text-(--muted) mt-1">Sign in to the internal portal</p>
         </div>
 
-        {error && <p className="text-sm text-[var(--destructive)] mb-4 text-center">{error}</p>}
+        {error && <p className="text-sm text-(--destructive) mb-4 text-center">{error}</p>}
 
         <button
           onClick={handleGoogleSignIn}
@@ -49,7 +49,7 @@ export default function LoginPage() {
           {loading ? "Redirecting..." : "Sign in with Google"}
         </button>
 
-        <p className="text-xs text-[var(--muted)] text-center mt-4">Only @mvrxlabs.com accounts are allowed</p>
+        <p className="text-xs text-(--muted) text-center mt-4">Only @mvrxlabs.com accounts are allowed</p>
       </div>
     </div>
   );

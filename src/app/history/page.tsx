@@ -50,7 +50,7 @@ function HistoryContent() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">Run History</h1>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-(--muted) mb-4">
         {account ? `Showing runs for ${account.name}` : "All tool runs across the organization"}
       </p>
 
@@ -76,7 +76,7 @@ function HistoryContent() {
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
+            <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="pb-2 pr-4 font-medium">Started</th>
               <th className="pb-2 pr-4 font-medium">Ended</th>
               <th className="pb-2 pr-4 font-medium">User</th>
@@ -90,19 +90,19 @@ function HistoryContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : runs.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={8} className="py-8 text-center text-(--muted)">
                   No runs found
                 </td>
               </tr>
             ) : (
               runs.map((run) => (
-                <tr key={run.id} className="border-b border-[var(--border)] last:border-0">
+                <tr key={run.id} className="border-b border-(--border) last:border-0">
                   <td className="py-2 pr-4 whitespace-nowrap">{formatTimestamp(run.createdAt)}</td>
                   <td className="py-2 pr-4 whitespace-nowrap">
                     {(run.status === "completed" || run.status === "failed") && run.updatedAt
@@ -115,7 +115,7 @@ function HistoryContent() {
                   <td className="py-2 pr-4">
                     <span className={`badge badge-${run.status}`}>{run.status}</span>
                   </td>
-                  <td className="py-2 pr-4 max-w-xs truncate text-[var(--muted)]">
+                  <td className="py-2 pr-4 max-w-xs truncate text-(--muted)">
                     {JSON.stringify(run.inputs).slice(0, 80)}
                   </td>
                   <td className="py-2">
@@ -124,14 +124,14 @@ function HistoryContent() {
                         href={run.outputUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[var(--accent)] hover:underline"
+                        className="text-(--accent) hover:underline"
                       >
                         View
                       </a>
                     ) : run.output ? (
                       <details>
-                        <summary className="cursor-pointer text-[var(--accent)] hover:underline">View text</summary>
-                        <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-[var(--muted)]">
+                        <summary className="cursor-pointer text-(--accent) hover:underline">View text</summary>
+                        <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-(--muted)">
                           {run.output}
                         </pre>
                       </details>
@@ -150,7 +150,7 @@ function HistoryContent() {
         <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
           Previous
         </button>
-        <span className="text-sm text-[var(--muted)]">Page {page}</span>
+        <span className="text-sm text-(--muted)">Page {page}</span>
         <button onClick={() => navigate(page + 1)} disabled={runs.length < 100} className="btn-secondary">
           Next
         </button>
@@ -161,7 +161,7 @@ function HistoryContent() {
 
 export default function HistoryPage() {
   return (
-    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
+    <Suspense fallback={<div className="text-(--muted)">Loading...</div>}>
       <HistoryContent />
     </Suspense>
   );

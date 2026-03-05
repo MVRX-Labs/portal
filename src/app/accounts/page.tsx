@@ -279,18 +279,18 @@ function ExpandedView({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Left: Contacts */}
         <div>
-          <h3 className="text-sm font-semibold mb-3 text-[var(--muted)] uppercase tracking-wide">
+          <h3 className="text-sm font-semibold mb-3 text-(--muted) uppercase tracking-wide">
             Contacts ({loadingContacts ? "..." : contacts.length})
           </h3>
           {loadingContacts ? (
-            <p className="text-sm text-[var(--muted)]">Loading...</p>
+            <p className="text-sm text-(--muted)">Loading...</p>
           ) : contacts.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No contacts yet</p>
+            <p className="text-sm text-(--muted)">No contacts yet</p>
           ) : (
             <div className="space-y-2">
               {contacts.map((contact) => (
                 <div key={contact.id}>
-                  <div className="flex items-center justify-between py-2 px-3 rounded bg-[var(--input)] border border-[var(--border)]">
+                  <div className="flex items-center justify-between py-2 px-3 rounded bg-(--input) border border-(--border)">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate flex items-center gap-1.5">
                         {contact.name}
@@ -312,7 +312,7 @@ function ExpandedView({
                         )}
                       </p>
                       {contact.accountEmail && (
-                        <p className="text-xs text-[var(--muted)] truncate">{contact.accountEmail}</p>
+                        <p className="text-xs text-(--muted) truncate">{contact.accountEmail}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 ml-2 shrink-0">
@@ -326,7 +326,7 @@ function ExpandedView({
                               ? setEditingContactId(null)
                               : handleStartEditContact(contact)
                           }
-                          className="text-xs text-[var(--muted)] hover:underline"
+                          className="text-xs text-(--muted) hover:underline"
                         >
                           {editingContactId === contact.id ? "Cancel" : "Edit"}
                         </button>
@@ -334,10 +334,10 @@ function ExpandedView({
                     </div>
                   </div>
                   {editMode && editingContactId === contact.id && (
-                    <div className="mt-1 p-3 rounded bg-[var(--card)] border border-[var(--border)] space-y-2">
+                    <div className="mt-1 p-3 rounded bg-(--card) border border-(--border) space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs text-[var(--muted)] mb-1">Name</label>
+                          <label className="block text-xs text-(--muted) mb-1">Name</label>
                           <input
                             type="text"
                             value={contactEdits.name || ""}
@@ -346,7 +346,7 @@ function ExpandedView({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-[var(--muted)] mb-1">LinkedIn URL</label>
+                          <label className="block text-xs text-(--muted) mb-1">LinkedIn URL</label>
                           <input
                             type="text"
                             value={contactEdits.linkedinUrl || ""}
@@ -358,7 +358,7 @@ function ExpandedView({
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs text-[var(--muted)] mb-1">Work Email</label>
+                          <label className="block text-xs text-(--muted) mb-1">Work Email</label>
                           <input
                             type="email"
                             value={contactEdits.accountEmail || ""}
@@ -367,7 +367,7 @@ function ExpandedView({
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-[var(--muted)] mb-1">Personal Email</label>
+                          <label className="block text-xs text-(--muted) mb-1">Personal Email</label>
                           <input
                             type="email"
                             value={contactEdits.personalEmail || ""}
@@ -402,36 +402,34 @@ function ExpandedView({
 
         {/* Right: Actions */}
         <div>
-          <h3 className="text-sm font-semibold mb-3 text-[var(--muted)] uppercase tracking-wide">
+          <h3 className="text-sm font-semibold mb-3 text-(--muted) uppercase tracking-wide">
             Pending Actions ({loadingActions ? "..." : actions.length})
           </h3>
           {loadingActions ? (
-            <p className="text-sm text-[var(--muted)]">Loading...</p>
+            <p className="text-sm text-(--muted)">Loading...</p>
           ) : (
             <>
-              {actions.length === 0 && <p className="text-sm text-[var(--muted)] mb-3">No pending actions</p>}
+              {actions.length === 0 && <p className="text-sm text-(--muted) mb-3">No pending actions</p>}
               <div className="space-y-2 mb-3">
                 {actions.map((action) => (
                   <div
                     key={action.id}
-                    className="flex items-center gap-2 py-2 px-3 rounded bg-[var(--input)] border border-[var(--border)]"
+                    className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
                   >
                     <span className="text-sm flex-1 truncate">{action.title}</span>
                     {action.dueDate && (
-                      <span className="text-xs text-[var(--muted)] whitespace-nowrap">
-                        Due {formatDate(action.dueDate)}
-                      </span>
+                      <span className="text-xs text-(--muted) whitespace-nowrap">Due {formatDate(action.dueDate)}</span>
                     )}
                     <span className="badge badge-pending">{action.status}</span>
                     <button
                       onClick={() => handleCompleteAction(action.id)}
-                      className="text-xs text-[var(--success)] hover:underline shrink-0"
+                      className="text-xs text-(--success) hover:underline shrink-0"
                     >
                       Done
                     </button>
                     <button
                       onClick={() => handleDeleteAction(action.id)}
-                      className="text-xs text-[var(--destructive)] hover:underline shrink-0"
+                      className="text-xs text-(--destructive) hover:underline shrink-0"
                     >
                       Delete
                     </button>
@@ -462,10 +460,10 @@ function ExpandedView({
 
       {/* Editable fields — only shown in edit mode */}
       {editMode && (
-        <div className="border-t border-[var(--border)] pt-4">
+        <div className="border-t border-(--border) pt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <label className="block text-xs text-[var(--muted)] mb-1">Summary</label>
+              <label className="block text-xs text-(--muted) mb-1">Summary</label>
               <textarea
                 value={summary}
                 onChange={(e) => {
@@ -479,7 +477,7 @@ function ExpandedView({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[var(--muted)] mb-1">Owner</label>
+                <label className="block text-xs text-(--muted) mb-1">Owner</label>
                 <select
                   value={ownerId}
                   onChange={(e) => {
@@ -496,7 +494,7 @@ function ExpandedView({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[var(--muted)] mb-1">MRR</label>
+                <label className="block text-xs text-(--muted) mb-1">MRR</label>
                 <div className="flex">
                   <button
                     type="button"
@@ -504,7 +502,7 @@ function ExpandedView({
                       setMrrCurrency(mrrCurrency === "$" ? "£" : "$");
                       setDirty(true);
                     }}
-                    className="shrink-0 w-8 text-center border border-r-0 border-[var(--border)] rounded-l bg-[var(--input)] text-sm hover:bg-[var(--border)] transition-colors"
+                    className="shrink-0 w-8 text-center border border-r-0 border-(--border) rounded-l bg-(--input) text-sm hover:bg-(--border) transition-colors"
                     title="Click to toggle currency"
                   >
                     {mrrCurrency}
@@ -626,7 +624,7 @@ function AccountsContent() {
         <h1 className="text-2xl font-bold">Accounts</h1>
         <div className="flex items-center gap-3">
           {editMode && (
-            <label className="flex items-center gap-2 text-sm text-[var(--muted)] cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-sm text-(--muted) cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={showHidden}
@@ -644,11 +642,11 @@ function AccountsContent() {
           </button>
         </div>
       </div>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-(--muted) mb-4">
         Overview of all accounts
         {!loading && ` \u2014 ${visibleCount} total${showHidden && hiddenCount > 0 ? ` (${hiddenCount} hidden)` : ""}`}
         {!loading && Object.keys(mrrTotals).length > 0 && (
-          <span className="ml-3 font-medium text-[var(--foreground)]">
+          <span className="ml-3 font-medium text-(--foreground)">
             Total MRR:{" "}
             {Object.entries(mrrTotals)
               .sort(([a], [b]) => a.localeCompare(b))
@@ -661,7 +659,7 @@ function AccountsContent() {
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
+            <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="px-3 py-2 font-medium">Account</th>
               <th className="px-3 py-2 font-medium">Summary</th>
               <th className="px-3 py-2 font-medium">Owner</th>
@@ -674,13 +672,13 @@ function AccountsContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : accounts.length === 0 ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
                   No accounts found
                 </td>
               </tr>
@@ -689,8 +687,8 @@ function AccountsContent() {
                 <React.Fragment key={account.id}>
                   <tr
                     onClick={() => setExpandedId(expandedId === account.id ? null : account.id)}
-                    className={`border-b border-[var(--border)] cursor-pointer transition-colors hover:bg-[var(--input)] ${
-                      expandedId === account.id ? "bg-[var(--input)]" : ""
+                    className={`border-b border-(--border) cursor-pointer transition-colors hover:bg-(--input) ${
+                      expandedId === account.id ? "bg-(--input)" : ""
                     } ${account.hidden ? "opacity-50" : ""}`}
                   >
                     <td className="px-3 py-1.5">
@@ -713,15 +711,15 @@ function AccountsContent() {
                           </span>
                         )}
                         {account.hidden && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--muted)]/20 text-[var(--muted)] font-medium leading-none">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-(--muted)/20 text-(--muted) font-medium leading-none">
                             Hidden
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-[var(--muted)]">
+                      <div className="text-xs text-(--muted)">
                         {account.contactCount} contact{account.contactCount !== 1 ? "s" : ""}
                         {account.pendingActionCount > 0 && (
-                          <span className="ml-2 text-[var(--warning)]">
+                          <span className="ml-2 text-(--warning)">
                             {account.pendingActionCount} action
                             {account.pendingActionCount !== 1 ? "s" : ""}
                           </span>
@@ -729,16 +727,16 @@ function AccountsContent() {
                       </div>
                     </td>
                     <td className="px-3 py-1.5 max-w-xs">
-                      <span className="text-[var(--muted)] truncate block">{account.summary || "\u2014"}</span>
+                      <span className="text-(--muted) truncate block">{account.summary || "\u2014"}</span>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      {account.ownerName || <span className="text-[var(--muted)]">Unassigned</span>}
+                      {account.ownerName || <span className="text-(--muted)">Unassigned</span>}
                     </td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
                       {account.mrr > 0 ? (
                         formatMrr(account.mrr, account.mrrCurrency)
                       ) : (
-                        <span className="text-[var(--muted)]">{account.mrrCurrency || "$"}0</span>
+                        <span className="text-(--muted)">{account.mrrCurrency || "$"}0</span>
                       )}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
@@ -758,7 +756,7 @@ function AccountsContent() {
                             e.stopPropagation();
                             handleToggleHidden(account);
                           }}
-                          className={`text-xs hover:underline ${account.hidden ? "text-[var(--success)]" : "text-[var(--muted)]"}`}
+                          className={`text-xs hover:underline ${account.hidden ? "text-(--success)" : "text-(--muted)"}`}
                         >
                           {account.hidden ? "Show" : "Hide"}
                         </button>
@@ -767,7 +765,7 @@ function AccountsContent() {
                   </tr>
                   {expandedId === account.id && (
                     <tr>
-                      <td colSpan={editMode ? 7 : 6} className="border-b border-[var(--border)] bg-[var(--card)]">
+                      <td colSpan={editMode ? 7 : 6} className="border-b border-(--border) bg-(--card)">
                         <ExpandedView account={account} users={users} editMode={editMode} onSave={handleSave} />
                       </td>
                     </tr>
@@ -784,7 +782,7 @@ function AccountsContent() {
 
 export default function AccountsPage() {
   return (
-    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
+    <Suspense fallback={<div className="text-(--muted)">Loading...</div>}>
       <AccountsContent />
     </Suspense>
   );

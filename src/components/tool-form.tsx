@@ -193,7 +193,7 @@ export function ToolForm({ tool }: ToolFormProps) {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-1">{tool.name}</h1>
-        <p className="text-[var(--muted)] text-sm">{tool.description}</p>
+        <p className="text-(--muted) text-sm">{tool.description}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -203,7 +203,7 @@ export function ToolForm({ tool }: ToolFormProps) {
               <div key={field.name}>
                 <label className="block text-sm font-medium mb-1">
                   {field.label}
-                  {field.required && <span className="text-[var(--destructive)]"> *</span>}
+                  {field.required && <span className="text-(--destructive)"> *</span>}
                 </label>
 
                 {field.type === "contact" ? (
@@ -224,7 +224,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                         })
                       }
                     />
-                    <span className="text-[var(--muted)]">Enable LinkedIn profile scraping</span>
+                    <span className="text-(--muted)">Enable LinkedIn profile scraping</span>
                   </label>
                 ) : field.type === "textarea" ? (
                   <textarea
@@ -285,7 +285,7 @@ export function ToolForm({ tool }: ToolFormProps) {
             </div>
 
             {error && (
-              <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+              <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-(--destructive)">
                 {error}
               </div>
             )}
@@ -296,7 +296,7 @@ export function ToolForm({ tool }: ToolFormProps) {
               <div className="absolute inset-0 bg-black/60" onClick={() => setSuggestOpen(false)} />
               <div className="relative card w-full max-w-lg mx-4 space-y-4">
                 <h2 className="text-lg font-semibold">Suggest improvement for {tool.name}</h2>
-                <p className="text-sm text-[var(--muted)]">
+                <p className="text-sm text-(--muted)">
                   Describe what you&apos;d like changed. An AI agent will implement it and create a PR.
                 </p>
                 <textarea
@@ -308,7 +308,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                   autoFocus
                 />
                 {suggestError && (
-                  <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+                  <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-(--destructive)">
                     {suggestError}
                   </div>
                 )}
@@ -352,10 +352,10 @@ export function ToolForm({ tool }: ToolFormProps) {
                     />
                   ) : (
                     <div className="p-3 rounded-md bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.2)] text-sm">
-                      <p className="font-medium text-[var(--accent)]">Job in progress...</p>
-                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
+                      <p className="font-medium text-(--accent)">Job in progress...</p>
+                      <p className="text-(--muted) mt-1">Run ID: {run.id}</p>
                       {run.createdAt && (
-                        <p className="text-[var(--muted)] mt-1">Started: {formatTimestamp(run.createdAt)}</p>
+                        <p className="text-(--muted) mt-1">Started: {formatTimestamp(run.createdAt)}</p>
                       )}
                     </div>
                   )}
@@ -367,22 +367,22 @@ export function ToolForm({ tool }: ToolFormProps) {
                   {run.status === "completed" && (
                     <div className="p-3 rounded-md bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-sm">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-[var(--success)]">Job completed successfully</p>
+                        <p className="font-medium text-(--success)">Job completed successfully</p>
                         <button
                           type="button"
                           onClick={() => dismissRun(run.id)}
-                          className="text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
+                          className="text-(--muted) hover:text-(--foreground) text-xs"
                         >
                           Dismiss
                         </button>
                       </div>
-                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
-                      <div className="text-[var(--muted)] mt-1">
+                      <p className="text-(--muted) mt-1">Run ID: {run.id}</p>
+                      <div className="text-(--muted) mt-1">
                         {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
                         {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
                       </div>
                       {run.output && (
-                        <pre className="mt-3 p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                        <pre className="mt-3 p-3 rounded bg-(--background) text-xs overflow-auto max-h-96 whitespace-pre-wrap">
                           {run.output}
                         </pre>
                       )}
@@ -390,20 +390,20 @@ export function ToolForm({ tool }: ToolFormProps) {
                   )}
 
                   {run.status === "failed" && (
-                    <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-[var(--destructive)]">
+                    <div className="p-3 rounded-md bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-sm text-(--destructive)">
                       <div className="flex items-center justify-between">
                         <p className="font-medium">Job failed</p>
                         <button
                           type="button"
                           onClick={() => dismissRun(run.id)}
-                          className="text-[var(--muted)] hover:text-[var(--foreground)] text-xs"
+                          className="text-(--muted) hover:text-(--foreground) text-xs"
                         >
                           Dismiss
                         </button>
                       </div>
                       <p className="mt-1">{run.error}</p>
-                      <p className="text-[var(--muted)] mt-1">Run ID: {run.id}</p>
-                      <div className="text-[var(--muted)] mt-1">
+                      <p className="text-(--muted) mt-1">Run ID: {run.id}</p>
+                      <div className="text-(--muted) mt-1">
                         {run.createdAt && <p>Started: {formatTimestamp(run.createdAt)}</p>}
                         {run.updatedAt && <p>Ended: {formatTimestamp(run.updatedAt)}</p>}
                       </div>
@@ -418,25 +418,25 @@ export function ToolForm({ tool }: ToolFormProps) {
         <div className="card">
           <h2 className="text-sm font-semibold mb-3">Recent runs</h2>
           {!historyLoaded ? (
-            <p className="text-xs text-[var(--muted)]">Loading...</p>
+            <p className="text-xs text-(--muted)">Loading...</p>
           ) : history.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">No runs yet</p>
+            <p className="text-xs text-(--muted)">No runs yet</p>
           ) : (
             <div className="space-y-2">
               {history.map((run) => (
-                <div key={run.id} className="p-2 rounded bg-[var(--background)] text-xs">
+                <div key={run.id} className="p-2 rounded bg-(--background) text-xs">
                   <div className="flex items-center justify-between mb-1">
                     <span className={`badge badge-${run.status}`}>{run.status}</span>
                     {run.inputs && Object.keys(run.inputs).length > 0 && (
                       <button
                         onClick={() => setViewingInputRunId(run.id)}
-                        className="text-[var(--accent)] hover:underline text-xs"
+                        className="text-(--accent) hover:underline text-xs"
                       >
                         View Input
                       </button>
                     )}
                   </div>
-                  <div className="text-[var(--muted)] space-y-0.5 mb-1">
+                  <div className="text-(--muted) space-y-0.5 mb-1">
                     <div>Started: {formatTimestamp(run.createdAt)}</div>
                     {(run.status === "completed" || run.status === "failed") && run.updatedAt && (
                       <div>Ended: {formatTimestamp(run.updatedAt)}</div>
@@ -447,14 +447,14 @@ export function ToolForm({ tool }: ToolFormProps) {
                       href={run.outputUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-(--accent) hover:underline"
                     >
                       View Output
                     </a>
                   )}
                   {!run.outputUrl && run.output && (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[var(--accent)] hover:underline">View Output</summary>
+                      <summary className="cursor-pointer text-(--accent) hover:underline">View Output</summary>
                       <pre className="mt-2 p-2 rounded bg-black/5 text-xs overflow-auto max-h-56 whitespace-pre-wrap">
                         {run.output}
                       </pre>
@@ -474,17 +474,17 @@ export function ToolForm({ tool }: ToolFormProps) {
           return createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div className="absolute inset-0 bg-black/60" onClick={() => setViewingInputRunId(null)} />
-              <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 w-full max-w-lg shadow-xl">
+              <div className="relative bg-(--card) border border-(--border) rounded-lg p-6 w-full max-w-lg shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold">Run Input</h2>
                   <button
                     onClick={() => setViewingInputRunId(null)}
-                    className="text-[var(--muted)] hover:text-[var(--foreground)] text-lg"
+                    className="text-(--muted) hover:text-(--foreground) text-lg"
                   >
                     &times;
                   </button>
                 </div>
-                <pre className="p-3 rounded bg-[var(--background)] text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+                <pre className="p-3 rounded bg-(--background) text-xs overflow-auto max-h-96 whitespace-pre-wrap">
                   {JSON.stringify(run.inputs, null, 2)}
                 </pre>
               </div>

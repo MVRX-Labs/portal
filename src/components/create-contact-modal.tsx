@@ -57,13 +57,13 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-lg p-6 w-full max-w-md shadow-xl">
+      <div className="relative bg-(--card) border border-(--border) rounded-lg p-6 w-full max-w-md shadow-xl">
         <h2 className="text-lg font-bold mb-4">Create Contact</h2>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">
-              Name <span className="text-[var(--destructive)]">*</span>
+              Name <span className="text-(--destructive)">*</span>
             </label>
             <input
               type="text"
@@ -115,7 +115,7 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
             Enable engagement scraping
           </label>
 
-          {error && <div className="text-sm text-[var(--destructive)]">{error}</div>}
+          {error && <div className="text-sm text-(--destructive)">{error}</div>}
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">

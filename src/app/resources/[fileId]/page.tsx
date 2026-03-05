@@ -53,11 +53,11 @@ export default function ResourceViewerPage() {
   };
 
   if (loading) {
-    return <div className="text-[var(--muted)]">Loading...</div>;
+    return <div className="text-(--muted)">Loading...</div>;
   }
 
   if (error || !data) {
-    return <div className="text-[var(--destructive)]">{error || "File not found"}</div>;
+    return <div className="text-(--destructive)">{error || "File not found"}</div>;
   }
 
   const isGoogleDoc = data.file.mimeType.startsWith("application/vnd.google-apps.");

@@ -7,7 +7,7 @@ interface ResourceViewerProps {
 
 export function ResourceViewer({ previewUrl, fileName }: ResourceViewerProps) {
   return (
-    <div className="w-full h-[80vh] rounded-lg overflow-hidden border border-[var(--border)]">
+    <div className="w-full h-[80vh] rounded-lg overflow-hidden border border-(--border)">
       <iframe
         src={previewUrl}
         title={fileName}

@@ -87,7 +87,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
 
   if (!account) {
     return (
-      <div className="text-sm text-[var(--muted)] px-2 py-1.5 rounded bg-[var(--input)] border border-[var(--border)]">
+      <div className="text-sm text-(--muted) px-2 py-1.5 rounded bg-(--input) border border-(--border)">
         Select an account first
       </div>
     );
@@ -99,17 +99,17 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="w-full text-left text-sm px-3 py-2 rounded bg-[var(--input)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors"
+          className="w-full text-left text-sm px-3 py-2 rounded bg-(--input) border border-(--border) hover:border-(--accent) transition-colors"
         >
           {selectedContact ? (
             <div>
               <span className="font-medium">{selectedContact.name}</span>
               {selectedContact.linkedinUrl && (
-                <span className="text-[var(--muted)] ml-2 text-xs">{selectedContact.linkedinUrl}</span>
+                <span className="text-(--muted) ml-2 text-xs">{selectedContact.linkedinUrl}</span>
               )}
             </div>
           ) : (
-            <span className="text-[var(--muted)]">Select contact...</span>
+            <span className="text-(--muted)">Select contact...</span>
           )}
         </button>
 
@@ -126,8 +126,8 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
         )}
 
         {open && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg max-h-56 overflow-auto">
-            <div className="p-2 border-b border-[var(--border)]">
+          <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-(--card) border border-(--border) rounded-md shadow-lg max-h-56 overflow-auto">
+            <div className="p-2 border-b border-(--border)">
               <input
                 type="text"
                 value={query}
@@ -143,25 +143,21 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
                 key={contact.id}
                 type="button"
                 onClick={() => handleSelect(contact)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--input)] transition-colors ${
-                  value === contact.id ? "text-[var(--accent)]" : ""
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-(--input) transition-colors ${
+                  value === contact.id ? "text-(--accent)" : ""
                 }`}
               >
                 <div className="font-medium">{contact.name}</div>
-                {contact.linkedinUrl && (
-                  <div className="text-xs text-[var(--muted)] truncate">{contact.linkedinUrl}</div>
-                )}
+                {contact.linkedinUrl && <div className="text-xs text-(--muted) truncate">{contact.linkedinUrl}</div>}
               </button>
             ))}
 
-            {results.length === 0 && query && (
-              <div className="px-3 py-2 text-xs text-[var(--muted)]">No contacts found</div>
-            )}
+            {results.length === 0 && query && <div className="px-3 py-2 text-xs text-(--muted)">No contacts found</div>}
 
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="w-full text-left px-3 py-2 text-sm text-[var(--accent)] hover:bg-[var(--input)] transition-colors border-t border-[var(--border)]"
+              className="w-full text-left px-3 py-2 text-sm text-(--accent) hover:bg-(--input) transition-colors border-t border-(--border)"
             >
               + Create Contact
             </button>

@@ -129,7 +129,7 @@ function LeadsContent() {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-1">Leads</h1>
-        <p className="text-sm text-[var(--muted)]">Select an account from the sidebar to view leads.</p>
+        <p className="text-sm text-(--muted)">Select an account from the sidebar to view leads.</p>
       </div>
     );
   }
@@ -154,15 +154,13 @@ function LeadsContent() {
           </button>
         </div>
       </div>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-(--muted) mb-4">
         People who engaged with {account.name}&apos;s LinkedIn content
         {pagination ? ` \u2014 ${pagination.total} total` : ""}
       </p>
 
       {scrapeStatus && (
-        <div className="text-sm px-3 py-2 mb-4 rounded bg-[var(--input)] border border-[var(--border)]">
-          {scrapeStatus}
-        </div>
+        <div className="text-sm px-3 py-2 mb-4 rounded bg-(--input) border border-(--border)">{scrapeStatus}</div>
       )}
 
       <div className="flex gap-3 mb-4">
@@ -186,7 +184,7 @@ function LeadsContent() {
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
+            <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="px-3 py-2 font-medium">Name</th>
               <th className="px-3 py-2 font-medium">Headline</th>
               <th className="px-3 py-2 font-medium">Company</th>
@@ -199,25 +197,25 @@ function LeadsContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={7} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : leads.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                <td colSpan={7} className="py-8 text-center text-(--muted)">
                   No leads found
                 </td>
               </tr>
             ) : (
               leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-[var(--border)] last:border-0">
+                <tr key={lead.id} className="border-b border-(--border) last:border-0">
                   <td className="px-3 py-1.5">
                     <a
                       href={lead.linkedinUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[var(--accent)] hover:underline"
+                      className="text-(--accent) hover:underline"
                     >
                       {lead.firstName}
                       {lead.lastName ? ` ${lead.lastName}` : ""}
@@ -237,9 +235,9 @@ function LeadsContent() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 text-[var(--muted)]">{lead.contactName || "Company Page"}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.firstSeenAt)}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-[var(--muted)]">{formatDate(lead.lastSeenAt)}</td>
+                  <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
                 </tr>
               ))
             )}
@@ -252,7 +250,7 @@ function LeadsContent() {
           <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
             Previous
           </button>
-          <span className="text-sm text-[var(--muted)]">
+          <span className="text-sm text-(--muted)">
             Page {page} of {pagination.totalPages}
           </span>
           <button onClick={() => navigate(page + 1)} disabled={page >= pagination.totalPages} className="btn-secondary">
@@ -266,7 +264,7 @@ function LeadsContent() {
 
 export default function LeadsPage() {
   return (
-    <Suspense fallback={<div className="text-[var(--muted)]">Loading...</div>}>
+    <Suspense fallback={<div className="text-(--muted)">Loading...</div>}>
       <LeadsContent />
     </Suspense>
   );

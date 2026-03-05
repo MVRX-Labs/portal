@@ -88,7 +88,7 @@ export const implementSuggestionTask = task({
       cloneDir = await mkdtemp(join(tmpdir(), "suggestion-"));
       const cloneUrl = `https://x-access-token:${githubToken}@github.com/${repoOwner}/${repoName}.git`;
       exec(`git clone --depth 50 ${cloneUrl} .`, cloneDir);
-      exec(`git config user.name "vex"`, cloneDir);
+      exec(`git config user.name "danny-hunt"`, cloneDir); // vercel didn't like vex
       exec(`git config user.email "danny@mvrxlabs.com"`, cloneDir); // vercel requires a user email that we have :')
       logger.info("Repository cloned", { cloneDir });
 

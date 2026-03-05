@@ -1,8 +1,9 @@
 import { task, logger, metadata, queue } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
-import { leads, toolRuns } from "@/lib/schema";
+import { accounts, leads, toolRuns } from "@/lib/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { sendSlackNotification } from "@/lib/slack";
+import { sendSlackNotification, sendSlackFile } from "@/lib/slack";
+import { escapeCsv } from "@/lib/csv";
 import {
   scrapeRecentPosts,
   scrapePostReactions,
@@ -285,6 +286,7 @@ export const linkedinEngagementScrapeTask = task({
       const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl.replace(/\/$/, ""), l]));
 
       let upsertCount = 0;
+      const newLeads: typeof uniqueEngagers = [];
       const now = new Date();
 
       await db.transaction(async (tx) => {
@@ -337,6 +339,7 @@ export const linkedinEngagementScrapeTask = task({
               firstSeenAt: engager.firstEngagedAt,
               lastSeenAt: engager.lastEngagedAt,
             });
+            newLeads.push(engager);
           }
           upsertCount++;
         }
@@ -349,7 +352,57 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 100,
       });
 
-      logger.info(`Upserted ${upsertCount} leads for account ${accountId}`);
+      logger.info(`Upserted ${upsertCount} leads for account ${accountId} (${newLeads.length} new)`);
+
+      // Send Slack notification with new leads CSV to Tarun
+      if (newLeads.length > 0) {
+        try {
+          const [account] = await db
+            .select({ name: accounts.name })
+            .from(accounts)
+            .where(eq(accounts.id, accountId))
+            .limit(1);
+          const accountName = account?.name ?? accountId;
+
+          const csvHeaders = ["firstName", "lastName", "LinkedInProfileUrl", "headline", "company"];
+          const csvRows = [csvHeaders.join(",")];
+          for (const lead of newLeads) {
+            csvRows.push(
+              [
+                escapeCsv(lead.firstName),
+                escapeCsv(lead.lastName || ""),
+                escapeCsv(lead.linkedinUrl),
+                escapeCsv(lead.headline || ""),
+                escapeCsv(lead.company || ""),
+              ].join(",")
+            );
+          }
+          const csvContent = csvRows.join("\n");
+          const filename = `new-leads-${accountName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`;
+
+          // Look up Tarun's Slack user ID by email
+          const slackRes = await fetch(
+            `https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent("tarun@mvrxlabs.com")}`,
+            { headers: { Authorization: `Bearer ${process.env.SLACKBOT_TOKEN}` } }
+          );
+          const slackData = await slackRes.json();
+          if (slackData.ok) {
+            await sendSlackFile(
+              slackData.user.id,
+              filename,
+              csvContent,
+              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*`
+            );
+            logger.info(`Sent new leads CSV to Tarun for ${accountName}`);
+          } else {
+            logger.warn(`Could not resolve Slack user for tarun@mvrxlabs.com: ${slackData.error}`);
+          }
+        } catch (slackErr) {
+          logger.warn("Failed to send new leads Slack notification", {
+            error: slackErr instanceof Error ? slackErr.message : String(slackErr),
+          });
+        }
+      }
 
       const result = {
         postsScraped: recentPosts.length,

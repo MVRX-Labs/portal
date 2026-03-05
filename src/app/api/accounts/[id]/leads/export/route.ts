@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leads } from "@/lib/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { escapeCsv } from "@/lib/csv";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
@@ -49,11 +50,4 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       "Content-Disposition": `attachment; filename="leads-export.csv"`,
     },
   });
-}
-
-function escapeCsv(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }

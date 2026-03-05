@@ -157,3 +157,51 @@ export async function sendSlackDM(slackUserId: string, text: string, blocks: Rec
     throw new Error(`Slack chat.postMessage failed: ${data.error}`);
   }
 }
+
+export async function sendSlackFile(
+  slackUserId: string,
+  filename: string,
+  content: string,
+  initialComment: string
+): Promise<void> {
+  const token = process.env.SLACKBOT_TOKEN;
+  if (!token) {
+    console.warn("SLACKBOT_TOKEN not configured, skipping file upload");
+    return;
+  }
+
+  // Step 1: Get upload URL
+  const uploadRes = await fetch(
+    `https://slack.com/api/files.getUploadURLExternal?filename=${encodeURIComponent(filename)}&length=${Buffer.byteLength(content)}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const uploadData = await uploadRes.json();
+  if (!uploadData.ok) {
+    throw new Error(`Slack files.getUploadURLExternal failed: ${uploadData.error}`);
+  }
+
+  // Step 2: Upload file content
+  await fetch(uploadData.upload_url, {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: content,
+  });
+
+  // Step 3: Complete upload and share to user's DM
+  const completeRes = await fetch("https://slack.com/api/files.completeUploadExternal", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      files: [{ id: uploadData.file_id, title: filename }],
+      channel_id: slackUserId,
+      initial_comment: initialComment,
+    }),
+  });
+  const completeData = await completeRes.json();
+  if (!completeData.ok) {
+    throw new Error(`Slack files.completeUploadExternal failed: ${completeData.error}`);
+  }
+}

@@ -15,6 +15,7 @@ interface AccountOverview {
   nextMeetingAt: string | null;
   autoCreated: boolean;
   hidden: boolean;
+  engagementScrapeEnabled: boolean;
   contactCount: number;
   pendingActionCount: number;
 }
@@ -27,6 +28,7 @@ interface Contact {
   linkedinUrl: string | null;
   lastMeetingAt: string | null;
   autoCreated: boolean;
+  engagementScrapeEnabled: boolean;
 }
 
 interface Action {
@@ -100,8 +102,14 @@ function ExpandedView({
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
   const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
+  const [engagementScrapeEnabled, setEngagementScrapeEnabled] = useState(account.engagementScrapeEnabled);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+
+  // Contact editing
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [contactEdits, setContactEdits] = useState<Partial<Contact>>({});
+  const [savingContact, setSavingContact] = useState(false);
 
   // Reset editable fields when account changes
   useEffect(() => {
@@ -109,8 +117,9 @@ function ExpandedView({
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
     setMrrCurrency(account.mrrCurrency || "$");
+    setEngagementScrapeEnabled(account.engagementScrapeEnabled);
     setDirty(false);
-  }, [account.id, account.summary, account.ownerId, account.mrr, account.mrrCurrency]);
+  }, [account.id, account.summary, account.ownerId, account.mrr, account.mrrCurrency, account.engagementScrapeEnabled]);
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -203,6 +212,7 @@ function ExpandedView({
           ownerId: ownerId || null,
           mrr: mrrCents,
           mrrCurrency,
+          engagementScrapeEnabled,
         }),
       });
       if (res.ok) {
@@ -214,6 +224,7 @@ function ExpandedView({
           ownerName: ownerUser?.name || null,
           mrr: mrrCents,
           mrrCurrency,
+          engagementScrapeEnabled,
         });
         setDirty(false);
       }
@@ -221,6 +232,44 @@ function ExpandedView({
       // ignore
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStartEditContact = (contact: Contact) => {
+    setEditingContactId(contact.id);
+    setContactEdits({
+      name: contact.name,
+      accountEmail: contact.accountEmail,
+      personalEmail: contact.personalEmail,
+      linkedinUrl: contact.linkedinUrl,
+      engagementScrapeEnabled: contact.engagementScrapeEnabled,
+    });
+  };
+
+  const handleSaveContact = async () => {
+    if (!editingContactId) return;
+    setSavingContact(true);
+    try {
+      const res = await fetch(`/api/contacts/${editingContactId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactEdits.name,
+          accountEmail: contactEdits.accountEmail || null,
+          personalEmail: contactEdits.personalEmail || null,
+          linkedinUrl: contactEdits.linkedinUrl || null,
+          engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
+        }),
+      });
+      if (res.ok) {
+        setContacts((prev) => prev.map((c) => (c.id === editingContactId ? { ...c, ...contactEdits } : c)));
+        setEditingContactId(null);
+        setContactEdits({});
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSavingContact(false);
     }
   };
 
@@ -240,29 +289,111 @@ function ExpandedView({
           ) : (
             <div className="space-y-2">
               {contacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  className="flex items-center justify-between py-2 px-3 rounded bg-[var(--input)] border border-[var(--border)]"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                      {contact.name}
-                      {contact.autoCreated && (
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
-                          title="Auto-created from calendar sync"
-                        >
-                          Auto
-                        </span>
+                <div key={contact.id}>
+                  <div className="flex items-center justify-between py-2 px-3 rounded bg-[var(--input)] border border-[var(--border)]">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                        {contact.name}
+                        {contact.autoCreated && (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
+                            title="Auto-created from calendar sync"
+                          >
+                            Auto
+                          </span>
+                        )}
+                        {contact.engagementScrapeEnabled && (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
+                            title="Engagement scraping enabled"
+                          >
+                            Scrape
+                          </span>
+                        )}
+                      </p>
+                      {contact.accountEmail && (
+                        <p className="text-xs text-[var(--muted)] truncate">{contact.accountEmail}</p>
                       )}
-                    </p>
-                    {contact.accountEmail && (
-                      <p className="text-xs text-[var(--muted)] truncate">{contact.accountEmail}</p>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-2 shrink-0">
+                      <span className="badge badge-neutral whitespace-nowrap">
+                        {contact.lastMeetingAt ? relativeDate(contact.lastMeetingAt) : "No meetings"}
+                      </span>
+                      {editMode && (
+                        <button
+                          onClick={() =>
+                            editingContactId === contact.id
+                              ? setEditingContactId(null)
+                              : handleStartEditContact(contact)
+                          }
+                          className="text-xs text-[var(--muted)] hover:underline"
+                        >
+                          {editingContactId === contact.id ? "Cancel" : "Edit"}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <span className="badge badge-neutral ml-2 whitespace-nowrap shrink-0">
-                    {contact.lastMeetingAt ? relativeDate(contact.lastMeetingAt) : "No meetings"}
-                  </span>
+                  {editMode && editingContactId === contact.id && (
+                    <div className="mt-1 p-3 rounded bg-[var(--card)] border border-[var(--border)] space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-[var(--muted)] mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={contactEdits.name || ""}
+                            onChange={(e) => setContactEdits((prev) => ({ ...prev, name: e.target.value }))}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-[var(--muted)] mb-1">LinkedIn URL</label>
+                          <input
+                            type="text"
+                            value={contactEdits.linkedinUrl || ""}
+                            onChange={(e) => setContactEdits((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
+                            placeholder="https://linkedin.com/in/username"
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-[var(--muted)] mb-1">Work Email</label>
+                          <input
+                            type="email"
+                            value={contactEdits.accountEmail || ""}
+                            onChange={(e) => setContactEdits((prev) => ({ ...prev, accountEmail: e.target.value }))}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-[var(--muted)] mb-1">Personal Email</label>
+                          <input
+                            type="email"
+                            value={contactEdits.personalEmail || ""}
+                            onChange={(e) => setContactEdits((prev) => ({ ...prev, personalEmail: e.target.value }))}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={contactEdits.engagementScrapeEnabled || false}
+                            onChange={(e) =>
+                              setContactEdits((prev) => ({ ...prev, engagementScrapeEnabled: e.target.checked }))
+                            }
+                            className="rounded"
+                          />
+                          Enable engagement scraping
+                        </label>
+                        <button onClick={handleSaveContact} disabled={savingContact} className="btn-primary text-sm">
+                          {savingContact ? "Saving..." : "Save Contact"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -394,6 +525,18 @@ function ExpandedView({
               </div>
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
+            <input
+              type="checkbox"
+              checked={engagementScrapeEnabled}
+              onChange={(e) => {
+                setEngagementScrapeEnabled(e.target.checked);
+                setDirty(true);
+              }}
+              className="rounded"
+            />
+            Enable engagement scraping for this account
+          </label>
           {dirty && (
             <div className="mt-3 flex justify-end">
               <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
@@ -559,6 +702,14 @@ function AccountsContent() {
                             title="Auto-created from calendar sync — review details"
                           >
                             Auto
+                          </span>
+                        )}
+                        {account.engagementScrapeEnabled && (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
+                            title="Engagement scraping enabled"
+                          >
+                            Scrape
                           </span>
                         )}
                         {account.hidden && (

@@ -12,3 +12,4 @@ checking-process.md
 src/components/tool\-form.tsx
 *_snapshot.json
 src/trigger/linkedin-post-generator.ts
+src/app/accounts/page.tsx

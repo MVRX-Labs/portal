@@ -294,6 +294,50 @@ export const engagementJobs = pgTable("engagement_jobs", {
   completedAt: timestamp("completed_at"),
 });
 
+// --- Post analytics (snapshots + growth tracking) ---
+
+export const postSnapshots = pgTable("post_snapshots", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("snap")),
+  postId: text("post_id")
+    .notNull()
+    .references(() => engagementPosts.id),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => engagementProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  likesCount: integer("likes_count").notNull().default(0),
+  commentsCount: integer("comments_count").notNull().default(0),
+  repostsCount: integer("reposts_count").notNull().default(0),
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+});
+
+export const analyticsReports = pgTable(
+  "analytics_reports",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("arpt")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    profileId: text("profile_id").references(() => engagementProfiles.id),
+    reportType: text("report_type").notNull().default("weekly"),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    reportData: jsonb("report_data").notNull().default({}),
+    pdfUrl: text("pdf_url"),
+    slackTs: text("slack_ts"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueReport: unique().on(table.accountId, table.profileId, table.reportType, table.periodStart),
+  })
+);
+
 export const engagementRawResults = pgTable(
   "engagement_raw_results",
   {

@@ -226,6 +226,34 @@ export const calendarEventContacts = pgTable(
   })
 );
 
+// --- Meeting prep tables ---
+
+export const meetingPreps = pgTable("meeting_preps", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("prep")),
+  eventId: text("event_id")
+    .notNull()
+    .references(() => calendarEvents.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  briefingJson: jsonb("briefing_json").$type<{
+    account_summary: string;
+    key_contacts: Array<{ name: string; role?: string; notes: string }>;
+    recent_activity_highlights: string[];
+    talking_points: string[];
+    suggested_agenda: string[];
+    risk_flags: string[];
+  }>(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // --- Engagement bot tables ---
 
 export const engagementProfiles = pgTable(

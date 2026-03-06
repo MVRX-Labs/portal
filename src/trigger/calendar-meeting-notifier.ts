@@ -1,4 +1,4 @@
-import { schedules, logger } from "@trigger.dev/sdk/v3";
+import { schedules, logger, tasks } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
 import {
   calendarEvents,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
 import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
+import type { meetingPrepGeneratorTask } from "@/trigger/meeting-prep-generator";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
@@ -78,6 +79,7 @@ export const calendarMeetingNotifier = schedules.task({
       // Get linked accounts
       const linkedAccounts = await db
         .select({
+          accountId: calendarEventAccounts.accountId,
           accountName: accounts.name,
           matchConfidence: calendarEventAccounts.matchConfidence,
         })
@@ -170,6 +172,23 @@ export const calendarMeetingNotifier = schedules.task({
 
         // Mark as notified to prevent duplicates
         await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));
+
+        // Trigger meeting prep generation for the first linked account
+        if (linkedAccounts.length > 0) {
+          const bestAccount = linkedAccounts[0];
+          await tasks
+            .trigger<typeof meetingPrepGeneratorTask>("meeting-prep-generator", {
+              eventId: event.id,
+              accountId: bestAccount.accountId,
+              userId: syncRow.userId,
+              userEmail: syncRow.userEmail,
+            })
+            .catch((prepErr) => {
+              logger.warn(`Failed to trigger meeting prep for event ${event.id}`, {
+                error: prepErr instanceof Error ? prepErr.message : String(prepErr),
+              });
+            });
+        }
 
         notified++;
       } catch (err) {

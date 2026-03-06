@@ -25,6 +25,7 @@ const PREFIXES = {
   engpost: "engpost",
   engjob: "engjob",
   engraw: "engraw",
+  prep: "prep",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -43,6 +44,7 @@ export type EngagementProfileId = `engprof_${string}`;
 export type EngagementPostId = `engpost_${string}`;
 export type EngagementJobId = `engjob_${string}`;
 export type EngagementRawResultId = `engraw_${string}`;
+export type MeetingPrepId = `prep_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -57,7 +59,8 @@ export type ObjectId =
   | EngagementProfileId
   | EngagementPostId
   | EngagementJobId
-  | EngagementRawResultId;
+  | EngagementRawResultId
+  | MeetingPrepId;
 
 type PrefixToId = {
   user: UserId;
@@ -74,6 +77,7 @@ type PrefixToId = {
   engpost: EngagementPostId;
   engjob: EngagementJobId;
   engraw: EngagementRawResultId;
+  prep: MeetingPrepId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -107,6 +111,7 @@ export function prefixForTable(table: string): Prefix {
     engagement_posts: "engpost",
     engagement_jobs: "engjob",
     engagement_raw_results: "engraw",
+    meeting_preps: "prep",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

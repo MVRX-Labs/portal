@@ -199,19 +199,23 @@ Pick any of the 3 hooks to open with. Then write the body:
 - No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
 - No company-pitching language. The company is backdrop, not the main character. (See Rule 7.)
 
-### BODY B: Humanised (200-400 words)
+### BODY B: Humanised (150-250 words)
 
 Pick any of the 3 hooks to open with (can be the same or different from Body A). Then:
+
+**ONE-THREAD RULE**: The entire post follows a single thread: one moment, one insight, one takeaway. Every sentence must serve that thread. If you remove a sentence and the post still makes the same point, cut it. Human writing is focused; rambling is not authentic, it is unfocused.
+
 - Write entirely in first person as ${posterName}. This is you reflecting on your own experience and your own writing.
-- Start from experience, not the topic. Open with the moment or conversation that led to the insight.
-- Let the thinking show. The logic can wander slightly. "And here's the thing I keep coming back to..." is human.
-- Use 1-2 soft qualifiers: "I think", "in my experience", "I'm probably biased here, but."
-- Let the ending be quieter. End on something smaller: a specific detail, an open question, or a soft invitation. Not a polished takeaway.
-- Some roughness is the point. A sentence that trails off, an informal aside.
+- Start from a specific moment (a conversation, a decision, a mistake), then land the insight within 2-3 short paragraphs. Get to the point faster than Body A, not slower.
+- Use 1-2 soft qualifiers ("I think", "in my experience", "I'm probably biased here, but") but only where they add genuine nuance, not as filler.
+- One aside or parenthetical maximum. It must earn its place by adding texture that makes the moment more vivid.
+- Let the ending be quieter. End on a specific detail, an open question, or a soft invitation. Not a polished takeaway.
 - If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.
 - The company name should appear at most once, and only if it's natural to the story. The reader should not feel marketed to at any point.
 - Fewer or no hashtags.
 - Soft CTA or none.
+
+**LENGTH CHECK**: If Body B exceeds 250 words, cut from the middle. The opening moment and the closing insight are sacred. Everything between must justify its presence.
 
 ### WHAT HUMAN WRITING LOOKS LIKE (positive guidance)
 
@@ -251,6 +255,7 @@ After writing each body, scan line by line and FIX any violations:
 8. Sentence length distribution: scan each paragraph. If three consecutive sentences are similar in length, break the pattern.
 9. Third-person scan: does any sentence refer to ${posterName} or their company as "they", "the team", or by name in the third person? Rewrite in first person ("I" / "we"). The poster IS the author. Target: ZERO third-person self-references.
 10. Sales pitch scan: does any sentence exist primarily to make the company or product look good? Would a reader think "this is an ad" if they read it? Rewrite to focus on the insight, story, or lesson instead. Strip any sentence that reads like marketing copy. Target: ZERO promotional sentences.
+11. Body B focus scan: read Body B and identify the single core insight. Does every sentence either (a) set up that insight through a specific moment, or (b) deliver that insight? If a sentence does neither, cut it. Check word count: if over 250 words, remove the least essential sentences from the middle until it is under 250.
 
 Do not present output that violates rules 1-7. These are hard failures.
 
@@ -262,6 +267,7 @@ After the self-edit:
 3. Add one moment of genuine hedging where it feels natural.
 4. Find the most abstract sentence and rewrite it with a detail from the source material.
 5. Check the ending: if the last two lines feel like a conclusion, cut or rewrite. End on a small specific detail or an open question.
+6. Body B length recheck: humanization must not re-inflate Body B. If adding texture pushes it over 250 words, swap rather than add (replace a weaker sentence with the more human one). The word ceiling is non-negotiable.
 
 ## OUTPUT FORMAT
 

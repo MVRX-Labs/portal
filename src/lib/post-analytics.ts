@@ -150,10 +150,10 @@ export async function getProfileGrowth(profileId: string, accountId: string): Pr
   let snapshotCount = 0;
   if (posts.length > 0) {
     const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(*)::int` })
       .from(postSnapshots)
       .where(eq(postSnapshots.postId, posts[0].id));
-    snapshotCount = countResult?.count ?? 0;
+    snapshotCount = Number(countResult?.count ?? 0);
   }
 
   return {

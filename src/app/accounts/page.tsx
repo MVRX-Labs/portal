@@ -96,6 +96,8 @@ function ExpandedView({
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingActions, setLoadingActions] = useState(true);
   const [newActionTitle, setNewActionTitle] = useState("");
+  const [newActionDueDate, setNewActionDueDate] = useState("");
+  const [newActionAssigneeId, setNewActionAssigneeId] = useState("");
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
@@ -164,10 +166,16 @@ function ExpandedView({
       const res = await fetch(`/api/accounts/${account.id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newActionTitle.trim() }),
+        body: JSON.stringify({
+          title: newActionTitle.trim(),
+          dueDate: newActionDueDate || null,
+          assigneeId: newActionAssigneeId || null,
+        }),
       });
       if (res.ok) {
         setNewActionTitle("");
+        setNewActionDueDate("");
+        setNewActionAssigneeId("");
         await fetchActions();
       }
     } catch {
@@ -417,40 +425,77 @@ function ExpandedView({
             <>
               {actions.length === 0 && <p className="text-sm text-(--muted) mb-3">No pending actions</p>}
               <div className="space-y-2 mb-3">
-                {actions.map((action) => (
-                  <div
-                    key={action.id}
-                    className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
-                  >
-                    <span className="text-sm flex-1 truncate">{action.title}</span>
-                    {action.dueDate && (
-                      <span className="text-xs text-(--muted) whitespace-nowrap">Due {formatDate(action.dueDate)}</span>
-                    )}
-                    <span className="badge badge-pending">{action.status}</span>
-                    <button
-                      onClick={() => handleCompleteAction(action.id)}
-                      className="text-xs text-(--success) hover:underline shrink-0"
+                {actions.map((action) => {
+                  const isOverdue =
+                    action.dueDate && new Date(action.dueDate) < new Date(new Date().toDateString());
+                  return (
+                    <div
+                      key={action.id}
+                      className={`flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border) ${
+                        isOverdue ? "border-l-2 border-l-red-500" : ""
+                      }`}
                     >
-                      Done
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAction(action.id)}
-                      className="text-xs text-(--destructive) hover:underline shrink-0"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
+                      <span className="text-sm flex-1 truncate">
+                        {action.title}
+                        {action.assigneeName && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none">
+                            {action.assigneeName}
+                          </span>
+                        )}
+                      </span>
+                      {action.dueDate && (
+                        <span
+                          className={`text-xs whitespace-nowrap ${isOverdue ? "text-(--destructive) font-medium" : "text-(--muted)"}`}
+                        >
+                          Due {formatDate(action.dueDate)}
+                        </span>
+                      )}
+                      <span className="badge badge-pending">{action.status}</span>
+                      <button
+                        onClick={() => handleCompleteAction(action.id)}
+                        className="text-xs text-(--success) hover:underline shrink-0"
+                      >
+                        Done
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAction(action.id)}
+                        className="text-xs text-(--destructive) hover:underline shrink-0"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <input
                   type="text"
                   value={newActionTitle}
                   onChange={(e) => setNewActionTitle(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
                   placeholder="Add an action..."
-                  className="flex-1"
+                  className="flex-1 min-w-[150px]"
                 />
+                <input
+                  type="date"
+                  value={newActionDueDate}
+                  onChange={(e) => setNewActionDueDate(e.target.value)}
+                  className="text-sm"
+                  title="Due date"
+                />
+                <select
+                  value={newActionAssigneeId}
+                  onChange={(e) => setNewActionAssigneeId(e.target.value)}
+                  className="text-sm"
+                  title="Assignee"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={handleAddAction}
                   disabled={!newActionTitle.trim() || addingAction}

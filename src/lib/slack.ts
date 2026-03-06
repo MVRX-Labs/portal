@@ -101,6 +101,63 @@ export async function sendSlackSuggestionNotification(message: {
   }
 }
 
+export async function sendSlackIdeaNotification(message: {
+  type: "pr_created" | "failed";
+  idea: string;
+  scope: "small" | "big";
+  prUrl?: string;
+  branchName?: string;
+  error?: string;
+  costUsd?: number;
+}) {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) {
+    console.warn("SLACK_WEBHOOK_URL not configured, skipping notification");
+    return;
+  }
+
+  const lines =
+    message.type === "pr_created"
+      ? [
+          `*Idea Bot — PR Created*`,
+          `*Idea:* ${message.idea}`,
+          `*Scope:* ${message.scope}`,
+          `*Branch:* ${message.branchName}`,
+          `*PR:* ${message.prUrl}`,
+          message.costUsd !== undefined ? `*Cost:* $${message.costUsd.toFixed(4)}` : "",
+        ].filter(Boolean)
+      : [
+          `*Idea Bot — Failed*`,
+          `*Idea:* ${message.idea}`,
+          `*Scope:* ${message.scope}`,
+          `*Error:* ${message.error}`,
+          `*Time:* ${new Date().toISOString()}`,
+        ];
+
+  const payload = {
+    text: lines[0],
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: lines.join("\n"),
+        },
+      },
+    ],
+  };
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Failed to send Slack idea notification:", err);
+  }
+}
+
 export async function resolveSlackUserId(userId: string, email: string): Promise<string | null> {
   const [user] = await db.select({ slackUserId: users.slackUserId }).from(users).where(eq(users.id, userId)).limit(1);
 

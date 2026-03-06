@@ -89,6 +89,8 @@ export const linkedinEngagementScrapeTask = task({
       });
 
       const allEngagers: EngagedPerson[] = [];
+      let scrapeFailures = 0;
+      let scrapeAttempts = 0;
 
       for (let i = 0; i < recentPosts.length; i++) {
         const post = recentPosts[i];
@@ -98,22 +100,26 @@ export const linkedinEngagementScrapeTask = task({
         );
 
         // Reactions
+        scrapeAttempts++;
         try {
           const reactions = await scrapePostReactions(post.postUrl, signal, runId, postDate);
           allEngagers.push(...reactions);
           logger.info(`Got ${reactions.length} reactions for post ${i + 1}`);
         } catch (err) {
+          scrapeFailures++;
           logger.warn(`Failed to scrape reactions for ${post.postUrl}`, {
             error: err instanceof Error ? err.message : String(err),
           });
         }
 
         // Comments
+        scrapeAttempts++;
         try {
           const comments = await scrapePostComments(post.postUrl, signal, runId, postDate);
           allEngagers.push(...comments);
           logger.info(`Got ${comments.length} comments for post ${i + 1}`);
         } catch (err) {
+          scrapeFailures++;
           logger.warn(`Failed to scrape comments for ${post.postUrl}`, {
             error: err instanceof Error ? err.message : String(err),
           });
@@ -121,11 +127,13 @@ export const linkedinEngagementScrapeTask = task({
 
         // Reshares
         if (post.numShares > 0) {
+          scrapeAttempts++;
           try {
             const reshares = await scrapePostReshares(post.postUrl, signal, runId, postDate);
             allEngagers.push(...reshares);
             logger.info(`Got ${reshares.length} reshares for post ${i + 1}`);
           } catch (err) {
+            scrapeFailures++;
             logger.warn(`Failed to scrape reshares for ${post.postUrl}`, {
               error: err instanceof Error ? err.message : String(err),
             });
@@ -140,7 +148,11 @@ export const linkedinEngagementScrapeTask = task({
         });
       }
 
-      logger.info(`Total engagers found: ${allEngagers.length}`);
+      if (scrapeAttempts > 0 && scrapeFailures === scrapeAttempts) {
+        throw new Error(`All ${scrapeAttempts} scrape attempts failed — scraper may be down`);
+      }
+
+      logger.info(`Total engagers found: ${allEngagers.length} (${scrapeFailures}/${scrapeAttempts} scrapes failed)`);
 
       if (allEngagers.length === 0) {
         metadata.set("progress", {
@@ -398,9 +410,10 @@ export const linkedinEngagementScrapeTask = task({
             logger.warn(`Could not resolve Slack user for tarun@mvrxlabs.com: ${slackData.error}`);
           }
         } catch (slackErr) {
-          logger.warn("Failed to send new leads Slack notification", {
+          logger.error("Failed to send new leads Slack notification", {
             error: slackErr instanceof Error ? slackErr.message : String(slackErr),
           });
+          throw slackErr;
         }
       }
 

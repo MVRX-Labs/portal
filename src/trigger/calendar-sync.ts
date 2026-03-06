@@ -174,6 +174,7 @@ export const calendarSyncTask = schedules.task({
           const matchedAccountIds = new Set<string>();
           const matchedContactIds = new Set<string>();
 
+          let attendeeMatchFailures = 0;
           for (const attendee of externalAttendees) {
             try {
               const match = await matchOrCreateForAttendee(attendee.email, attendee.displayName);
@@ -220,10 +221,16 @@ export const calendarSyncTask = schedules.task({
                 );
               }
             } catch (matchErr) {
+              attendeeMatchFailures++;
               logger.warn(`Failed to match attendee ${attendee.email}`, {
                 error: matchErr instanceof Error ? matchErr.message : String(matchErr),
               });
             }
+          }
+          if (externalAttendees.length > 0 && attendeeMatchFailures === externalAttendees.length) {
+            throw new Error(
+              `All ${externalAttendees.length} attendee matches failed for event "${event.summary}" — matching service may be down`
+            );
           }
 
           // Update next/last meeting timestamps

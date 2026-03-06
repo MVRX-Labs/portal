@@ -16,3 +16,4 @@ src/trigger/linkedin-post-generator.ts
 src/app/accounts/page.tsx
 src/trigger/linkedin-engagement-scrape.ts
 src/app/admin/calendar/page.tsx
+src/trigger/calendar-sync.ts

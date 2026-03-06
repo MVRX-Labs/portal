@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 
 interface AccountOverview {
   id: string;
@@ -561,6 +561,8 @@ function AccountsContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [sortKey, setSortKey] = useState<keyof AccountOverview>("mrr");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -611,6 +613,62 @@ function AccountsContent() {
       // ignore
     }
   };
+
+  const sortedAccounts = useMemo(() => {
+    const stringKeys = new Set<keyof AccountOverview>(["name", "ownerName", "summary"]);
+    const dateKeys = new Set<keyof AccountOverview>(["lastMeetingAt", "nextMeetingAt"]);
+    const numericKeys = new Set<keyof AccountOverview>(["mrr"]);
+
+    return [...accounts].sort((a, b) => {
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
+
+      // Nulls always sort to end regardless of direction
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      let cmp = 0;
+      if (stringKeys.has(sortKey)) {
+        cmp = String(aVal).localeCompare(String(bVal));
+      } else if (dateKeys.has(sortKey)) {
+        cmp = new Date(aVal as string).getTime() - new Date(bVal as string).getTime();
+      } else if (numericKeys.has(sortKey)) {
+        cmp = (aVal as number) - (bVal as number);
+      }
+
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [accounts, sortKey, sortDir]);
+
+  function SortHeader({
+    label,
+    field,
+    className,
+  }: {
+    label: string;
+    field: keyof AccountOverview;
+    className?: string;
+  }) {
+    const isActive = sortKey === field;
+    const arrow = isActive ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+    return (
+      <th
+        className={`px-3 py-2 font-medium cursor-pointer select-none hover:text-white ${className || ""}`}
+        onClick={() => {
+          if (isActive) {
+            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+          } else {
+            setSortKey(field);
+            setSortDir("asc");
+          }
+        }}
+      >
+        {label}
+        {arrow}
+      </th>
+    );
+  }
 
   const visibleCount = accounts.filter((a) => !a.hidden).length;
   const hiddenCount = accounts.filter((a) => a.hidden).length;
@@ -666,12 +724,12 @@ function AccountsContent() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-(--border) text-left text-(--muted)">
-              <th className="px-3 py-2 font-medium">Account</th>
-              <th className="px-3 py-2 font-medium">Summary</th>
-              <th className="px-3 py-2 font-medium">Owner</th>
-              <th className="px-3 py-2 font-medium text-right">MRR</th>
-              <th className="px-3 py-2 font-medium">Last Meeting</th>
-              <th className="px-3 py-2 font-medium">Next Meeting</th>
+              <SortHeader label="Account" field="name" />
+              <SortHeader label="Summary" field="summary" />
+              <SortHeader label="Owner" field="ownerName" />
+              <SortHeader label="MRR" field="mrr" className="text-right" />
+              <SortHeader label="Last Meeting" field="lastMeetingAt" />
+              <SortHeader label="Next Meeting" field="nextMeetingAt" />
               {editMode && <th className="px-3 py-2 font-medium w-20"></th>}
             </tr>
           </thead>
@@ -682,14 +740,14 @@ function AccountsContent() {
                   Loading...
                 </td>
               </tr>
-            ) : accounts.length === 0 ? (
+            ) : sortedAccounts.length === 0 ? (
               <tr>
                 <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
                   No accounts found
                 </td>
               </tr>
             ) : (
-              accounts.map((account) => (
+              sortedAccounts.map((account) => (
                 <React.Fragment key={account.id}>
                   <tr
                     onClick={() => setExpandedId(expandedId === account.id ? null : account.id)}

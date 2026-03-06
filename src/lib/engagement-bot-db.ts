@@ -5,7 +5,7 @@ import {
   engagementJobs,
   engagementRawResults,
 } from "@/lib/schema";
-import { eq, and, desc, inArray, notInArray } from "drizzle-orm";
+import { eq, and, desc, inArray, notInArray, isNotNull } from "drizzle-orm";
 import type { NormalizedPost } from "./engagement-bot";
 
 // ---------------------------------------------------------------------------
@@ -185,6 +185,25 @@ export async function listPosts(accountId: string) {
     .from(engagementPosts)
     .where(inArray(engagementPosts.profileId, profiles.map((p) => p.id)))
     .orderBy(desc(engagementPosts.postedAt));
+}
+
+/** Fetch the most recent generated comments for a profile to use as LLM context. */
+export async function getRecentComments(profileId: string, limit = 5): Promise<string[]> {
+  const rows = await db
+    .select({ agentComment: engagementPosts.agentComment })
+    .from(engagementPosts)
+    .where(
+      and(
+        eq(engagementPosts.profileId, profileId),
+        isNotNull(engagementPosts.agentComment),
+      ),
+    )
+    .orderBy(desc(engagementPosts.createdAt))
+    .limit(limit);
+
+  return rows
+    .map((r) => r.agentComment)
+    .filter((c): c is string => c !== null);
 }
 
 // ---------------------------------------------------------------------------

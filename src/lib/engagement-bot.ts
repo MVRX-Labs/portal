@@ -241,7 +241,11 @@ Generate a thoughtful, relevant comment for the given LinkedIn post.
 Keep it concise (1-3 sentences), authentic, and value-adding.
 Do not be generic or sycophantic. Reference specific points from the post.`;
 
-export async function generateComment(postContent: string, persona?: string): Promise<string> {
+export async function generateComment(
+  postContent: string,
+  persona?: string,
+  previousComments?: string[],
+): Promise<string> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
   let systemPrompt = COMMENT_SYSTEM_PROMPT;
@@ -249,7 +253,12 @@ export async function generateComment(postContent: string, persona?: string): Pr
     systemPrompt = `You are commenting as: ${persona}\n\n${COMMENT_SYSTEM_PROMPT}`;
   }
 
-  const prompt = `${systemPrompt}\n\nPost content:\n${postContent}`;
+  let prompt = `${systemPrompt}\n\nPost content:\n${postContent}`;
+
+  if (previousComments && previousComments.length > 0) {
+    const numbered = previousComments.map((c, i) => `${i + 1}. ${c}`).join("\n");
+    prompt += `\n\nYou have previously written these comments on this person's posts (avoid repeating similar themes, phrases, or structures):\n${numbered}`;
+  }
 
   let output = "";
   for await (const message of query({

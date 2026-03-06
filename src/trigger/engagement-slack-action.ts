@@ -1,6 +1,6 @@
 import { task, logger } from "@trigger.dev/sdk/v3";
 import { generateComment, updateSlackCard } from "@/lib/engagement-bot";
-import { getPost, updatePostStatus, getProfile } from "@/lib/engagement-bot-db";
+import { getPost, updatePostStatus, getProfile, getRecentComments } from "@/lib/engagement-bot-db";
 
 interface SlackActionPayload {
   actionName: "comment" | "like" | "repost" | "skip";
@@ -33,8 +33,9 @@ export const engagementSlackActionTask = task({
     let comment: string | undefined;
     if (actionName === "comment") {
       const persona = profile?.engagementPersona || "";
+      const previousComments = await getRecentComments(post.profileId, 5);
       try {
-        comment = await generateComment(post.content, persona || undefined);
+        comment = await generateComment(post.content, persona || undefined, previousComments);
       } catch (err) {
         logger.error(`Comment generation failed for post ${postId}: ${String(err)}`);
         await updatePostStatus(postId, "failed");

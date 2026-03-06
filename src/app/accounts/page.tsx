@@ -59,6 +59,15 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
+function lastMeetingBadgeClass(iso: string | null): string {
+  if (!iso) return "badge-neutral";
+  const diffMs = new Date().getTime() - new Date(iso).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 14) return "badge-completed";
+  if (diffDays <= 30) return "badge-pending";
+  return "badge-failed";
+}
+
 function relativeDate(iso: string | null): string {
   if (!iso) return "No data";
   const date = new Date(iso);
@@ -746,7 +755,7 @@ function AccountsContent() {
                       )}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}>
+                      <span className={`badge ${lastMeetingBadgeClass(account.lastMeetingAt)}`}>
                         {relativeDate(account.lastMeetingAt)}
                       </span>
                     </td>

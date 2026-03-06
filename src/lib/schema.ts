@@ -294,18 +294,68 @@ export const engagementJobs = pgTable("engagement_jobs", {
   completedAt: timestamp("completed_at"),
 });
 
-// --- Post analytics (snapshots + growth tracking) ---
+// --- Post analytics (tracking OUR CLIENTS' LinkedIn profiles) ---
+// Separate from engagement_profiles which track external people to engage WITH
 
-export const postSnapshots = pgTable("post_snapshots", {
+export const managedProfiles = pgTable(
+  "managed_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("mprof")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    linkedinUrl: text("linkedin_url").notNull(),
+    displayName: text("display_name").notNull().default(""),
+    linkedinSlug: text("linkedin_slug"),
+    active: boolean("active").notNull().default(true),
+    lastScrapedAt: timestamp("last_scraped_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueAccountUrl: unique().on(table.accountId, table.linkedinUrl),
+  })
+);
+
+export const managedPosts = pgTable(
+  "managed_posts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("mpost")),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => managedProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    apifyPostId: text("apify_post_id").notNull(),
+    content: text("content").notNull().default(""),
+    postUrl: text("post_url").notNull().default(""),
+    likesCount: integer("likes_count").notNull().default(0),
+    commentsCount: integer("comments_count").notNull().default(0),
+    repostsCount: integer("reposts_count").notNull().default(0),
+    postedAt: timestamp("posted_at"),
+    discoveredAt: timestamp("discovered_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueProfilePost: unique().on(table.profileId, table.apifyPostId),
+  })
+);
+
+export const managedPostSnapshots = pgTable("managed_post_snapshots", {
   id: text("id")
     .primaryKey()
-    .$defaultFn(() => createObjectId("snap")),
+    .$defaultFn(() => createObjectId("msnap")),
   postId: text("post_id")
     .notNull()
-    .references(() => engagementPosts.id),
+    .references(() => managedPosts.id),
   profileId: text("profile_id")
     .notNull()
-    .references(() => engagementProfiles.id),
+    .references(() => managedProfiles.id),
   accountId: text("account_id")
     .notNull()
     .references(() => accounts.id),
@@ -324,7 +374,7 @@ export const analyticsReports = pgTable(
     accountId: text("account_id")
       .notNull()
       .references(() => accounts.id),
-    profileId: text("profile_id").references(() => engagementProfiles.id),
+    profileId: text("profile_id").references(() => managedProfiles.id),
     reportType: text("report_type").notNull().default("weekly"),
     periodStart: timestamp("period_start").notNull(),
     periodEnd: timestamp("period_end").notNull(),

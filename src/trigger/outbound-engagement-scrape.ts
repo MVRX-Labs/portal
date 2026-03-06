@@ -20,7 +20,7 @@ import {
   claimUnsentPosts,
   unclaimPost,
 } from "@/lib/engagement-bot-db";
-import { takeSnapshots } from "@/lib/post-analytics";
+
 
 const outboundEngagementQueue = queue({
   name: "outbound-engagement-scrape",
@@ -82,9 +82,7 @@ export const outboundEngagementScrapeTask = task({
       metadata.set("progress", { step: "Saving posts", stepNumber: 5, totalSteps: 7, percentage: 60 });
       const { total, newPosts } = await savePosts(profileId, normalized);
 
-      // Step 6b: Take engagement snapshot for growth tracking
-      const snapshotsTaken = await takeSnapshots(profileId, accountId);
-      logger.info(`Took ${snapshotsTaken} engagement snapshots for profile ${profileId}`);
+
 
       // Update lastScrapedAt
       await updateProfile(profileId, { lastScrapedAt: new Date() });

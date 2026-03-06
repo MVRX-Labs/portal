@@ -35,7 +35,7 @@ export async function POST(
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ urls: [profile.linkedinUrl], maxPosts: 50 }),
+        body: JSON.stringify({ urls: [profile.linkedinUrl], maxPosts: 200 }),
       });
 
       if (!res.ok) {

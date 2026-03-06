@@ -561,12 +561,16 @@ function AccountsContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = showHidden ? "?includeHidden=true" : "";
-      const [acctRes, userRes] = await Promise.all([fetch(`/api/accounts${params}`), fetch("/api/admin/users")]);
+      const params = new URLSearchParams();
+      if (showHidden) params.set("includeHidden", "true");
+      if (search) params.set("q", search);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const [acctRes, userRes] = await Promise.all([fetch(`/api/accounts${qs}`), fetch("/api/admin/users")]);
       if (acctRes.ok) {
         const data = await acctRes.json();
         setAccounts(data.accounts);
@@ -580,7 +584,7 @@ function AccountsContent() {
     } finally {
       setLoading(false);
     }
-  }, [showHidden]);
+  }, [showHidden, search]);
 
   useEffect(() => {
     fetchAccounts();
@@ -629,6 +633,13 @@ function AccountsContent() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">Accounts</h1>
         <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search accounts..."
+            className="w-64"
+          />
           {editMode && (
             <label className="flex items-center gap-2 text-sm text-(--muted) cursor-pointer select-none">
               <input

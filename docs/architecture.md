@@ -22,7 +22,7 @@ src/
     dashboard/   # Main UI pages
     tools/       # Tool UI pages
     admin/       # Admin UI
-  trigger/       # Trigger.dev background tasks (12 tasks)
+  trigger/       # Trigger.dev background tasks (15 tasks)
   components/    # React components
   lib/           # Shared utilities, DB schema, API clients
 scripts/         # Dev scripts (seed, migrations, pre-commit hooks)
@@ -31,7 +31,7 @@ docs/            # Project documentation (you are here)
 
 ## Dependency Layers
 
-Code flows in one direction. Violations are caught by `scripts/lint-architecture.ts`.
+Code flows in one direction. Violations are caught by `scripts/lint-architecture.sh`.
 
 ```
 lib/          Shared utilities, DB, types, API clients
@@ -65,6 +65,10 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `toolRuns` — Record of all background job executions
 - `accountActions` — Action items per account
 - `calendarSyncState`, `calendarEvents`, `calendarEventAccounts`, `calendarEventContacts` — Calendar automation
+- `engagementProfiles` — LinkedIn profiles tracked for outbound engagement (per account)
+- `engagementPosts` — Scraped LinkedIn posts pending/actioned review
+- `engagementJobs` — Apify scrape job records for engagement profiles
+- `engagementRawResults` — Raw Apify output per job (dedup key: profileId + apifyItemId)
 
 ID scheme: CUID2 with prefixes (`user_`, `acct_`, `contact_`, `lead_`, `run_`, etc.) — see `src/lib/ids.ts`.
 
@@ -84,13 +88,16 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 **Automation tasks** (triggered via API or scheduled):
 
 - `linkedin-engagement-scrape` — Lead discovery from company/personal engagement
+- `outbound-engagement-scrape` — Scrapes recent LinkedIn posts for tracked profiles, sends to Slack for review
+- `engagement-slack-action` — Processes Slack button clicks (comment/like/repost/skip) on outbound engagement cards
 - `account-enrichment` — Company data enrichment via web search
 
 **Scheduled tasks:**
 
-- `calendar-sync` — Google Calendar incremental sync (every 30 min, 7:22am-7:22pm London)
+- `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
 - `calendar-meeting-notifier` — Meeting prep notifications
 - `linkedin-engagement-scheduler` — Periodic engagement scraping
+- `idea-generator` — Hourly AI-driven idea bot: generates a product idea, implements it, opens a PR (Mon–Fri, 9am–5pm London)
 - `code-quality-scan` — Weekly doc gardening: Claude audits docs vs code, opens PR for drift
 
 **Patterns:**

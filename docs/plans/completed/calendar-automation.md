@@ -1,6 +1,6 @@
-**Moved to [docs/plans/completed/calendar-automation.md](../completed/calendar-automation.md) — this plan is implemented.**
-
 # Automated LinkedIn Audits from Google Calendar
+
+> **Status: COMPLETED.** Calendar sync is implemented as a Trigger.dev scheduled task (`calendar-sync` in `src/trigger/calendar-sync.ts`). Note: the final implementation uses Trigger.dev scheduling (not Vercel Cron) and does not include the contact-resolution chained-job flow described below — calendar sync instead matches attendees to existing contacts/accounts directly.
 
 ## Context
 

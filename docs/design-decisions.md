@@ -71,3 +71,19 @@ Key architectural decisions and their rationale. Check here before making change
 **Decision:** Generated reports (audit DOCX, GTM DOCX, sentiment DOCX) are uploaded to Google Drive.
 
 **Why:** Team already uses Google Workspace. Documents are accessible to non-technical stakeholders. Folder structure mirrors account hierarchy.
+
+---
+
+## Outbound Engagement Bot: Slack as the Review Interface
+
+**Decision:** Outbound LinkedIn engagement (commenting, liking, reposting) is orchestrated via Slack interactive messages, not a portal UI.
+
+**Why:** The workflow is: scrape recent posts from tracked LinkedIn profiles → post a Slack card for each → team member clicks an action button → `engagement-slack-action` task generates a comment (if needed) and marks the post. Slack is where the team already works; building a dedicated UI would add friction. Accounts opt in per-channel via `accounts.engagementSlackChannel`. The scraper (`outbound-engagement-scrape`) uses Apify and is rate-limited to 2 concurrent jobs via a Trigger.dev queue.
+
+---
+
+## Idea Generator: Autonomous PR Bot
+
+**Decision:** A scheduled Trigger.dev task (`idea-generator`) autonomously generates product ideas and opens PRs, running hourly during UK working hours.
+
+**Why:** Keeps a steady stream of small improvements flowing without requiring manual effort. Uses a two-phase Claude approach: Phase 1 (ideation) reads the codebase and optionally web-searches; Phase 2 (implementation) writes the code. Randomised scope/strategy per run avoids repetition. Logs total cost per run.

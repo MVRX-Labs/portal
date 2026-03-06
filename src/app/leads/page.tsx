@@ -211,15 +211,32 @@ function LeadsContent() {
               leads.map((lead) => (
                 <tr key={lead.id} className="border-b border-(--border) last:border-0">
                   <td className="px-3 py-1.5">
-                    <a
-                      href={lead.linkedinUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-(--accent) hover:underline"
-                    >
-                      {lead.firstName}
-                      {lead.lastName ? ` ${lead.lastName}` : ""}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      {lead.profileImageUrl ? (
+                        <img
+                          src={lead.profileImageUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="h-7 w-7 min-w-[28px] rounded-full object-cover ring-1 ring-(--border)"
+                        />
+                      ) : (
+                        <div className="h-7 w-7 min-w-[28px] rounded-full bg-(--input) ring-1 ring-(--border) flex items-center justify-center">
+                          <span className="text-[10px] font-medium text-(--muted) leading-none">
+                            {lead.firstName?.charAt(0).toUpperCase() ?? ""}
+                            {lead.lastName?.charAt(0).toUpperCase() ?? ""}
+                          </span>
+                        </div>
+                      )}
+                      <a
+                        href={lead.linkedinUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-(--accent) hover:underline"
+                      >
+                        {lead.firstName}
+                        {lead.lastName ? ` ${lead.lastName}` : ""}
+                      </a>
+                    </div>
                   </td>
                   <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
                   <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>

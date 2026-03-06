@@ -32,7 +32,7 @@ export const analyticsScrapeTask = task({
   maxDuration: 300,
   retry: { maxAttempts: 2 },
   run: async (payload: AnalyticsScrapePayload) => {
-    const { accountId, profileId, maxPosts = 50 } = payload;
+    const { accountId, profileId, maxPosts = 200 } = payload;
 
     const profile = await getManagedProfile(profileId);
     if (!profile) throw new Error(`Managed profile ${profileId} not found`);

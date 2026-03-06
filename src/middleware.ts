@@ -75,5 +75,6 @@ export const config = {
     "/api/contacts/:path*",
     "/linkedin-engagement/:path*",
     "/leads/:path*",
+    "/analytics/:path*",
   ],
 };

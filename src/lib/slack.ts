@@ -170,7 +170,7 @@ export async function sendSlackFile(
     return;
   }
 
-  // Step 1: Get upload URL
+  // Step 1: Upload the file (v2 API)
   const uploadRes = await fetch(
     `https://slack.com/api/files.getUploadURLExternal?filename=${encodeURIComponent(filename)}&length=${Buffer.byteLength(content)}`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -180,14 +180,32 @@ export async function sendSlackFile(
     throw new Error(`Slack files.getUploadURLExternal failed: ${uploadData.error}`);
   }
 
-  // Step 2: Upload file content
   await fetch(uploadData.upload_url, {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
     body: content,
   });
 
-  // Step 3: Complete upload and share to user's DM
+  // Step 2: Complete upload and share — channel_id must be a conversation ID, not user ID.
+  // Use chat.postMessage first to ensure a DM channel exists, then extract the channel ID.
+  const openMsg = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      channel: slackUserId,
+      text: initialComment,
+    }),
+  });
+  const openMsgData = await openMsg.json();
+  if (!openMsgData.ok) {
+    throw new Error(`Slack chat.postMessage failed: ${openMsgData.error}`);
+  }
+  const dmChannelId = openMsgData.channel;
+
+  // Step 3: Complete the file upload and share to the DM channel
   const completeRes = await fetch("https://slack.com/api/files.completeUploadExternal", {
     method: "POST",
     headers: {
@@ -196,8 +214,7 @@ export async function sendSlackFile(
     },
     body: JSON.stringify({
       files: [{ id: uploadData.file_id, title: filename }],
-      channel_id: slackUserId,
-      initial_comment: initialComment,
+      channel_id: dmChannelId,
     }),
   });
   const completeData = await completeRes.json();

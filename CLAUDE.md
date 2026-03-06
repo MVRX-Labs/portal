@@ -24,7 +24,7 @@ docs/
 - **All Trigger.dev tasks must send Slack notifications on failure** via `src/lib/slack.ts`.
 - **Reduce coupling.** Each subsystem (calendar sync, LinkedIn audit, engagement scraping) operates independently.
 - **Do not expect accounts/contacts to always be accurate.** We should handle missing fields gracefully.
-- **Trigger tasks use `logger` from `@trigger.dev/sdk`**, not `console.log`. This is enforced by `scripts/lint-architecture.ts`.
+- **Trigger tasks use `logger` from `@trigger.dev/sdk`**, not `console.log`. This is enforced by `scripts/lint-architecture.sh`.
 - **Max 300 lines per file.** Enforced by pre-commit hook. Break large files into focused modules.
 
 ## Dependency Rules (enforced by lint)

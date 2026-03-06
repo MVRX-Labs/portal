@@ -1,6 +1,6 @@
-**Moved to [docs/plans/completed/idea-generator.md](../completed/idea-generator.md) — this plan is implemented.**
-
 # Idea Generator — Periodic Background Job
+
+> **Status: COMPLETED.** Implemented as `src/trigger/idea-generator.ts` (task id: `idea-generator`). `sendSlackIdeaNotification` added to `src/lib/slack.ts`. Implemented as specified below.
 
 ## Summary
 

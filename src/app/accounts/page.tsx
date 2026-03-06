@@ -27,6 +27,7 @@ interface Contact {
   personalEmail: string | null;
   linkedinUrl: string | null;
   lastMeetingAt: string | null;
+  nextMeetingAt: string | null;
   autoCreated: boolean;
   engagementScrapeEnabled: boolean;
 }
@@ -318,6 +319,11 @@ function ExpandedView({
                     <div className="flex items-center gap-2 ml-2 shrink-0">
                       <span className="badge badge-neutral whitespace-nowrap">
                         {contact.lastMeetingAt ? relativeDate(contact.lastMeetingAt) : "No meetings"}
+                      </span>
+                      <span
+                        className={`badge whitespace-nowrap ${contact.nextMeetingAt ? "badge-running" : "badge-neutral"}`}
+                      >
+                        {contact.nextMeetingAt ? relativeDate(contact.nextMeetingAt) : "None scheduled"}
                       </span>
                       {editMode && (
                         <button

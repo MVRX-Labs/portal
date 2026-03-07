@@ -27,6 +27,7 @@ const PREFIXES = {
   engraw: "engraw",
   mprof: "mprof",
   mpost: "mpost",
+  msnap: "msnap",
   arpt: "arpt",
 } as const;
 
@@ -48,6 +49,7 @@ export type EngagementJobId = `engjob_${string}`;
 export type EngagementRawResultId = `engraw_${string}`;
 export type ManagedProfileId = `mprof_${string}`;
 export type ManagedPostId = `mpost_${string}`;
+export type ManagedPostSnapshotId = `msnap_${string}`;
 export type AnalyticsReportId = `arpt_${string}`;
 export type ObjectId =
   | UserId
@@ -66,6 +68,7 @@ export type ObjectId =
   | EngagementRawResultId
   | ManagedProfileId
   | ManagedPostId
+  | ManagedPostSnapshotId
   | AnalyticsReportId;
 
 type PrefixToId = {
@@ -85,6 +88,7 @@ type PrefixToId = {
   engraw: EngagementRawResultId;
   mprof: ManagedProfileId;
   mpost: ManagedPostId;
+  msnap: ManagedPostSnapshotId;
   arpt: AnalyticsReportId;
 };
 
@@ -121,6 +125,7 @@ export function prefixForTable(table: string): Prefix {
     engagement_raw_results: "engraw",
     managed_profiles: "mprof",
     managed_posts: "mpost",
+    managed_post_snapshots: "msnap",
     analytics_reports: "arpt",
   };
   const prefix = map[table];

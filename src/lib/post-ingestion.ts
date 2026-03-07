@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { managedPosts, managedProfiles } from "@/lib/schema";
+import { managedPosts, managedPostSnapshots, managedProfiles } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { normalizePost } from "./engagement-bot";
 import { extractManagedLinkedinSlug } from "./managed-profiles";
@@ -104,6 +104,8 @@ export async function ingestPosts(
     for (const p of posts) {
       const existing = existingByApifyPostId.get(p.apifyPostId);
 
+      let postId: string;
+
       if (existing) {
         await tx
           .update(managedPosts)
@@ -116,8 +118,9 @@ export async function ingestPosts(
             postedAt: p.postedAt ?? existing.postedAt,
           })
           .where(eq(managedPosts.id, existing.id));
+        postId = existing.id;
       } else {
-        await tx
+        const [inserted] = await tx
           .insert(managedPosts)
           .values({
             profileId,
@@ -129,9 +132,20 @@ export async function ingestPosts(
             commentsCount: p.commentsCount,
             repostsCount: p.repostsCount,
             postedAt: p.postedAt,
-          });
+          })
+          .returning({ id: managedPosts.id });
+        postId = inserted.id;
         newCount++;
       }
+
+      await tx.insert(managedPostSnapshots).values({
+        postId,
+        profileId,
+        accountId,
+        likesCount: p.likesCount,
+        commentsCount: p.commentsCount,
+        repostsCount: p.repostsCount,
+      });
     }
 
     await tx

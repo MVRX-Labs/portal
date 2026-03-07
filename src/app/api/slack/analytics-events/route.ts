@@ -1,0 +1,117 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { accounts, managedProfiles } from "@/lib/schema";
+import { eq, like } from "drizzle-orm";
+import { tasks } from "@trigger.dev/sdk";
+import { sendAnalyticsSlackMessage } from "@/lib/slack";
+import type { trackPostTask } from "@/trigger/post-tracker";
+
+const LINKEDIN_POST_RE =
+  /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/i;
+
+function extractAuthorSlugFromPostUrl(url: string): string | null {
+  const match = url.match(/linkedin\.com\/posts\/([a-z0-9_-]+?)_/i);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+async function findAccountByChannel(channelId: string) {
+  const rows = await db
+    .select({ id: accounts.id, analyticsSlackChannel: accounts.analyticsSlackChannel })
+    .from(accounts)
+    .where(like(accounts.analyticsSlackChannel, `%${channelId}%`));
+
+  return rows.find((r) => {
+    const ids = (r.analyticsSlackChannel ?? "").split(",").map((s) => s.trim());
+    return ids.includes(channelId);
+  }) ?? null;
+}
+
+async function findProfileBySlug(accountId: string, slug: string) {
+  const profiles = await db
+    .select()
+    .from(managedProfiles)
+    .where(eq(managedProfiles.accountId, accountId));
+
+  return profiles.find((p) => p.linkedinSlug === slug) ?? null;
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+
+  // Slack URL verification challenge
+  if (body.type === "url_verification") {
+    return NextResponse.json({ challenge: body.challenge });
+  }
+
+  // Only handle event callbacks
+  if (body.type !== "event_callback") {
+    return NextResponse.json({ ok: true });
+  }
+
+  const event = body.event;
+  if (!event || event.type !== "app_mention") {
+    return NextResponse.json({ ok: true });
+  }
+
+  const text: string = event.text ?? "";
+  const channelId: string = event.channel;
+  const threadTs: string = event.thread_ts ?? event.ts;
+
+  // Extract LinkedIn post URL from message
+  const urlMatch = text.match(LINKEDIN_POST_RE);
+  if (!urlMatch) {
+    await sendAnalyticsSlackMessage(
+      channelId,
+      "Please include a LinkedIn post URL to track.",
+      [{ type: "section", text: { type: "mrkdwn", text: "Please include a LinkedIn post URL to track." } }],
+      { thread_ts: threadTs },
+    ).catch(() => {});
+    return NextResponse.json({ ok: true });
+  }
+
+  const postUrl = urlMatch[0].replace(/>$/, "");
+
+  // Find which account owns this channel
+  const account = await findAccountByChannel(channelId);
+  if (!account) {
+    await sendAnalyticsSlackMessage(
+      channelId,
+      "This channel isn't linked to any account's analytics. Set the Slack channel ID in the Analytics settings first.",
+      [{ type: "section", text: { type: "mrkdwn", text: "This channel isn't linked to any account's analytics. Set the Slack channel ID in the Analytics settings first." } }],
+      { thread_ts: threadTs },
+    ).catch(() => {});
+    return NextResponse.json({ ok: true });
+  }
+
+  // Try to match to a managed profile by author slug
+  const authorSlug = extractAuthorSlugFromPostUrl(postUrl);
+  let profileId: string | null = null;
+  if (authorSlug) {
+    const profile = await findProfileBySlug(account.id, authorSlug);
+    profileId = profile?.id ?? null;
+  }
+
+  // Acknowledge in thread
+  await sendAnalyticsSlackMessage(
+    channelId,
+    `Tracking this post — will report performance in 4 hours.`,
+    [{
+      type: "section",
+      text: { type: "mrkdwn", text: `Tracking <${postUrl}|this post> — will report performance in 4 hours.` },
+    }],
+    { thread_ts: threadTs },
+  ).catch(() => {});
+
+  // Trigger the delayed task
+  await tasks.trigger<typeof trackPostTask>("track-post", {
+    postUrl,
+    accountId: account.id,
+    profileId,
+    channelId,
+    threadTs,
+  }, {
+    delay: "4h",
+  });
+
+  return NextResponse.json({ ok: true });
+}

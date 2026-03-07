@@ -219,12 +219,23 @@ export async function sendAnalyticsSlackMessage(
   channelId: string,
   text: string,
   blocks: Record<string, unknown>[],
-  options?: { unfurl_links?: boolean; unfurl_media?: boolean },
+  options?: { unfurl_links?: boolean; unfurl_media?: boolean; thread_ts?: string },
 ): Promise<void> {
   const token = process.env.ANALYTICS_SLACKBOT_TOKEN;
   if (!token) {
     console.warn("ANALYTICS_SLACKBOT_TOKEN not configured, skipping analytics message");
     return;
+  }
+
+  const body: Record<string, unknown> = {
+    channel: channelId,
+    text,
+    blocks,
+    unfurl_links: options?.unfurl_links ?? false,
+    unfurl_media: options?.unfurl_media ?? false,
+  };
+  if (options?.thread_ts) {
+    body.thread_ts = options.thread_ts;
   }
 
   const res = await fetch("https://slack.com/api/chat.postMessage", {
@@ -233,13 +244,7 @@ export async function sendAnalyticsSlackMessage(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      channel: channelId,
-      text,
-      blocks,
-      unfurl_links: options?.unfurl_links ?? false,
-      unfurl_media: options?.unfurl_media ?? false,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await res.json();

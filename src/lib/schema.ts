@@ -347,6 +347,25 @@ export const managedPosts = pgTable(
   })
 );
 
+export const managedPostSnapshots = pgTable("managed_post_snapshots", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("msnap")),
+  postId: text("post_id")
+    .notNull()
+    .references(() => managedPosts.id),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => managedProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  likesCount: integer("likes_count").notNull().default(0),
+  commentsCount: integer("comments_count").notNull().default(0),
+  repostsCount: integer("reposts_count").notNull().default(0),
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+});
+
 export const analyticsReports = pgTable(
   "analytics_reports",
   {

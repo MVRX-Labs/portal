@@ -7,7 +7,7 @@ import { sendAnalyticsSlackMessage } from "@/lib/slack";
 import type { trackPostTask } from "@/trigger/post-tracker";
 
 const LINKEDIN_POST_RE =
-  /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/i;
+  /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/gi;
 
 function extractAuthorSlugFromPostUrl(url: string): string | null {
   const match = url.match(/linkedin\.com\/posts\/([a-z0-9_-]+?)_/i);
@@ -57,9 +57,12 @@ export async function POST(request: NextRequest) {
   const channelId: string = event.channel;
   const threadTs: string = event.thread_ts ?? event.ts;
 
-  // Extract LinkedIn post URL from message
-  const urlMatch = text.match(LINKEDIN_POST_RE);
-  if (!urlMatch) {
+  // Extract all LinkedIn post URLs from message
+  const postUrls = [...text.matchAll(LINKEDIN_POST_RE)]
+    .map((m) => m[0].replace(/>$/, ""))
+    .filter((url, i, arr) => arr.indexOf(url) === i); // dedupe
+
+  if (postUrls.length === 0) {
     await sendAnalyticsSlackMessage(
       channelId,
       "Please include a LinkedIn post URL to track.",
@@ -68,8 +71,6 @@ export async function POST(request: NextRequest) {
     ).catch(() => {});
     return NextResponse.json({ ok: true });
   }
-
-  const postUrl = urlMatch[0].replace(/>$/, "");
 
   // Find which account owns this channel
   const account = await findAccountByChannel(channelId);
@@ -83,26 +84,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Try to match to a managed profile by author slug
-  const authorSlug = extractAuthorSlugFromPostUrl(postUrl);
-  let profileId: string | null = null;
-  if (authorSlug) {
-    const profile = await findProfileBySlug(account.id, authorSlug);
-    profileId = profile?.id ?? null;
-  }
-
   // Acknowledge in thread
+  const postWord = postUrls.length === 1 ? "post" : `${postUrls.length} posts`;
+  const linkList = postUrls.map((url, i) => `<${url}|Post ${i + 1}>`).join(", ");
   await sendAnalyticsSlackMessage(
     channelId,
-    `Tracking this post — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.`,
+    `Tracking ${postWord} — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.`,
     [{
       type: "section",
-      text: { type: "mrkdwn", text: `Tracking <${postUrl}|this post> — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.` },
+      text: { type: "mrkdwn", text: `Tracking ${linkList} — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.` },
     }],
     { thread_ts: threadTs },
   ).catch(() => {});
 
-  // Trigger snapshots at each checkpoint
+  // Trigger snapshots at each checkpoint for each URL
   const checkpoints = [
     { delay: "5m", label: "5-Minute" },
     { delay: "30m", label: "30-Minute" },
@@ -111,24 +106,33 @@ export async function POST(request: NextRequest) {
     { delay: "4h", label: "4-Hour" },
   ];
 
-  const basePayload = {
-    postUrl,
-    accountId: account.id,
-    profileId,
-    channelId,
-    threadTs,
-  };
+  const triggers: Promise<unknown>[] = [];
 
-  await Promise.all(
-    checkpoints.map((cp) =>
-      tasks.trigger<typeof trackPostTask>("track-post", {
-        ...basePayload,
-        label: cp.label,
-      }, {
-        delay: cp.delay,
-      }),
-    ),
-  );
+  for (const postUrl of postUrls) {
+    const authorSlug = extractAuthorSlugFromPostUrl(postUrl);
+    let profileId: string | null = null;
+    if (authorSlug) {
+      const profile = await findProfileBySlug(account.id, authorSlug);
+      profileId = profile?.id ?? null;
+    }
+
+    for (const cp of checkpoints) {
+      triggers.push(
+        tasks.trigger<typeof trackPostTask>("track-post", {
+          postUrl,
+          accountId: account.id,
+          profileId,
+          channelId,
+          threadTs,
+          label: cp.label,
+        }, {
+          delay: cp.delay,
+        }),
+      );
+    }
+  }
+
+  await Promise.all(triggers);
 
   return NextResponse.json({ ok: true });
 }

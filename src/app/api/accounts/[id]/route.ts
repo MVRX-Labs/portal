@@ -26,18 +26,23 @@ async function ensureDriveFolder(account: typeof accounts.$inferSelect) {
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  try {
+    const { id } = await params;
 
-  const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
-  let [account] = await db.select().from(accounts).where(eq(column, id));
+    const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
+    let [account] = await db.select().from(accounts).where(eq(column, id));
 
-  if (!account) {
-    return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    if (!account) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+
+    account = await ensureDriveFolder(account);
+
+    return NextResponse.json({ account });
+  } catch (err) {
+    console.error("GET /api/accounts/[id] failed:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  account = await ensureDriveFolder(account);
-
-  return NextResponse.json({ account });
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

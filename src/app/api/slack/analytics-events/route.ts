@@ -94,24 +94,41 @@ export async function POST(request: NextRequest) {
   // Acknowledge in thread
   await sendAnalyticsSlackMessage(
     channelId,
-    `Tracking this post — will report performance in 4 hours.`,
+    `Tracking this post — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.`,
     [{
       type: "section",
-      text: { type: "mrkdwn", text: `Tracking <${postUrl}|this post> — will report performance in 4 hours.` },
+      text: { type: "mrkdwn", text: `Tracking <${postUrl}|this post> — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.` },
     }],
     { thread_ts: threadTs },
   ).catch(() => {});
 
-  // Trigger the delayed task
-  await tasks.trigger<typeof trackPostTask>("track-post", {
+  // Trigger snapshots at each checkpoint
+  const checkpoints = [
+    { delay: "5m", label: "5-Minute" },
+    { delay: "30m", label: "30-Minute" },
+    { delay: "1h", label: "1-Hour" },
+    { delay: "2h", label: "2-Hour" },
+    { delay: "4h", label: "4-Hour" },
+  ];
+
+  const basePayload = {
     postUrl,
     accountId: account.id,
     profileId,
     channelId,
     threadTs,
-  }, {
-    delay: "4h",
-  });
+  };
+
+  await Promise.all(
+    checkpoints.map((cp) =>
+      tasks.trigger<typeof trackPostTask>("track-post", {
+        ...basePayload,
+        label: cp.label,
+      }, {
+        delay: cp.delay,
+      }),
+    ),
+  );
 
   return NextResponse.json({ ok: true });
 }

@@ -17,6 +17,7 @@ interface TrackPostPayload {
   profileId: string | null;
   channelId: string;
   threadTs: string;
+  label: string;
 }
 
 export const trackPostTask = task({
@@ -24,7 +25,7 @@ export const trackPostTask = task({
   maxDuration: 300,
   retry: { maxAttempts: 2 },
   run: async (payload: TrackPostPayload, { ctx }) => {
-    const { postUrl, accountId, profileId, channelId, threadTs } = payload;
+    const { postUrl, accountId, profileId, channelId, threadTs, label } = payload;
 
     try {
       logger.info("Scraping tracked post", { postUrl, accountId });
@@ -115,7 +116,7 @@ export const trackPostTask = task({
       const blocks: Record<string, unknown>[] = [
         {
           type: "header",
-          text: { type: "plain_text", text: "4-Hour Post Performance", emoji: true },
+          text: { type: "plain_text", text: `${label} Post Performance`, emoji: true },
         },
         {
           type: "section",
@@ -138,7 +139,7 @@ export const trackPostTask = task({
 
       await sendAnalyticsSlackMessage(
         channelId,
-        `4-Hour Performance: ${likes} likes, ${comments} comments, ${reposts} reposts (${totalEngagement} total)`,
+        `${label} Performance: ${likes} likes, ${comments} comments, ${reposts} reposts (${totalEngagement} total)`,
         blocks,
         { thread_ts: threadTs },
       );

@@ -19,6 +19,7 @@ export interface Account {
   lastMeetingAt: string | null;
   nextMeetingAt: string | null;
   engagementSlackChannel: string | null;
+  analyticsSlackChannel: string | null;
   createdAt: string;
   updatedAt: string;
 }

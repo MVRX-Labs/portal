@@ -215,6 +215,39 @@ export async function sendSlackDM(slackUserId: string, text: string, blocks: Rec
   }
 }
 
+export async function sendAnalyticsSlackMessage(
+  channelId: string,
+  text: string,
+  blocks: Record<string, unknown>[],
+  options?: { unfurl_links?: boolean; unfurl_media?: boolean },
+): Promise<void> {
+  const token = process.env.ANALYTICS_SLACKBOT_TOKEN;
+  if (!token) {
+    console.warn("ANALYTICS_SLACKBOT_TOKEN not configured, skipping analytics message");
+    return;
+  }
+
+  const res = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      channel: channelId,
+      text,
+      blocks,
+      unfurl_links: options?.unfurl_links ?? false,
+      unfurl_media: options?.unfurl_media ?? false,
+    }),
+  });
+
+  const data = await res.json();
+  if (!data.ok) {
+    throw new Error(`Slack analytics chat.postMessage failed: ${data.error}`);
+  }
+}
+
 export async function sendSlackFile(
   slackUserId: string,
   filename: string,

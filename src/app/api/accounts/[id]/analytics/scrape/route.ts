@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listManagedProfiles, ingestPosts } from "@/lib/post-analytics";
-
-const APIFY_BASE = "https://api.apify.com/v2";
-const APIFY_ACTOR_ID = "supreme_coder/linkedin-post";
+import { tasks } from "@trigger.dev/sdk";
+import { listManagedProfiles } from "@/lib/managed-profiles";
+import type { weeklyAnalyticsTask } from "@/trigger/analytics-scrape";
 
 export async function POST(
   request: NextRequest,
@@ -10,47 +9,34 @@ export async function POST(
 ) {
   const { id: accountId } = await params;
   const body = await request.json().catch(() => ({}));
-  const profileId = body.profile_id;
+  const profileId = typeof body.profile_id === "string" ? body.profile_id : undefined;
 
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) {
-    return NextResponse.json({ error: "APIFY_API_TOKEN not configured" }, { status: 500 });
-  }
-
-  // Get profiles to scrape
-  let profiles = await listManagedProfiles(accountId);
-  if (profileId) {
-    profiles = profiles.filter((p) => p.id === profileId);
-  }
-
-  if (profiles.length === 0) {
-    return NextResponse.json({ error: "No managed profiles found" }, { status: 404 });
-  }
-
-  const results: Array<{ profileId: string; name: string; total: number; newCount: number }> = [];
-
-  for (const profile of profiles) {
-    try {
-      const url = `${APIFY_BASE}/acts/${encodeURIComponent(APIFY_ACTOR_ID)}/run-sync-get-dataset-items?token=${token}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ urls: [profile.linkedinUrl], maxPosts: 200 }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        results.push({ profileId: profile.id, name: profile.displayName, total: 0, newCount: 0 });
-        continue;
-      }
-
-      const rawPosts = (await res.json()) as Record<string, unknown>[];
-      const { total, newCount } = await ingestPosts(profile.id, accountId, rawPosts);
-      results.push({ profileId: profile.id, name: profile.displayName, total, newCount });
-    } catch (err) {
-      results.push({ profileId: profile.id, name: profile.displayName, total: 0, newCount: 0 });
+  try {
+    let profiles = await listManagedProfiles(accountId);
+    if (profileId) {
+      profiles = profiles.filter((p) => p.id === profileId);
     }
-  }
 
-  return NextResponse.json({ results });
+    if (profiles.length === 0) {
+      return NextResponse.json({ error: "No managed profiles found" }, { status: 404 });
+    }
+
+    const handles = await Promise.all(
+      profiles.map((p) =>
+        tasks.trigger<typeof weeklyAnalyticsTask>("weekly-analytics", {
+          accountId,
+          profileId: p.id,
+          maxPosts: 200,
+        }),
+      ),
+    );
+
+    return NextResponse.json({
+      triggered: profiles.length,
+      runs: handles.map((h) => h.id),
+      profiles: profiles.map((p) => ({ id: p.id, name: p.displayName || p.linkedinUrl })),
+    });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }

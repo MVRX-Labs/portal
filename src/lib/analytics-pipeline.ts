@@ -57,11 +57,14 @@ export async function runWeeklyReportForProfile(
     channelId = acct?.analyticsSlackChannel ?? null;
   }
   if (channelId) {
+    const channelIds = channelId.split(",").map((c) => c.trim()).filter(Boolean);
     const msg = buildAnalyticsSlackMessage(report);
-    await sendAnalyticsSlackMessage(channelId, msg.text, msg.blocks, {
-      unfurl_links: msg.unfurl_links,
-      unfurl_media: msg.unfurl_media,
-    });
+    for (const ch of channelIds) {
+      await sendAnalyticsSlackMessage(ch, msg.text, msg.blocks, {
+        unfurl_links: msg.unfurl_links,
+        unfurl_media: msg.unfurl_media,
+      });
+    }
     slackSent = true;
   }
 

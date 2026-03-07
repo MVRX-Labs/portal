@@ -165,9 +165,9 @@ function AnalyticsContent() {
       {/* Slack channel config */}
       <div className="card mb-4">
         <h2 className="text-sm font-semibold mb-2">Slack Weekly Reports</h2>
-        <p className="text-xs text-[var(--muted)] mb-2">Set a Slack channel ID to receive weekly analytics reports.</p>
+        <p className="text-xs text-[var(--muted)] mb-2">Set Slack channel IDs to receive weekly analytics reports. Separate multiple channels with commas.</p>
         <div className="flex gap-2 items-center">
-          <input type="text" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="C0AJLSV0M1A" className="w-64" />
+          <input type="text" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="C0AJLSV0M1A, C0BKL2V1M2B" className="w-64" />
           <button onClick={saveSlackChannel} disabled={savingSlack || slackChannel === slackChannelSaved} className="btn-primary text-sm">
             {savingSlack ? "Saving..." : "Save"}
           </button>

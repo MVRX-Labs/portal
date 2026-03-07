@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export interface Account {
   id: string;
@@ -57,7 +57,6 @@ export function useAccount() {
 }
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const accountId = searchParams.get("account");
 
@@ -119,9 +118,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         params.delete("account");
       }
       const qs = params.toString();
-      router.push(`${window.location.pathname}${qs ? `?${qs}` : ""}`);
+      const url = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+      window.history.pushState(null, "", url);
     },
-    [router, searchParams]
+    [searchParams]
   );
 
   const value = useMemo(

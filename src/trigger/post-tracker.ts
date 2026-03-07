@@ -1,6 +1,6 @@
 /**
- * Track a single LinkedIn post — scrapes after a 4-hour delay, saves snapshot,
- * and reports performance back in the Slack thread.
+ * Track LinkedIn posts — scrapes after a delay, saves snapshots,
+ * and reports performance back in the Slack thread as a single table.
  */
 
 import { task, logger } from "@trigger.dev/sdk";
@@ -11,13 +11,27 @@ import { scrapeProfilePosts, normalizePost } from "@/lib/engagement-bot";
 import { sendAnalyticsSlackMessage } from "@/lib/slack";
 import { sendSlackNotification } from "@/lib/slack";
 
-interface TrackPostPayload {
+interface TrackedPost {
   postUrl: string;
-  accountId: string;
   profileId: string | null;
+}
+
+interface TrackPostPayload {
+  posts: TrackedPost[];
+  accountId: string;
   channelId: string;
   threadTs: string;
   label: string;
+}
+
+interface PostResult {
+  postUrl: string;
+  content: string;
+  likes: number;
+  comments: number;
+  reposts: number;
+  total: number;
+  failed: boolean;
 }
 
 export const trackPostTask = task({
@@ -25,127 +39,191 @@ export const trackPostTask = task({
   maxDuration: 300,
   retry: { maxAttempts: 2 },
   run: async (payload: TrackPostPayload, { ctx }) => {
-    const { postUrl, accountId, profileId, channelId, threadTs, label } = payload;
+    const { posts, accountId, channelId, threadTs, label } = payload;
 
     try {
-      logger.info("Scraping tracked post", { postUrl, accountId });
+      logger.info("Scraping tracked posts", { count: posts.length, accountId });
 
-      // Scrape the single post URL via Apify
-      const { rawPosts } = await scrapeProfilePosts(postUrl, 1);
+      const results: PostResult[] = [];
 
-      if (rawPosts.length === 0) {
-        await sendAnalyticsSlackMessage(
-          channelId,
-          "Could not fetch this post. It may be private or the URL may be invalid.",
-          [{ type: "section", text: { type: "mrkdwn", text: "Could not fetch this post. It may be private or the URL may be invalid." } }],
-          { thread_ts: threadTs },
-        );
-        return { success: false, reason: "no_data" };
+      for (const tracked of posts) {
+        try {
+          const { rawPosts } = await scrapeProfilePosts(tracked.postUrl, 1);
+
+          if (rawPosts.length === 0) {
+            results.push({
+              postUrl: tracked.postUrl,
+              content: "",
+              likes: 0, comments: 0, reposts: 0, total: 0,
+              failed: true,
+            });
+            continue;
+          }
+
+          const raw = rawPosts[0];
+          const normalized = normalizePost(raw);
+          const repostsCount =
+            (raw.numShares as number) ??
+            (raw.repostsCount as number) ??
+            (raw.reshareCount as number) ??
+            0;
+
+          const likes = normalized.likesCount;
+          const comments = normalized.commentsCount;
+          const reposts = typeof repostsCount === "number"
+            ? Math.max(0, repostsCount) : 0;
+
+          // Upsert + snapshot if we have a managed profile
+          if (tracked.profileId && normalized.apifyPostId) {
+            const [existing] = await db
+              .select()
+              .from(managedPosts)
+              .where(
+                and(
+                  eq(managedPosts.profileId, tracked.profileId),
+                  eq(managedPosts.apifyPostId, normalized.apifyPostId),
+                ),
+              );
+
+            let postId: string;
+            if (existing) {
+              await db
+                .update(managedPosts)
+                .set({
+                  likesCount: likes,
+                  commentsCount: comments,
+                  repostsCount: reposts,
+                  postUrl: normalized.postUrl || existing.postUrl,
+                })
+                .where(eq(managedPosts.id, existing.id));
+              postId = existing.id;
+            } else {
+              const [inserted] = await db
+                .insert(managedPosts)
+                .values({
+                  profileId: tracked.profileId,
+                  accountId,
+                  apifyPostId: normalized.apifyPostId,
+                  content: normalized.content.slice(0, 500),
+                  postUrl: normalized.postUrl || tracked.postUrl,
+                  likesCount: likes,
+                  commentsCount: comments,
+                  repostsCount: reposts,
+                  postedAt: normalized.postedAt,
+                })
+                .returning({ id: managedPosts.id });
+              postId = inserted.id;
+            }
+
+            await db.insert(managedPostSnapshots).values({
+              postId,
+              profileId: tracked.profileId,
+              accountId,
+              likesCount: likes,
+              commentsCount: comments,
+              repostsCount: reposts,
+            });
+          }
+
+          results.push({
+            postUrl: tracked.postUrl,
+            content: normalized.content,
+            likes, comments, reposts,
+            total: likes + comments + reposts,
+            failed: false,
+          });
+        } catch (err) {
+          logger.warn("Failed to scrape post", {
+            postUrl: tracked.postUrl,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          results.push({
+            postUrl: tracked.postUrl,
+            content: "",
+            likes: 0, comments: 0, reposts: 0, total: 0,
+            failed: true,
+          });
+        }
       }
 
-      const raw = rawPosts[0];
-      const normalized = normalizePost(raw);
-      const repostsCount =
-        (raw.numShares as number) ??
-        (raw.repostsCount as number) ??
-        (raw.reshareCount as number) ??
-        0;
+      // Build Slack message
+      const blocks: Record<string, unknown>[] = [];
+      const successful = results.filter((r) => !r.failed);
+      const failed = results.filter((r) => r.failed);
 
-      const likes = normalized.likesCount;
-      const comments = normalized.commentsCount;
-      const reposts = typeof repostsCount === "number" ? Math.max(0, repostsCount) : 0;
-      const totalEngagement = likes + comments + reposts;
+      if (successful.length === 1) {
+        // Single post — card format
+        const r = successful[0];
+        const snippet = r.content.length > 100
+          ? r.content.slice(0, 100) + "..." : r.content || "(no text)";
+        blocks.push(
+          { type: "header", text: { type: "plain_text", text: `${label} Post Performance`, emoji: true } },
+          { type: "section", text: { type: "mrkdwn", text: `> ${snippet}` } },
+          { type: "section", fields: [
+            { type: "mrkdwn", text: `*Likes*\n${r.likes.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Comments*\n${r.comments.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Reposts*\n${r.reposts.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Total*\n${r.total.toLocaleString()}` },
+          ]},
+          { type: "context", elements: [{ type: "mrkdwn", text: `<${r.postUrl}|View Post>` }] },
+        );
+      } else if (successful.length > 1) {
+        // Multiple posts — table format
+        blocks.push({
+          type: "header",
+          text: { type: "plain_text", text: `${label} Post Performance`, emoji: true },
+        });
 
-      // If we have a managed profile, upsert the post and save a snapshot
-      if (profileId && normalized.apifyPostId) {
-        const [existing] = await db
-          .select()
-          .from(managedPosts)
-          .where(
-            and(
-              eq(managedPosts.profileId, profileId),
-              eq(managedPosts.apifyPostId, normalized.apifyPostId),
-            ),
-          );
+        const rows = successful.map((r, i) => {
+          const snippet = r.content.length > 60
+            ? r.content.slice(0, 60) + "..." : r.content || "(no text)";
+          return `<${r.postUrl}|Post ${i + 1}>  —  ${snippet}\n` +
+            `:thumbsup: ${r.likes}  :speech_balloon: ${r.comments}  :repeat: ${r.reposts}  ·  *${r.total} total*`;
+        });
 
-        let postId: string;
-        if (existing) {
-          await db
-            .update(managedPosts)
-            .set({
-              likesCount: likes,
-              commentsCount: comments,
-              repostsCount: reposts,
-              postUrl: normalized.postUrl || existing.postUrl,
-            })
-            .where(eq(managedPosts.id, existing.id));
-          postId = existing.id;
-        } else {
-          const [inserted] = await db
-            .insert(managedPosts)
-            .values({
-              profileId,
-              accountId,
-              apifyPostId: normalized.apifyPostId,
-              content: normalized.content.slice(0, 500),
-              postUrl: normalized.postUrl || postUrl,
-              likesCount: likes,
-              commentsCount: comments,
-              repostsCount: reposts,
-              postedAt: normalized.postedAt,
-            })
-            .returning({ id: managedPosts.id });
-          postId = inserted.id;
-        }
+        blocks.push({
+          type: "section",
+          text: { type: "mrkdwn", text: rows.join("\n\n") },
+        });
 
-        await db.insert(managedPostSnapshots).values({
-          postId,
-          profileId,
-          accountId,
-          likesCount: likes,
-          commentsCount: comments,
-          repostsCount: reposts,
+        // Totals row
+        const totLikes = successful.reduce((s, r) => s + r.likes, 0);
+        const totComments = successful.reduce((s, r) => s + r.comments, 0);
+        const totReposts = successful.reduce((s, r) => s + r.reposts, 0);
+        const totAll = successful.reduce((s, r) => s + r.total, 0);
+        blocks.push({ type: "divider" });
+        blocks.push({
+          type: "context",
+          elements: [{
+            type: "mrkdwn",
+            text: `*Combined:* ${totLikes} likes · ${totComments} comments · ${totReposts} reposts · *${totAll} total*`,
+          }],
         });
       }
 
-      // Report back in Slack thread
-      const snippet = normalized.content.length > 100
-        ? normalized.content.slice(0, 100) + "..."
-        : normalized.content || "(no text)";
-
-      const blocks: Record<string, unknown>[] = [
-        {
-          type: "header",
-          text: { type: "plain_text", text: `${label} Post Performance`, emoji: true },
-        },
-        {
-          type: "section",
-          text: { type: "mrkdwn", text: `> ${snippet}` },
-        },
-        {
-          type: "section",
-          fields: [
-            { type: "mrkdwn", text: `*Likes*\n${likes.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Comments*\n${comments.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Reposts*\n${reposts.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Total Engagement*\n${totalEngagement.toLocaleString()}` },
-          ],
-        },
-        {
+      if (failed.length > 0) {
+        const failedLinks = failed.map((r) => `<${r.postUrl}|link>`).join(", ");
+        blocks.push({
           type: "context",
-          elements: [{ type: "mrkdwn", text: `<${postUrl}|View Post>` }],
-        },
-      ];
+          elements: [{ type: "mrkdwn", text: `Could not fetch: ${failedLinks}` }],
+        });
+      }
 
-      await sendAnalyticsSlackMessage(
-        channelId,
-        `${label} Performance: ${likes} likes, ${comments} comments, ${reposts} reposts (${totalEngagement} total)`,
-        blocks,
-        { thread_ts: threadTs },
-      );
+      if (blocks.length > 0) {
+        const fallback = successful.map((r) =>
+          `${r.likes} likes, ${r.comments} comments, ${r.reposts} reposts`,
+        ).join(" | ");
 
-      logger.info("Post tracking complete", { likes, comments, reposts, totalEngagement });
-      return { success: true, likes, comments, reposts, totalEngagement };
+        await sendAnalyticsSlackMessage(
+          channelId,
+          `${label} Performance: ${fallback}`,
+          blocks,
+          { thread_ts: threadTs },
+        );
+      }
+
+      logger.info("Post tracking complete", { label, tracked: results.length });
+      return { success: true, results };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error("Post tracking failed", { error: errorMessage });

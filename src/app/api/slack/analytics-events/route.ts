@@ -84,6 +84,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Resolve profile IDs for each post
+  const trackedPosts: { postUrl: string; profileId: string | null }[] = [];
+  for (const postUrl of postUrls) {
+    const authorSlug = extractAuthorSlugFromPostUrl(postUrl);
+    let profileId: string | null = null;
+    if (authorSlug) {
+      const profile = await findProfileBySlug(account.id, authorSlug);
+      profileId = profile?.id ?? null;
+    }
+    trackedPosts.push({ postUrl, profileId });
+  }
+
   // Acknowledge in thread
   const postWord = postUrls.length === 1 ? "post" : `${postUrls.length} posts`;
   const linkList = postUrls.map((url, i) => `<${url}|Post ${i + 1}>`).join(", ");
@@ -97,7 +109,7 @@ export async function POST(request: NextRequest) {
     { thread_ts: threadTs },
   ).catch(() => {});
 
-  // Trigger snapshots at each checkpoint for each URL
+  // Trigger one task per checkpoint (handles all posts together)
   const checkpoints = [
     { delay: "5m", label: "5-Minute" },
     { delay: "30m", label: "30-Minute" },
@@ -106,33 +118,19 @@ export async function POST(request: NextRequest) {
     { delay: "4h", label: "4-Hour" },
   ];
 
-  const triggers: Promise<unknown>[] = [];
-
-  for (const postUrl of postUrls) {
-    const authorSlug = extractAuthorSlugFromPostUrl(postUrl);
-    let profileId: string | null = null;
-    if (authorSlug) {
-      const profile = await findProfileBySlug(account.id, authorSlug);
-      profileId = profile?.id ?? null;
-    }
-
-    for (const cp of checkpoints) {
-      triggers.push(
-        tasks.trigger<typeof trackPostTask>("track-post", {
-          postUrl,
-          accountId: account.id,
-          profileId,
-          channelId,
-          threadTs,
-          label: cp.label,
-        }, {
-          delay: cp.delay,
-        }),
-      );
-    }
-  }
-
-  await Promise.all(triggers);
+  await Promise.all(
+    checkpoints.map((cp) =>
+      tasks.trigger<typeof trackPostTask>("track-post", {
+        posts: trackedPosts,
+        accountId: account.id,
+        channelId,
+        threadTs,
+        label: cp.label,
+      }, {
+        delay: cp.delay,
+      }),
+    ),
+  );
 
   return NextResponse.json({ ok: true });
 }

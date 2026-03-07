@@ -23,8 +23,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "analyticsSlackChannel must be a string" }, { status: 400 });
   }
 
-  if (analyticsSlackChannel && !/^[CG][A-Z0-9]{8,}$/i.test(analyticsSlackChannel)) {
-    return NextResponse.json({ error: "Invalid Slack channel ID format. Should look like C0AJLSV0M1A" }, { status: 400 });
+  if (analyticsSlackChannel) {
+    const ids = analyticsSlackChannel.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const invalid = ids.find((id: string) => !/^[CG][A-Z0-9]{8,}$/i.test(id));
+    if (invalid) {
+      return NextResponse.json({ error: `Invalid Slack channel ID: ${invalid}. Should look like C0AJLSV0M1A` }, { status: 400 });
+    }
   }
 
   const channelValue = analyticsSlackChannel || null;

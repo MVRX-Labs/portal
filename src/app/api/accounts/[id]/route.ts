@@ -10,9 +10,8 @@ export const maxDuration = 300;
 async function ensureDriveFolder(account: typeof accounts.$inferSelect) {
   if (account.googleDriveFolderId) return account;
 
-  const rootFolderId = getGeneratedMaterialsFolderId();
-
   try {
+    const rootFolderId = getGeneratedMaterialsFolderId();
     const folderId = await findOrCreateFolder(account.name, rootFolderId);
     const [updated] = await db
       .update(accounts)

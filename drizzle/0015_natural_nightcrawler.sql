@@ -1,1 +1,1 @@
-ALTER TABLE "accounts" ADD COLUMN "analytics_slack_channel" text;
+ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "analytics_slack_channel" text;

@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import { TOOLS } from "@/lib/types";
 import type { implementSuggestionTask } from "@/trigger/implement-suggestion";
+import { parseBody } from "@/lib/api-schemas/common";
+import { suggestionBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -14,16 +16,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { toolId?: string; description?: string };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.toolId || !inputs.description?.trim()) {
-    return NextResponse.json({ error: "toolId and description are required" }, { status: 400 });
-  }
+  const { data: inputs, error } = await parseBody(request, suggestionBodySchema);
+  if (error) return error;
 
   const toolExists = TOOLS.some((t) => t.id === inputs.toolId);
   if (!toolExists) {

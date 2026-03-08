@@ -2,6 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
+import type {
+  CalendarEventsResponse,
+  CalendarSyncStateResponse,
+  CalendarStatsResponse,
+  CalendarSyncResponse,
+} from "@/lib/api-schemas/admin";
+import {
+  calendarEventsResponseSchema,
+  calendarSyncStateResponseSchema,
+  calendarStatsResponseSchema,
+  calendarSyncResponseSchema,
+} from "@/lib/api-schemas/admin";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 
 interface SyncState {
   id: string;
@@ -111,18 +124,14 @@ export default function AdminCalendarPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [eventsRes, syncRes, statsRes] = await Promise.all([
-        fetch("/api/admin/calendar-events?view=events&limit=50"),
-        fetch("/api/admin/calendar-events?view=sync-state"),
-        fetch("/api/admin/calendar-events?view=stats"),
+      const [eventsData, syncData, statsData] = await Promise.all([
+        apiFetch("/api/admin/calendar-events?view=events&limit=50", calendarEventsResponseSchema),
+        apiFetch("/api/admin/calendar-events?view=sync-state", calendarSyncStateResponseSchema),
+        apiFetch("/api/admin/calendar-events?view=stats", calendarStatsResponseSchema),
       ]);
 
-      const eventsData = await eventsRes.json();
-      const syncData = await syncRes.json();
-      const statsData = await statsRes.json();
-
-      setEvents(eventsData.events || []);
-      setSyncStates(syncData.syncStates || []);
+      setEvents((eventsData.events || []) as CalendarEvent[]);
+      setSyncStates((syncData.syncStates || []) as SyncState[]);
       setStats(statsData.stats || null);
     } catch {
       // ignore
@@ -141,21 +150,16 @@ export default function AdminCalendarPage() {
     setActiveSync(null);
 
     try {
-      const res = await fetch("/api/admin/calendar-sync", { method: "POST" });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setSyncMessage(data.error || "Failed to trigger sync");
-        setSyncing(false);
-        return;
-      }
-
+      const data = await apiMutate("/api/admin/calendar-sync", calendarSyncResponseSchema, {
+        method: "POST",
+        body: {},
+      });
       setActiveSync({
         triggerRunId: data.triggerRunId,
         publicAccessToken: data.publicAccessToken,
       });
-    } catch {
-      setSyncMessage("Failed to trigger sync");
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : "Failed to trigger sync");
       setSyncing(false);
     }
   };

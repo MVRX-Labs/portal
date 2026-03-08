@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contacts } from "@/lib/schema";
 import { and, eq, ilike } from "drizzle-orm";
+import { parseBody } from "@/lib/api-schemas/common";
+import { createContactBodySchema } from "@/lib/api-schemas/contacts";
 
 export const maxDuration = 300;
 
@@ -22,22 +24,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { name, accountId, accountEmail, personalEmail, linkedinUrl, engagementScrapeEnabled } = body;
-
-  if (!name || !accountId) {
-    return NextResponse.json({ error: "Name and accountId are required" }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, createContactBodySchema);
+  if (error) return error;
 
   const [contact] = await db
     .insert(contacts)
     .values({
-      name,
-      accountId,
-      accountEmail: accountEmail || null,
-      personalEmail: personalEmail || null,
-      linkedinUrl: linkedinUrl || null,
-      engagementScrapeEnabled: engagementScrapeEnabled || false,
+      name: data.name,
+      accountId: data.accountId,
+      accountEmail: data.accountEmail || null,
+      personalEmail: data.personalEmail || null,
+      linkedinUrl: data.linkedinUrl || null,
+      engagementScrapeEnabled: data.engagementScrapeEnabled || false,
     })
     .returning();
 

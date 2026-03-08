@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { sentimentAnalysisTask } from "@/trigger/sentiment-analysis";
 import type { SourceType } from "@/lib/sentiment-scraper";
+import { parseBody } from "@/lib/api-schemas/common";
+import { sentimentAnalysisBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -14,23 +16,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: {
-    productName?: string;
-    accountId?: string | null;
-    sources?: string;
-    urls?: string;
-    keywords?: string;
-    model?: string;
-  };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.productName) {
-    return NextResponse.json({ error: "productName is required" }, { status: 400 });
-  }
+  const { data: inputs, error } = await parseBody(request, sentimentAnalysisBodySchema);
+  if (error) return error;
 
   let companyName = "Unknown";
   if (inputs.accountId) {

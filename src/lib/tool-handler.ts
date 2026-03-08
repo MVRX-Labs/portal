@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { ZodType } from "zod";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
 import { withTimeoutGuard } from "@/lib/timeout-guard";
+import { parseBody } from "@/lib/api-schemas/common";
 
-export function createToolHandler(toolId: string) {
+export function createToolHandler<T extends Record<string, unknown>>(toolId: string, schema?: ZodType<T>) {
   return async function POST(request: NextRequest) {
     const userId = request.headers.get("x-user-id");
     const userName = request.headers.get("x-user-name") || "Unknown";
@@ -14,10 +16,17 @@ export function createToolHandler(toolId: string) {
     }
 
     let inputs: Record<string, unknown>;
-    try {
-      inputs = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+
+    if (schema) {
+      const { data, error } = await parseBody(request, schema);
+      if (error) return error;
+      inputs = data as Record<string, unknown>;
+    } else {
+      try {
+        inputs = await request.json();
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      }
     }
 
     const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;

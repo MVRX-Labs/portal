@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ResourceViewer } from "@/components/resource-viewer";
+import type { GetFileResponse } from "@/lib/api-schemas/resources";
+import { getFileResponseSchema, exportFileResponseSchema } from "@/lib/api-schemas/resources";
+import { apiFetch } from "@/lib/api-client";
 
 interface FileData {
   file: {
@@ -26,22 +29,16 @@ export default function ResourceViewerPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/resources/${fileId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load file");
-        return res.json();
-      })
-      .then(setData)
-      .catch((err) => setError(err.message))
+    apiFetch(`/api/resources/${fileId}`, getFileResponseSchema)
+      .then((data) => setData(data as FileData))
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load file"))
       .finally(() => setLoading(false));
   }, [fileId]);
 
   const handleCopyContent = async () => {
     setCopying(true);
     try {
-      const res = await fetch(`/api/resources/${fileId}?action=export`);
-      if (!res.ok) throw new Error("Failed to export content");
-      const { content } = await res.json();
+      const { content } = await apiFetch(`/api/resources/${fileId}?action=export`, exportFileResponseSchema);
       await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

@@ -3,28 +3,18 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { sendSlackNotification } from "@/lib/slack";
+import { parseBody } from "@/lib/api-schemas/common";
+import { jobCompleteBodySchema } from "@/lib/api-schemas/hooks";
 
 export const maxDuration = 300;
 
-interface JobCompletePayload {
-  runId: string;
-  status: "completed" | "failed";
-  output?: string;
-  error?: string;
-  durationMs?: number;
-  apiKey: string;
-}
-
 export async function POST(request: NextRequest) {
-  const body = (await request.json()) as JobCompletePayload;
+  const { data: body, error } = await parseBody(request, jobCompleteBodySchema);
+  if (error) return error;
 
   const expectedKey = process.env.DANNY_LOCAL_API_KEY;
   if (!expectedKey || body.apiKey !== expectedKey) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!body.runId || !body.status) {
-    return NextResponse.json({ error: "runId and status are required" }, { status: 400 });
   }
 
   const durationStr = body.durationMs ? ` (${(body.durationMs / 1000).toFixed(1)}s)` : "";

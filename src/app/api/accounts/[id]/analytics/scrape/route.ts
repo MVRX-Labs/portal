@@ -2,19 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { listManagedProfiles } from "@/lib/managed-profiles";
 import type { weeklyAnalyticsTask } from "@/trigger/analytics-scrape";
+import { parseBody } from "@/lib/api-schemas/common";
+import { analyticsScrapeBodySchema } from "@/lib/api-schemas/analytics";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
-  const body = await request.json().catch(() => ({}));
-  const profileId = typeof body.profile_id === "string" ? body.profile_id : undefined;
+  const { data } = await parseBody(request, analyticsScrapeBodySchema).catch(() => ({
+    data: { profile_id: undefined } as { profile_id?: string },
+    error: null,
+  }));
 
   try {
     let profiles = await listManagedProfiles(accountId);
-    if (profileId) {
-      profiles = profiles.filter((p) => p.id === profileId);
+    if (data.profile_id) {
+      profiles = profiles.filter((p) => p.id === data.profile_id);
     }
 
     if (profiles.length === 0) {
@@ -27,8 +28,8 @@ export async function POST(
           accountId,
           profileId: p.id,
           maxPosts: 200,
-        }),
-      ),
+        })
+      )
     );
 
     return NextResponse.json({

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listProfiles, bulkCreateProfiles } from "@/lib/engagement-bot-db";
+import { parseBody } from "@/lib/api-schemas/common";
+import { createEngagementProfilesBodySchema } from "@/lib/api-schemas/engagement";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,15 +16,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const body = await request.json();
-    if (!Array.isArray(body.linkedin_urls) || body.linkedin_urls.length === 0) {
-      return NextResponse.json({ error: "linkedin_urls must be a non-empty array" }, { status: 400 });
-    }
-    const profiles = await bulkCreateProfiles(
-      id,
-      body.linkedin_urls,
-      body.engagement_persona || "",
-    );
+    const { data, error } = await parseBody(request, createEngagementProfilesBodySchema);
+    if (error) return error;
+
+    const profiles = await bulkCreateProfiles(id, data.linkedin_urls, data.engagement_persona || "");
     return NextResponse.json(profiles);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

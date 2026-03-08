@@ -2,7 +2,19 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useAccount } from "@/components/account-provider";
+import type { EngagementProfile } from "@/lib/api-schemas/engagement";
+import {
+  engagementConfigResponseSchema,
+  engagementProfilesArraySchema,
+  engagementJobsArraySchema,
+  engagementPostsArraySchema,
+  engagementProfilesUploadResponseSchema,
+  engagementScrapeResponseSchema,
+  deleteEngagementProfileResponseSchema,
+} from "@/lib/api-schemas/engagement";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 
+// Local interfaces for UI-specific fields (schemas use .passthrough() so extra fields allowed)
 interface Profile {
   id: string;
   linkedinUrl: string;
@@ -63,40 +75,44 @@ function EngagementContent() {
   const fetchConfig = useCallback(async () => {
     if (!base) return;
     try {
-      const res = await fetch(`${base}/config`);
-      const data = await res.json();
+      const data = await apiFetch(`${base}/config`, engagementConfigResponseSchema);
       setSlackChannel(data.engagementSlackChannel || "");
       setSavedChannel(data.engagementSlackChannel || null);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [base]);
 
   const fetchProfiles = useCallback(async () => {
     if (!base) return;
     setLoadingProfiles(true);
     try {
-      const res = await fetch(`${base}/profiles`);
-      const data = await res.json();
-      setProfiles(Array.isArray(data) ? data : data.profiles || []);
-    } catch { /* ignore */ }
+      const data = await apiFetch(`${base}/profiles`, engagementProfilesArraySchema);
+      setProfiles(data as Profile[]);
+    } catch {
+      /* ignore */
+    }
     setLoadingProfiles(false);
   }, [base]);
 
   const fetchJobs = useCallback(async () => {
     if (!base) return;
     try {
-      const res = await fetch(`${base}/jobs`);
-      const data = await res.json();
-      setJobs(Array.isArray(data) ? data : data.jobs || []);
-    } catch { /* ignore */ }
+      const data = await apiFetch(`${base}/jobs`, engagementJobsArraySchema);
+      setJobs(data as unknown as Job[]);
+    } catch {
+      /* ignore */
+    }
   }, [base]);
 
   const fetchPosts = useCallback(async () => {
     if (!base) return;
     try {
-      const res = await fetch(`${base}/posts`);
-      const data = await res.json();
-      setPosts(Array.isArray(data) ? data : data.posts || []);
-    } catch { /* ignore */ }
+      const data = await apiFetch(`${base}/posts`, engagementPostsArraySchema);
+      setPosts(data as unknown as Post[]);
+    } catch {
+      /* ignore */
+    }
   }, [base]);
 
   useEffect(() => {
@@ -108,12 +124,10 @@ function EngagementContent() {
     if (!base) return;
     setSavingConfig(true);
     try {
-      const res = await fetch(`${base}/config`, {
+      const data = await apiMutate(`${base}/config`, engagementConfigResponseSchema, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ engagementSlackChannel: slackChannel }),
+        body: { engagementSlackChannel: slackChannel },
       });
-      const data = await res.json();
       setSavedChannel(data.engagementSlackChannel || null);
       setStatus("Slack channel saved.");
     } catch {
@@ -126,13 +140,12 @@ function EngagementContent() {
     if (!base || !profileUrl) return;
     setAddingProfile(true);
     try {
-      await fetch(`${base}/profiles`, {
+      await apiMutate(`${base}/profiles`, engagementProfilesArraySchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           linkedin_urls: [profileUrl],
           engagement_persona: persona || "",
-        }),
+        },
       });
       setProfileUrl("");
       setPersona("");
@@ -150,7 +163,12 @@ function EngagementContent() {
     try {
       const res = await fetch(`${base}/profiles/upload`, { method: "POST", body: form });
       const data = await res.json();
-      setStatus(res.ok ? `Uploaded ${data.parsed} profiles.` : data.error);
+      if (!res.ok) {
+        setStatus(data.error || "Upload failed");
+        return;
+      }
+      const parsed = engagementProfilesUploadResponseSchema.safeParse(data);
+      setStatus(parsed.success ? `Uploaded ${parsed.data.parsed} profiles.` : "Upload succeeded");
       await fetchProfiles();
     } catch {
       setStatus("CSV upload failed.");
@@ -159,20 +177,26 @@ function EngagementContent() {
 
   const deleteProfile = async (profileId: string) => {
     if (!base || !confirm("Delete this profile? This cannot be undone.")) return;
-    await fetch(`${base}/profiles/${profileId}`, { method: "DELETE" });
-    await fetchProfiles();
+    try {
+      await apiMutate(`${base}/profiles/${profileId}`, deleteEngagementProfileResponseSchema, { method: "DELETE" });
+      await fetchProfiles();
+    } catch {
+      setStatus("Failed to delete profile.");
+    }
   };
 
   const scrapeAll = async () => {
     if (!base) return;
     setScraping(true);
     try {
-      const res = await fetch(`${base}/scrape`, { method: "POST" });
-      const data = await res.json();
-      setStatus(res.ok ? "Scrape triggered. Jobs will appear in history." : data.error);
+      await apiMutate(`${base}/scrape`, engagementScrapeResponseSchema, {
+        method: "POST",
+        body: {},
+      });
+      setStatus("Scrape triggered. Jobs will appear in history.");
       if (showJobs) await fetchJobs();
-    } catch {
-      setStatus("Failed to trigger scrape.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to trigger scrape.");
     }
     setScraping(false);
   };
@@ -197,16 +221,39 @@ function EngagementContent() {
       <details className="mb-4 text-sm">
         <summary className="text-[var(--accent)] cursor-pointer hover:underline">How does this work?</summary>
         <div className="mt-2 p-3 rounded bg-[var(--input)] border border-[var(--border)] space-y-2 text-[var(--muted)]">
-          <p><strong className="text-white">1. Add profiles</strong> — Enter LinkedIn URLs of people you want to monitor (prospects, industry leaders, etc). You can optionally set a persona that shapes the tone of AI-generated comments.</p>
-          <p><strong className="text-white">2. Configure Slack</strong> — Set the Slack channel ID where post cards will be sent.</p>
-          <p><strong className="text-white">3. Scrape</strong> — Click &quot;Scrape All&quot; to pull recent posts (last 24h) from each profile. New posts appear as interactive cards in your Slack channel.</p>
-          <p><strong className="text-white">4. Engage via Slack</strong> — Each card has action buttons:</p>
+          <p>
+            <strong className="text-white">1. Add profiles</strong> — Enter LinkedIn URLs of people you want to monitor
+            (prospects, industry leaders, etc). You can optionally set a persona that shapes the tone of AI-generated
+            comments.
+          </p>
+          <p>
+            <strong className="text-white">2. Configure Slack</strong> — Set the Slack channel ID where post cards will
+            be sent.
+          </p>
+          <p>
+            <strong className="text-white">3. Scrape</strong> — Click &quot;Scrape All&quot; to pull recent posts (last
+            24h) from each profile. New posts appear as interactive cards in your Slack channel.
+          </p>
+          <p>
+            <strong className="text-white">4. Engage via Slack</strong> — Each card has action buttons:
+          </p>
           <ul className="list-disc list-inside pl-2 space-y-1">
-            <li><strong className="text-white">Comment</strong> — AI generates a context-aware comment you can copy and post on LinkedIn.</li>
-            <li><strong className="text-white">Like / Repost</strong> — Flags the post for manual action on LinkedIn (these actions are not automated).</li>
-            <li><strong className="text-white">Skip</strong> — Dismiss the post.</li>
+            <li>
+              <strong className="text-white">Comment</strong> — AI generates a context-aware comment you can copy and
+              post on LinkedIn.
+            </li>
+            <li>
+              <strong className="text-white">Like / Repost</strong> — Flags the post for manual action on LinkedIn
+              (these actions are not automated).
+            </li>
+            <li>
+              <strong className="text-white">Skip</strong> — Dismiss the post.
+            </li>
           </ul>
-          <p><strong className="text-white">CSV upload</strong> — Bulk add profiles via CSV with a &quot;linkedin&quot; column containing profile URLs.</p>
+          <p>
+            <strong className="text-white">CSV upload</strong> — Bulk add profiles via CSV with a &quot;linkedin&quot;
+            column containing profile URLs.
+          </p>
         </div>
       </details>
 
@@ -233,9 +280,7 @@ function EngagementContent() {
           <button onClick={saveConfig} disabled={savingConfig} className="btn-primary text-sm">
             {savingConfig ? "Saving..." : "Save"}
           </button>
-          {savedChannel && (
-            <span className="text-xs text-green-400">Configured</span>
-          )}
+          {savedChannel && <span className="text-xs text-green-400">Configured</span>}
         </div>
       </div>
 
@@ -283,9 +328,7 @@ function EngagementContent() {
       {/* Profiles table */}
       <div className="card mb-4 p-0 overflow-x-auto">
         <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)]">
-          <h2 className="text-sm font-semibold">
-            Profiles {!loadingProfiles && `(${profiles.length})`}
-          </h2>
+          <h2 className="text-sm font-semibold">Profiles {!loadingProfiles && `(${profiles.length})`}</h2>
           <button onClick={scrapeAll} disabled={scraping || profiles.length === 0} className="btn-secondary text-sm">
             {scraping ? "Scraping..." : "Scrape All"}
           </button>
@@ -303,18 +346,27 @@ function EngagementContent() {
           <tbody>
             {loadingProfiles ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[var(--muted)]">Loading...</td>
+                <td colSpan={5} className="py-8 text-center text-[var(--muted)]">
+                  Loading...
+                </td>
               </tr>
             ) : profiles.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-[var(--muted)]">No profiles added yet</td>
+                <td colSpan={5} className="py-8 text-center text-[var(--muted)]">
+                  No profiles added yet
+                </td>
               </tr>
             ) : (
               profiles.map((p) => (
                 <tr key={p.id} className="border-b border-[var(--border)] last:border-0">
                   <td className="px-3 py-1.5">{p.displayName || "\u2014"}</td>
                   <td className="px-3 py-1.5">
-                    <a href={p.linkedinUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline truncate block max-w-xs">
+                    <a
+                      href={p.linkedinUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[var(--accent)] hover:underline truncate block max-w-xs"
+                    >
                       {p.linkedinUrl}
                     </a>
                   </td>
@@ -337,7 +389,10 @@ function EngagementContent() {
       {/* Job history */}
       <div className="card mb-4">
         <button
-          onClick={() => { setShowJobs(!showJobs); if (!showJobs) fetchJobs(); }}
+          onClick={() => {
+            setShowJobs(!showJobs);
+            if (!showJobs) fetchJobs();
+          }}
           className="text-sm font-semibold w-full text-left flex justify-between items-center"
         >
           Job History
@@ -349,15 +404,24 @@ function EngagementContent() {
               <p className="text-sm text-[var(--muted)]">No jobs yet.</p>
             ) : (
               jobs.slice(0, 20).map((j) => (
-                <div key={j.id} className="text-sm flex items-center gap-3 py-1 border-b border-[var(--border)] last:border-0">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
-                    j.status === "completed" ? "bg-green-500/20 text-green-400" :
-                    j.status === "failed" ? "bg-red-500/20 text-red-400" :
-                    "bg-yellow-500/20 text-yellow-400"
-                  }`}>
+                <div
+                  key={j.id}
+                  className="text-sm flex items-center gap-3 py-1 border-b border-[var(--border)] last:border-0"
+                >
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
+                      j.status === "completed"
+                        ? "bg-green-500/20 text-green-400"
+                        : j.status === "failed"
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-yellow-500/20 text-yellow-400"
+                    }`}
+                  >
                     {j.status}
                   </span>
-                  <span>Posts: {j.postsFound} found, {j.postsNew} new</span>
+                  <span>
+                    Posts: {j.postsFound} found, {j.postsNew} new
+                  </span>
                   {j.errorMessage && <span className="text-red-400 truncate max-w-xs">{j.errorMessage}</span>}
                   {j.triggerRunId && (
                     <span className="text-[var(--muted)] text-xs truncate max-w-[120px]" title={j.triggerRunId}>
@@ -375,7 +439,10 @@ function EngagementContent() {
       {/* Recent posts */}
       <div className="card mb-4">
         <button
-          onClick={() => { setShowPosts(!showPosts); if (!showPosts) fetchPosts(); }}
+          onClick={() => {
+            setShowPosts(!showPosts);
+            if (!showPosts) fetchPosts();
+          }}
           className="text-sm font-semibold w-full text-left flex justify-between items-center"
         >
           Recent Posts
@@ -389,21 +456,34 @@ function EngagementContent() {
               posts.slice(0, 20).map((p) => (
                 <div key={p.id} className="text-sm py-2 border-b border-[var(--border)] last:border-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
-                      p.engagementStatus === "engaged" || p.engagementStatus === "awaiting_action" ? "bg-green-500/20 text-green-400" :
-                      p.engagementStatus === "sent_to_slack" ? "bg-blue-500/20 text-blue-400" :
-                      p.engagementStatus === "failed" ? "bg-red-500/20 text-red-400" :
-                      p.engagementStatus === "skip" ? "bg-yellow-500/20 text-yellow-400" :
-                      "bg-gray-500/20 text-gray-400"
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
+                        p.engagementStatus === "engaged" || p.engagementStatus === "awaiting_action"
+                          ? "bg-green-500/20 text-green-400"
+                          : p.engagementStatus === "sent_to_slack"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : p.engagementStatus === "failed"
+                              ? "bg-red-500/20 text-red-400"
+                              : p.engagementStatus === "skip"
+                                ? "bg-yellow-500/20 text-yellow-400"
+                                : "bg-gray-500/20 text-gray-400"
+                      }`}
+                    >
                       {p.engagementStatus || "new"}
                     </span>
                     {p.postUrl && (
-                      <a href={p.postUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline text-xs">
+                      <a
+                        href={p.postUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--accent)] hover:underline text-xs"
+                      >
                         View post
                       </a>
                     )}
-                    <span className="text-[var(--muted)] ml-auto whitespace-nowrap text-xs">{p.postedAt ? formatDate(p.postedAt) : "\u2014"}</span>
+                    <span className="text-[var(--muted)] ml-auto whitespace-nowrap text-xs">
+                      {p.postedAt ? formatDate(p.postedAt) : "\u2014"}
+                    </span>
                   </div>
                   <p className="text-[var(--muted)] line-clamp-2">{p.content}</p>
                   {p.agentComment && (

@@ -2,39 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import type { Account } from "@/lib/api-schemas/accounts";
+import type { Contact } from "@/lib/api-schemas/contacts";
+import { getAccountResponseSchema } from "@/lib/api-schemas/accounts";
+import { getAccountContactsResponseSchema } from "@/lib/api-schemas/contacts";
+import { apiFetch } from "@/lib/api-client";
 
-export interface Account {
-  id: string;
-  name: string;
-  slug: string;
-  industry: string | null;
-  website: string | null;
-  linkedinUrl: string | null;
-  engagementScrapeEnabled: boolean;
-  googleDriveFolderId: string | null;
-  summary: string | null;
-  ownerId: string | null;
-  mrr: number;
-  mrrCurrency: string;
-  lastMeetingAt: string | null;
-  nextMeetingAt: string | null;
-  engagementSlackChannel: string | null;
-  analyticsSlackChannel: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Contact {
-  id: string;
-  name: string;
-  accountId: string;
-  accountEmail: string | null;
-  personalEmail: string | null;
-  linkedinUrl: string | null;
-  engagementScrapeEnabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { Account } from "@/lib/api-schemas/accounts";
+export type { Contact } from "@/lib/api-schemas/contacts";
 
 interface AccountContextValue {
   account: Account | null;
@@ -67,13 +42,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const fetchAccount = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/accounts/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAccountState(data.account);
-      } else {
-        setAccountState(null);
-      }
+      const data = await apiFetch(`/api/accounts/${id}`, getAccountResponseSchema);
+      setAccountState(data.account);
     } catch {
       setAccountState(null);
     } finally {
@@ -83,11 +53,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const fetchContacts = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/accounts/${id}/contacts`);
-      if (res.ok) {
-        const data = await res.json();
-        setContacts(data.contacts);
-      }
+      const data = await apiFetch(`/api/accounts/${id}/contacts`, getAccountContactsResponseSchema);
+      setContacts(data.contacts);
     } catch {
       // ignore
     }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { parseBody } from "@/lib/api-schemas/common";
+import { patchAnalyticsConfigBodySchema } from "@/lib/api-schemas/analytics";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,18 +18,22 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await request.json();
-  const { analyticsSlackChannel } = body;
+  const { data, error } = await parseBody(request, patchAnalyticsConfigBodySchema);
+  if (error) return error;
 
-  if (typeof analyticsSlackChannel !== "string") {
-    return NextResponse.json({ error: "analyticsSlackChannel must be a string" }, { status: 400 });
-  }
+  const { analyticsSlackChannel } = data;
 
   if (analyticsSlackChannel) {
-    const ids = analyticsSlackChannel.split(",").map((s: string) => s.trim()).filter(Boolean);
+    const ids = analyticsSlackChannel
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
     const invalid = ids.find((id: string) => !/^[CG][A-Z0-9]{8,}$/i.test(id));
     if (invalid) {
-      return NextResponse.json({ error: `Invalid Slack channel ID: ${invalid}. Should look like C0AJLSV0M1A` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid Slack channel ID: ${invalid}. Should look like C0AJLSV0M1A` },
+        { status: 400 }
+      );
     }
   }
 

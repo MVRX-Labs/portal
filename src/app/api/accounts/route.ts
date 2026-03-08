@@ -4,6 +4,8 @@ import { accounts, users, contacts, accountActions } from "@/lib/schema";
 import { eq, ilike, and, ne, sql, desc, asc } from "drizzle-orm";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { uniqueSlug } from "@/lib/account-utils";
+import { parseBody } from "@/lib/api-schemas/common";
+import { createAccountBodySchema } from "@/lib/api-schemas/accounts";
 
 export const maxDuration = 300;
 
@@ -33,15 +35,18 @@ export async function GET(request: NextRequest) {
       mrrCurrency: accounts.mrrCurrency,
       lastMeetingAt: accounts.lastMeetingAt,
       nextMeetingAt: accounts.nextMeetingAt,
+      engagementSlackChannel: accounts.engagementSlackChannel,
+      analyticsSlackChannel: accounts.analyticsSlackChannel,
       autoCreated: accounts.autoCreated,
       hidden: accounts.hidden,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
-      contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as(
-        "contact_count"
-      ),
+      contactCount:
+        sql<number>`(select count(*)::int from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as(
+          "contact_count"
+        ),
       pendingActionCount:
-        sql<number>`(select count(*) from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as(
+        sql<number>`(select count(*)::int from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as(
           "pending_action_count"
         ),
     })
@@ -54,19 +59,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { name, industry, website, linkedinUrl, engagementScrapeEnabled } = body;
+  const { data, error } = await parseBody(request, createAccountBodySchema);
+  if (error) return error;
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  }
-
-  const slug = await uniqueSlug(name);
+  const slug = await uniqueSlug(data.name);
 
   let googleDriveFolderId: string | null = null;
   try {
     const rootFolderId = getGeneratedMaterialsFolderId();
-    googleDriveFolderId = await findOrCreateFolder(name, rootFolderId);
+    googleDriveFolderId = await findOrCreateFolder(data.name, rootFolderId);
   } catch (err) {
     console.error("Failed to create Google Drive folder:", err);
   }
@@ -74,12 +75,12 @@ export async function POST(request: NextRequest) {
   const [account] = await db
     .insert(accounts)
     .values({
-      name,
+      name: data.name,
       slug,
-      industry: industry || null,
-      website: website || null,
-      linkedinUrl: linkedinUrl || null,
-      engagementScrapeEnabled: engagementScrapeEnabled || false,
+      industry: data.industry || null,
+      website: data.website || null,
+      linkedinUrl: data.linkedinUrl || null,
+      engagementScrapeEnabled: data.engagementScrapeEnabled || false,
       googleDriveFolderId,
     })
     .returning();

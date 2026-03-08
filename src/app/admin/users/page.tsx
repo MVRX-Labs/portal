@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  isAdmin: boolean;
-  createdAt: string;
-}
+import type { User } from "@/lib/api-schemas/admin";
+import {
+  getUsersResponseSchema,
+  createUserResponseSchema,
+  updateUserResponseSchema,
+  deleteUserResponseSchema,
+} from "@/lib/api-schemas/admin";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,10 +24,14 @@ export default function AdminUsersPage() {
 
   const loadUsers = async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/users");
-    const data = await res.json();
-    setUsers(data.users || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch("/api/admin/users", getUsersResponseSchema);
+      setUsers(data.users || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -60,37 +64,41 @@ export default function AdminUsersPage() {
       return;
     }
 
-    const method = editing ? "PUT" : "POST";
-    const body = editing
-      ? {
-          id: editing.id,
-          name: form.name,
-          email: form.email,
-          isAdmin: form.isAdmin,
-        }
-      : form;
-
-    const res = await fetch("/api/admin/users", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Failed to save user");
-      return;
+    try {
+      if (editing) {
+        await apiMutate("/api/admin/users", updateUserResponseSchema, {
+          method: "PUT",
+          body: {
+            id: editing.id,
+            name: form.name,
+            email: form.email,
+            isAdmin: form.isAdmin,
+          },
+        });
+      } else {
+        await apiMutate("/api/admin/users", createUserResponseSchema, {
+          method: "POST",
+          body: form,
+        });
+      }
+      setShowModal(false);
+      loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save user");
     }
-
-    setShowModal(false);
-    loadUsers();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
 
-    await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
-    loadUsers();
+    try {
+      await apiMutate(`/api/admin/users?id=${id}`, deleteUserResponseSchema, {
+        method: "DELETE",
+      });
+      loadUsers();
+    } catch {
+      // ignore
+    }
   };
 
   return (

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accountActions, users } from "@/lib/schema";
 import { eq, ne, and } from "drizzle-orm";
+import { parseBody } from "@/lib/api-schemas/common";
+import { createActionBodySchema } from "@/lib/api-schemas/actions";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,21 +38,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await request.json();
-  const { title, description, dueDate, assigneeId } = body;
-
-  if (!title) {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, createActionBodySchema);
+  if (error) return error;
 
   const [action] = await db
     .insert(accountActions)
     .values({
       accountId: id,
-      title,
-      description: description || null,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      assigneeId: assigneeId || null,
+      title: data.title,
+      description: data.description || null,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      assigneeId: data.assigneeId || null,
     })
     .returning();
 

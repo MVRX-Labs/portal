@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Contact } from "./account-provider";
+import { createContactResponseSchema } from "@/lib/api-schemas/contacts";
+import { apiMutate } from "@/lib/api-client";
 
 interface CreateContactModalProps {
   accountId: string;
@@ -28,24 +30,17 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
     setError("");
 
     try {
-      const res = await fetch("/api/contacts", {
+      const data = await apiMutate("/api/contacts", createContactResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           name: name.trim(),
           accountId,
-          accountEmail: accountEmail.trim() || null,
-          personalEmail: personalEmail.trim() || null,
-          linkedinUrl: linkedinUrl.trim() || null,
+          accountEmail: accountEmail.trim() || undefined,
+          personalEmail: personalEmail.trim() || undefined,
+          linkedinUrl: linkedinUrl.trim() || undefined,
           engagementScrapeEnabled,
-        }),
+        },
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create contact");
-      }
-
       onCreated(data.contact);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create contact");

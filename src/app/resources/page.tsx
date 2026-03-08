@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "@/components/account-provider";
+import { getResourcesResponseSchema } from "@/lib/api-schemas/resources";
+import { apiFetch } from "@/lib/api-client";
 
 interface DriveFile {
   id: string;
@@ -37,13 +39,8 @@ export default function ResourcesPage() {
       if (folderId) searchParams.set("folderId", folderId);
       else if (account?.id) searchParams.set("accountId", account.id);
       const params = searchParams.toString() ? `?${searchParams}` : "";
-      const res = await fetch(`/api/resources${params}`);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error);
-      }
-      const data = await res.json();
-      setFiles(data.files || []);
+      const data = await apiFetch(`/api/resources${params}`, getResourcesResponseSchema);
+      setFiles((data.files || []) as unknown as DriveFile[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load files");
     } finally {

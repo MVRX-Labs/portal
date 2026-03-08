@@ -4,6 +4,8 @@ import { toolRuns } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinHumanizerTask } from "@/trigger/linkedin-humanizer";
+import { parseBody } from "@/lib/api-schemas/common";
+import { linkedinHumanizerBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -13,22 +15,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: {
-    postContent?: string;
-    tone?: string;
-    writingExamples?: string;
-    model?: string;
-    accountId?: string;
-  };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.postContent) {
-    return NextResponse.json({ error: "postContent is required" }, { status: 400 });
-  }
+  const { data: inputs, error } = await parseBody(request, linkedinHumanizerBodySchema);
+  if (error) return error;
 
   const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
 

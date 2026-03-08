@@ -26,6 +26,7 @@ docs/
 - **Do not expect accounts/contacts to always be accurate.** We should handle missing fields gracefully.
 - **Trigger tasks use `logger` from `@trigger.dev/sdk`**, not `console.log`. This is enforced by `scripts/lint-architecture.sh`.
 - **Max 300 lines per file.** Enforced by pre-commit hook. Break large files into focused modules.
+- **API routes use Zod schemas** defined in `src/lib/api-schemas/` for request/response validation.
 
 ## Dependency Rules (enforced by lint)
 

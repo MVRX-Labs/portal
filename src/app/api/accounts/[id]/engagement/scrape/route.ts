@@ -9,7 +9,10 @@ import type { outboundEngagementScrapeTask } from "@/trigger/outbound-engagement
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const [account] = await db.select({ channel: accounts.engagementSlackChannel }).from(accounts).where(eq(accounts.id, id));
+    const [account] = await db
+      .select({ channel: accounts.engagementSlackChannel })
+      .from(accounts)
+      .where(eq(accounts.id, id));
     if (!account?.channel) {
       return NextResponse.json({ error: "Configure a Slack channel before scraping" }, { status: 400 });
     }
@@ -25,8 +28,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
           accountId: id,
           profileId: p.id,
           maxPosts: 10,
-        }),
-      ),
+        })
+      )
     );
 
     return NextResponse.json({ triggered: profiles.length, runs: handles.map((h) => h.id) });

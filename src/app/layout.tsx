@@ -7,6 +7,7 @@ import { SessionProvider } from "next-auth/react";
 import { Sidebar } from "@/components/sidebar";
 import { AccountProvider } from "@/components/account-provider";
 import { AccountWarningBanner } from "@/components/account-warning-banner";
+import { Toaster } from "@/components/toaster";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Suspense>
           )}
         </SessionProvider>
+        <Toaster />
       </body>
     </html>
   );

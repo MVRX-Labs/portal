@@ -1,28 +1,6 @@
 export type { UserId, AccountId, ContactId, RunId, ObjectId } from "./ids";
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  isAdmin: boolean;
-  createdAt: string;
-}
-
-export interface ToolRun {
-  id: string;
-  tool: string;
-  status: "pending" | "running" | "completed" | "failed";
-  inputs: Record<string, unknown>;
-  output: string | null;
-  outputUrl: string | null;
-  error: string | null;
-  userId: string;
-  userName?: string;
-  accountId?: string | null;
-  accountName?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { User } from "./api-schemas/admin";
+export type { ToolRun } from "./api-schemas/history";
 
 export interface ToolConfig {
   id: string;

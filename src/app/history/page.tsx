@@ -3,6 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { ToolRun } from "@/lib/types";
+import type { GetHistoryResponse } from "@/lib/api-schemas/history";
+import { getHistoryResponseSchema } from "@/lib/api-schemas/history";
+import { apiFetch } from "@/lib/api-client";
 import { TOOLS } from "@/lib/types";
 import { useAccount } from "@/components/account-provider";
 
@@ -31,11 +34,9 @@ function HistoryContent() {
     if (account) params.set("account", account.id);
 
     setLoading(true);
-    fetch(`/api/history?${params}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setRuns(data.runs || []);
-      })
+    apiFetch(`/api/history?${params}`, getHistoryResponseSchema)
+      .then((data) => setRuns((data.runs || []) as ToolRun[]))
+      .catch(() => setRuns([]))
       .finally(() => setLoading(false));
   }, [page, toolFilter, statusFilter, account]);
 

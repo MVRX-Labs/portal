@@ -1,53 +1,21 @@
 "use client";
 
 import React, { Suspense, useEffect, useState, useCallback } from "react";
-
-interface AccountOverview {
-  id: string;
-  name: string;
-  slug: string;
-  summary: string | null;
-  ownerId: string | null;
-  ownerName: string | null;
-  mrr: number;
-  mrrCurrency: string;
-  lastMeetingAt: string | null;
-  nextMeetingAt: string | null;
-  autoCreated: boolean;
-  hidden: boolean;
-  engagementScrapeEnabled: boolean;
-  contactCount: number;
-  pendingActionCount: number;
-}
-
-interface Contact {
-  id: string;
-  name: string;
-  accountEmail: string | null;
-  personalEmail: string | null;
-  linkedinUrl: string | null;
-  lastMeetingAt: string | null;
-  nextMeetingAt: string | null;
-  autoCreated: boolean;
-  engagementScrapeEnabled: boolean;
-}
-
-interface Action {
-  id: string;
-  title: string;
-  description: string | null;
-  status: string;
-  dueDate: string | null;
-  assigneeId: string | null;
-  assigneeName: string | null;
-  createdAt: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import type { AccountListItem, GetAccountsResponse } from "@/lib/api-schemas/accounts";
+import type { Action, GetActionsResponse } from "@/lib/api-schemas/actions";
+import type { Contact, GetAccountContactsResponse } from "@/lib/api-schemas/contacts";
+import type { User } from "@/lib/api-schemas/admin";
+import { apiFetch, apiMutate } from "@/lib/api-client";
+import { getAccountsResponseSchema, updateAccountResponseSchema } from "@/lib/api-schemas/accounts";
+import { getAccountContactsResponseSchema } from "@/lib/api-schemas/contacts";
+import {
+  getActionsResponseSchema,
+  createActionResponseSchema,
+  updateActionResponseSchema,
+  deleteActionResponseSchema,
+} from "@/lib/api-schemas/actions";
+import { updateContactBodySchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
+import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -86,10 +54,10 @@ function ExpandedView({
   editMode,
   onSave,
 }: {
-  account: AccountOverview;
+  account: AccountListItem;
   users: User[];
   editMode: boolean;
-  onSave: (updated: AccountOverview) => void;
+  onSave: (updated: AccountListItem) => void;
 }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
@@ -125,11 +93,8 @@ function ExpandedView({
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
     try {
-      const res = await fetch(`/api/accounts/${account.id}/contacts`);
-      if (res.ok) {
-        const data = await res.json();
-        setContacts(data.contacts);
-      }
+      const data = await apiFetch(`/api/accounts/${account.id}/contacts`, getAccountContactsResponseSchema);
+      setContacts(data.contacts);
     } catch {
       // ignore
     } finally {
@@ -140,11 +105,8 @@ function ExpandedView({
   const fetchActions = useCallback(async () => {
     setLoadingActions(true);
     try {
-      const res = await fetch(`/api/accounts/${account.id}/actions`);
-      if (res.ok) {
-        const data = await res.json();
-        setActions(data.actions);
-      }
+      const data = await apiFetch(`/api/accounts/${account.id}/actions`, getActionsResponseSchema);
+      setActions(data.actions);
     } catch {
       // ignore
     } finally {
@@ -161,15 +123,12 @@ function ExpandedView({
     if (!newActionTitle.trim() || addingAction) return;
     setAddingAction(true);
     try {
-      const res = await fetch(`/api/accounts/${account.id}/actions`, {
+      await apiMutate(`/api/accounts/${account.id}/actions`, createActionResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newActionTitle.trim() }),
+        body: { title: newActionTitle.trim() },
       });
-      if (res.ok) {
-        setNewActionTitle("");
-        await fetchActions();
-      }
+      setNewActionTitle("");
+      await fetchActions();
     } catch {
       // ignore
     } finally {
@@ -179,10 +138,9 @@ function ExpandedView({
 
   const handleCompleteAction = async (actionId: string) => {
     try {
-      await fetch(`/api/accounts/${account.id}/actions/${actionId}`, {
+      await apiMutate(`/api/accounts/${account.id}/actions/${actionId}`, updateActionResponseSchema, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "completed" }),
+        body: { status: "completed" },
       });
       await fetchActions();
     } catch {
@@ -192,7 +150,7 @@ function ExpandedView({
 
   const handleDeleteAction = async (actionId: string) => {
     try {
-      await fetch(`/api/accounts/${account.id}/actions/${actionId}`, {
+      await apiMutate(`/api/accounts/${account.id}/actions/${actionId}`, deleteActionResponseSchema, {
         method: "DELETE",
       });
       await fetchActions();
@@ -205,30 +163,27 @@ function ExpandedView({
     setSaving(true);
     try {
       const mrrCents = Math.round(parseFloat(mrr || "0") * 100);
-      const res = await fetch(`/api/accounts/${account.id}`, {
+      await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           summary: summary || null,
           ownerId: ownerId || null,
           mrr: mrrCents,
           mrrCurrency,
           engagementScrapeEnabled,
-        }),
+        },
       });
-      if (res.ok) {
-        const ownerUser = users.find((u) => u.id === ownerId);
-        onSave({
-          ...account,
-          summary: summary || null,
-          ownerId: ownerId || null,
-          ownerName: ownerUser?.name || null,
-          mrr: mrrCents,
-          mrrCurrency,
-          engagementScrapeEnabled,
-        });
-        setDirty(false);
-      }
+      const ownerUser = users.find((u) => u.id === ownerId);
+      onSave({
+        ...account,
+        summary: summary || null,
+        ownerId: ownerId || null,
+        ownerName: ownerUser?.name || null,
+        mrr: mrrCents,
+        mrrCurrency,
+        engagementScrapeEnabled,
+      });
+      setDirty(false);
     } catch {
       // ignore
     } finally {
@@ -251,22 +206,19 @@ function ExpandedView({
     if (!editingContactId) return;
     setSavingContact(true);
     try {
-      const res = await fetch(`/api/contacts/${editingContactId}`, {
+      await apiMutate(`/api/contacts/${editingContactId}`, updateContactResponseSchema, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           name: contactEdits.name,
           accountEmail: contactEdits.accountEmail || null,
           personalEmail: contactEdits.personalEmail || null,
           linkedinUrl: contactEdits.linkedinUrl || null,
           engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
-        }),
+        },
       });
-      if (res.ok) {
-        setContacts((prev) => prev.map((c) => (c.id === editingContactId ? { ...c, ...contactEdits } : c)));
-        setEditingContactId(null);
-        setContactEdits({});
-      }
+      setContacts((prev) => prev.map((c) => (c.id === editingContactId ? { ...c, ...contactEdits } : c)));
+      setEditingContactId(null);
+      setContactEdits({});
     } catch {
       // ignore
     } finally {
@@ -555,7 +507,7 @@ function ExpandedView({
 }
 
 function AccountsContent() {
-  const [accounts, setAccounts] = useState<AccountOverview[]>([]);
+  const [accounts, setAccounts] = useState<AccountListItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -566,15 +518,12 @@ function AccountsContent() {
     setLoading(true);
     try {
       const params = showHidden ? "?includeHidden=true" : "";
-      const [acctRes, userRes] = await Promise.all([fetch(`/api/accounts${params}`), fetch("/api/admin/users")]);
-      if (acctRes.ok) {
-        const data = await acctRes.json();
-        setAccounts(data.accounts);
-      }
-      if (userRes.ok) {
-        const data = await userRes.json();
-        setUsers(data.users);
-      }
+      const [acctData, userData] = await Promise.all([
+        apiFetch(`/api/accounts${params}`, getAccountsResponseSchema),
+        apiFetch("/api/admin/users", getUsersResponseSchema),
+      ]);
+      setAccounts(acctData.accounts);
+      setUsers(userData.users);
     } catch {
       // ignore
     } finally {
@@ -586,26 +535,22 @@ function AccountsContent() {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  const handleSave = (updated: AccountOverview) => {
+  const handleSave = (updated: AccountListItem) => {
     setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   };
 
-  const handleToggleHidden = async (account: AccountOverview) => {
+  const handleToggleHidden = async (account: AccountListItem) => {
     const newHidden = !account.hidden;
     try {
-      const res = await fetch(`/api/accounts/${account.id}`, {
+      await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hidden: newHidden }),
+        body: { hidden: newHidden },
       });
-      if (res.ok) {
-        if (!showHidden && newHidden) {
-          // Remove from list if we're not showing hidden
-          setAccounts((prev) => prev.filter((a) => a.id !== account.id));
-          if (expandedId === account.id) setExpandedId(null);
-        } else {
-          setAccounts((prev) => prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a)));
-        }
+      if (!showHidden && newHidden) {
+        setAccounts((prev) => prev.filter((a) => a.id !== account.id));
+        if (expandedId === account.id) setExpandedId(null);
+      } else {
+        setAccounts((prev) => prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a)));
       }
     } catch {
       // ignore
@@ -723,11 +668,11 @@ function AccountsContent() {
                         )}
                       </div>
                       <div className="text-xs text-(--muted)">
-                        {account.contactCount} contact{account.contactCount !== 1 ? "s" : ""}
-                        {account.pendingActionCount > 0 && (
+                        {account.contactCount ?? 0} contact{(account.contactCount ?? 0) !== 1 ? "s" : ""}
+                        {(account.pendingActionCount ?? 0) > 0 && (
                           <span className="ml-2 text-(--warning)">
-                            {account.pendingActionCount} action
-                            {account.pendingActionCount !== 1 ? "s" : ""}
+                            {account.pendingActionCount ?? 0} action
+                            {(account.pendingActionCount ?? 0) !== 1 ? "s" : ""}
                           </span>
                         )}
                       </div>

@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { ToolConfig, ToolRun } from "@/lib/types";
+import type { RunDetail } from "@/lib/api-schemas/runs";
+import { runDetailSchema } from "@/lib/api-schemas/runs";
+import { getHistoryResponseSchema } from "@/lib/api-schemas/history";
+import { toolTriggerResponseSchema } from "@/lib/api-schemas/tools";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
 import { RunProgress } from "./run-progress";
@@ -46,9 +51,7 @@ export function ToolForm({ tool }: ToolFormProps) {
 
   const reconnectToRun = useCallback(async (runId: string, createdAt: string) => {
     try {
-      const res = await fetch(`/api/runs/${runId}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await apiFetch(`/api/runs/${runId}`, runDetailSchema);
       if (data.status === "running" || data.status === "pending") {
         setActiveRuns((prev) => {
           if (prev.some((r) => r.id === data.id)) return prev;
@@ -58,9 +61,9 @@ export function ToolForm({ tool }: ToolFormProps) {
               id: data.id,
               status: data.status,
               createdAt,
-              triggerRunId: data.triggerRunId,
+              triggerRunId: data.triggerRunId ?? undefined,
               publicAccessToken: data.publicAccessToken,
-            },
+            } as ActiveRun,
           ];
         });
       }
@@ -73,9 +76,8 @@ export function ToolForm({ tool }: ToolFormProps) {
     try {
       const params = new URLSearchParams({ tool: tool.id, limit: "10" });
       if (account?.id) params.set("account", account.id);
-      const res = await fetch(`/api/history?${params}`);
-      const data = await res.json();
-      const runs: ToolRun[] = data.runs || [];
+      const data = await apiFetch(`/api/history?${params}`, getHistoryResponseSchema);
+      const runs = (data.runs || []) as ToolRun[];
       setHistory(runs);
       setHistoryLoaded(true);
 
@@ -92,11 +94,8 @@ export function ToolForm({ tool }: ToolFormProps) {
   const handleRunComplete = useCallback(
     async (completedRunId: string) => {
       try {
-        const res = await fetch(`/api/runs/${completedRunId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setActiveRuns((prev) => prev.map((r) => (r.id === completedRunId ? { ...r, ...data } : r)));
-        }
+        const data = await apiFetch(`/api/runs/${completedRunId}`, runDetailSchema);
+        setActiveRuns((prev) => prev.map((r) => (r.id === completedRunId ? ({ ...r, ...data } as ActiveRun) : r)));
       } catch {
         // ignore
       }
@@ -119,17 +118,10 @@ export function ToolForm({ tool }: ToolFormProps) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/tools/${tool.id}`, {
+      const data = await apiMutate(`/api/tools/${tool.id}`, toolTriggerResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, model, accountId: account?.id || null }),
+        body: { ...values, model, accountId: account?.id || null },
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to start tool");
-      }
 
       setValues({});
       const newRun: ActiveRun = {
@@ -157,17 +149,10 @@ export function ToolForm({ tool }: ToolFormProps) {
     setSuggestError(null);
 
     try {
-      const res = await fetch("/api/tools/suggestion", {
+      const data = await apiMutate("/api/tools/suggestion", toolTriggerResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toolId: tool.id, description: suggestDescription }),
+        body: { toolId: tool.id, description: suggestDescription },
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to submit suggestion");
-      }
 
       setSuggestDescription("");
       setSuggestOpen(false);

@@ -161,18 +161,28 @@ Also banned: "something shifted", "the weight of it", "a need he/she couldn't na
 
 Write 3 hook variations. Each hook:
 - Is exactly 2 lines
-- Maximum 12 words per line
+- Maximum 8 words per line (shorter is almost always better)
 - Uses a different angle or pattern (don't repeat structure across all 3)
-- Sounds like ${posterName} wrote it, not a copywriter
-- Takes a firm, slightly uncomfortable stance (contrarian edge)
-- Starts mid-conflict or mid-scene, never with meta-commentary ("Here's why", "I've noticed", "Let's talk about")
-- Uses strong, non-neutral verbs: kills, guts, breaks, fakes, buries, exposes
-- Names concrete, visceral consequences, not abstract ones ("losing the deal in the final five minutes" not "enterprise readiness")
-- Hooks the reader with an IDEA, TENSION, or QUESTION they personally relate to. Never hook with a company name, product name, or announcement. The reader should think "that's interesting, tell me more" not "this person is promoting something."
+- Sounds like ${posterName} sharing something genuinely interesting, not a copywriter crafting a headline
+- Creates a curiosity gap: the reader NEEDS to keep reading to satisfy their curiosity
+- Uses plain, everyday language. Zero jargon, zero buzzwords, zero industry terminology in the hook
+- Starts mid-thought or mid-story, as if the reader walked into a conversation already happening
+- Never opens with meta-commentary ("Here's why", "I've noticed", "Let's talk about", "Most people")
+- Hooks with INTRIGUE, SURPRISE, or a personal moment the reader relates to. Never hook with a company name, product name, or announcement. The reader should think "wait, what?" or "tell me more", not "this person is promoting something."
 
-Hook structure to aim for (Bite and Twist):
-- Line 1 (The Bite): Short, aggressive reaction or observation. Under 7 words. Sounds like someone calling it out in real time.
-- Line 2 (The Twist): Visceral consequence that makes the reader feel the risk physically. Names the actor, not just the consequence.
+What makes a hook captivating:
+- It feels like the opening line of a story you'd lean in to hear at dinner
+- It hints at something surprising or counterintuitive without revealing it
+- It sounds like something a real person would actually say out loud
+- It creates tension between what the reader assumes and what's implied
+- Simple words hit harder than clever ones. "I almost quit" beats "I nearly abandoned the venture."
+
+What kills a hook:
+- Technical language or industry jargon (save that for the body)
+- Sounding like a LinkedIn guru or marketing headline
+- Aggressive try-hard language ("kills", "destroys", "exposes", "guts")
+- Statistics or numbers in the hook (put those in the body where they have context)
+- Formulaic structures that feel templated ("I did X. Here's what happened.")
 
 ### HOOK TEMPLATE INSPIRATION
 

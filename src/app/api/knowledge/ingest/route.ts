@@ -4,12 +4,16 @@
  * POST: Trigger immediate ingestion for a specific channel or all channels.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
 import type { knowledgeSlackIngestChannel } from "@/trigger/knowledge-slack-ingest";
-import { ingestAllChannels } from "@/lib/knowledge/ingest";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const isAdmin = req.headers.get("x-user-admin") === "true";
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { channelDbId } = body;
 

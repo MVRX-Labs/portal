@@ -8,7 +8,7 @@
 import { db } from "@/lib/db";
 import { knowledgeChannels, knowledgeEvents, knowledgeSyncState } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { fetchChannelHistory, fetchThreadReplies, resolveUser } from "./slack-client";
+import { fetchChannelHistory, fetchThreadReplies, resolveUser, clearUserCache } from "./slack-client";
 import { SKIP_SUBTYPES, classifyUserSide, detectContentType, extractLinks, buildMetadata, sleep } from "./helpers";
 import type { SlackMessage, Visibility } from "./types";
 
@@ -34,6 +34,9 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
 
   if (!channel) throw new Error(`Channel ${channelDbId} not found`);
 
+  // Clear user cache between runs to avoid stale data
+  clearUserCache();
+
   let [syncState] = await db
     .select()
     .from(knowledgeSyncState)
@@ -56,7 +59,10 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
     errors: [],
   };
 
-  const visibility: Visibility = channel.channelType === "internal" ? "internal" : "shared";
+  const visibility: Visibility =
+    channel.channelType === "internal" || channel.channelCategory === "client_internal"
+      ? "internal"
+      : "shared";
   const oldest = syncState.lastMessageTs ?? undefined;
   logger.info(`Fetching #${channel.slackChannelName} since ${oldest ?? "beginning"}`);
 
@@ -147,7 +153,7 @@ async function processMessage(
   msg: SlackMessage,
   channel: ChannelRow,
   visibility: Visibility,
-  logger: Logger,
+  _logger: Logger,
   parentTs?: string,
 ): Promise<"skipped" | "inserted"> {
   if (msg.subtype && SKIP_SUBTYPES.has(msg.subtype)) return "skipped";
@@ -173,7 +179,7 @@ async function processMessage(
   await db
     .insert(knowledgeEvents)
     .values({
-      accountId: channel.accountId,
+      accountId: channel.accountId ?? null,
       channelId: channel.id,
       source: "slack",
       sourceRef: msg.ts,
@@ -190,7 +196,15 @@ async function processMessage(
       metadata: buildMetadata(msg),
       messageAt: new Date(parseFloat(msg.ts) * 1000),
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: [knowledgeEvents.channelId, knowledgeEvents.sourceRef],
+      set: {
+        rawContent: text,
+        links: allLinks,
+        driveLinks,
+        metadata: buildMetadata(msg),
+      },
+    });
 
   return "inserted";
 }

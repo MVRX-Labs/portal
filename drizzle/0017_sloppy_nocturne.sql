@@ -1,9 +1,10 @@
 CREATE TABLE "knowledge_channels" (
 	"id" text PRIMARY KEY NOT NULL,
-	"account_id" text NOT NULL,
+	"account_id" text,
 	"slack_channel_id" text NOT NULL,
 	"slack_channel_name" text NOT NULL,
 	"channel_type" text DEFAULT 'shared' NOT NULL,
+	"channel_category" text DEFAULT 'client_shared' NOT NULL,
 	"workspace_id" text,
 	"active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -13,7 +14,7 @@ CREATE TABLE "knowledge_channels" (
 --> statement-breakpoint
 CREATE TABLE "knowledge_events" (
 	"id" text PRIMARY KEY NOT NULL,
-	"account_id" text NOT NULL,
+	"account_id" text,
 	"channel_id" text NOT NULL,
 	"source" text DEFAULT 'slack' NOT NULL,
 	"source_ref" text NOT NULL,
@@ -60,11 +61,16 @@ CREATE TABLE "knowledge_sync_state" (
 --> statement-breakpoint
 CREATE TABLE "knowledge_units" (
 	"id" text PRIMARY KEY NOT NULL,
-	"account_id" text NOT NULL,
+	"account_id" text,
+	"channel_id" text,
 	"unit_type" text NOT NULL,
 	"content" text NOT NULL,
 	"author" text,
 	"assignee" text,
+	"assignee_contact_id" text,
+	"requested_by" text,
+	"requested_by_user_id" text,
+	"status" text DEFAULT 'open' NOT NULL,
 	"due_date" timestamp,
 	"visibility" text DEFAULT 'shared' NOT NULL,
 	"confidence" integer DEFAULT 80 NOT NULL,
@@ -80,4 +86,10 @@ ALTER TABLE "knowledge_events" ADD CONSTRAINT "knowledge_events_account_id_accou
 ALTER TABLE "knowledge_events" ADD CONSTRAINT "knowledge_events_channel_id_knowledge_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."knowledge_channels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "knowledge_state" ADD CONSTRAINT "knowledge_state_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "knowledge_sync_state" ADD CONSTRAINT "knowledge_sync_state_channel_id_knowledge_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."knowledge_channels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "knowledge_units" ADD CONSTRAINT "knowledge_units_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "knowledge_units" ADD CONSTRAINT "knowledge_units_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_units" ADD CONSTRAINT "knowledge_units_channel_id_knowledge_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."knowledge_channels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_units" ADD CONSTRAINT "knowledge_units_assignee_contact_id_contacts_id_fk" FOREIGN KEY ("assignee_contact_id") REFERENCES "public"."contacts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "knowledge_units" ADD CONSTRAINT "knowledge_units_requested_by_user_id_users_id_fk" FOREIGN KEY ("requested_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "knowledge_events_account_message_at_idx" ON "knowledge_events" USING btree ("account_id","message_at");--> statement-breakpoint
+CREATE INDEX "knowledge_events_channel_created_at_idx" ON "knowledge_events" USING btree ("channel_id","created_at");--> statement-breakpoint
+CREATE INDEX "knowledge_units_account_unit_type_idx" ON "knowledge_units" USING btree ("account_id","unit_type");

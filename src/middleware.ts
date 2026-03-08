@@ -38,7 +38,10 @@ export default auth((request) => {
   const isPrefetch =
     request.headers.get("next-router-prefetch") === "1" || request.headers.get("purpose") === "prefetch";
   if (isPrefetch) {
-    return NextResponse.next();
+    const prefetchHeaders = new Headers(request.headers);
+    prefetchHeaders.delete("x-user-admin");
+    prefetchHeaders.delete("x-user-id");
+    return NextResponse.next({ request: { headers: prefetchHeaders } });
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {

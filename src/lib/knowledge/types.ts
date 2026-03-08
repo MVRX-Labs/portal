@@ -4,6 +4,8 @@
 
 export type ChannelType = "shared" | "internal";
 
+export type ChannelCategory = "client_shared" | "client_internal" | "general" | "product" | "ops";
+
 export type EventSource = "slack" | "granola" | "drive" | "crm";
 
 export type MediaType = "text" | "voice_note" | "image" | "video" | "pdf" | "gdoc" | "gsheet" | "gpres";
@@ -16,7 +18,11 @@ export type KnowledgeUnitType =
   | "request"
   | "feedback"
   | "deliverable"
-  | "blocker";
+  | "blocker"
+  | "product_bug"
+  | "product_feature";
+
+export type KnowledgeUnitStatus = "open" | "done" | "superseded";
 
 export type StateDocType = "brief" | "open_items" | "activity_log";
 
@@ -67,9 +73,12 @@ export interface SlackUser {
 export interface ExtractedUnit {
   type: KnowledgeUnitType;
   content: string;
+  accountSlug?: string; // For cross-account channels — LLM identifies the account
   author?: string;
   assignee?: string;
+  requestedBy?: string;
   dueDate?: string;
+  status?: KnowledgeUnitStatus;
   confidence: number;
-  sourceEventIds: string[];
+  sourceMessageTimestamps: string[]; // Slack ts values to trace back to events
 }

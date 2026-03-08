@@ -1,5 +1,5 @@
 {
-  "id": "e3e45747-3f6a-4d64-b78c-7de9a8ca64d8",
+  "id": "c15b84bb-a7df-4f23-9d3b-90acc08309c3",
   "prevId": "38b1f25b-984e-45f5-b05c-3b3ff4a28f0d",
   "version": "7",
   "dialect": "postgresql",
@@ -1292,7 +1292,7 @@
           "name": "account_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "slack_channel_id": {
           "name": "slack_channel_id",
@@ -1312,6 +1312,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'shared'"
+        },
+        "channel_category": {
+          "name": "channel_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'client_shared'"
         },
         "workspace_id": {
           "name": "workspace_id",
@@ -1385,7 +1392,7 @@
           "name": "account_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "channel_id": {
           "name": "channel_id",
@@ -1503,7 +1510,50 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "knowledge_events_account_message_at_idx": {
+          "name": "knowledge_events_account_message_at_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "message_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "knowledge_events_channel_created_at_idx": {
+          "name": "knowledge_events_channel_created_at_idx",
+          "columns": [
+            {
+              "expression": "channel_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "knowledge_events_account_id_accounts_id_fk": {
           "name": "knowledge_events_account_id_accounts_id_fk",
@@ -1728,7 +1778,13 @@
           "name": "account_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "unit_type": {
           "name": "unit_type",
@@ -1753,6 +1809,31 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "assignee_contact_id": {
+          "name": "assignee_contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_by_user_id": {
+          "name": "requested_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
         },
         "due_date": {
           "name": "due_date",
@@ -1809,7 +1890,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "knowledge_units_account_unit_type_idx": {
+          "name": "knowledge_units_account_unit_type_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "unit_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "knowledge_units_account_id_accounts_id_fk": {
           "name": "knowledge_units_account_id_accounts_id_fk",
@@ -1817,6 +1920,45 @@
           "tableTo": "accounts",
           "columnsFrom": [
             "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "knowledge_units_channel_id_knowledge_channels_id_fk": {
+          "name": "knowledge_units_channel_id_knowledge_channels_id_fk",
+          "tableFrom": "knowledge_units",
+          "tableTo": "knowledge_channels",
+          "columnsFrom": [
+            "channel_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "knowledge_units_assignee_contact_id_contacts_id_fk": {
+          "name": "knowledge_units_assignee_contact_id_contacts_id_fk",
+          "tableFrom": "knowledge_units",
+          "tableTo": "contacts",
+          "columnsFrom": [
+            "assignee_contact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "knowledge_units_requested_by_user_id_users_id_fk": {
+          "name": "knowledge_units_requested_by_user_id_users_id_fk",
+          "tableFrom": "knowledge_units",
+          "tableTo": "users",
+          "columnsFrom": [
+            "requested_by_user_id"
           ],
           "columnsTo": [
             "id"

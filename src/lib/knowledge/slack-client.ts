@@ -6,6 +6,7 @@
  */
 
 import type { SlackMessage, SlackUser } from "./types";
+import { sleep } from "./helpers";
 
 const SLACK_API = "https://slack.com/api";
 
@@ -32,10 +33,15 @@ async function slackGet<T>(method: string, params: Record<string, string>): Prom
   return data as T;
 }
 
+/** Max messages to fetch in a single ingestion run to avoid timeouts on backfill. */
+const MAX_MESSAGES_PER_RUN = 2000;
+
 /**
  * Fetch channel message history with pagination.
  * Returns messages in chronological order (oldest first).
+ * Capped at MAX_MESSAGES_PER_RUN to prevent runaway backfills.
  */
+
 export async function fetchChannelHistory(
   channelId: string,
   opts: { oldest?: string; limit?: number } = {},
@@ -43,6 +49,7 @@ export async function fetchChannelHistory(
   const allMessages: SlackMessage[] = [];
   let cursor: string | undefined;
   const perPage = Math.min(opts.limit ?? 200, 200);
+  const cap = opts.limit ?? MAX_MESSAGES_PER_RUN;
 
   do {
     const params: Record<string, string> = {
@@ -63,7 +70,7 @@ export async function fetchChannelHistory(
 
     // Rate-limit courtesy: 50 calls/min for conversations.history (Tier 3)
     if (cursor) await sleep(300);
-  } while (cursor && (!opts.limit || allMessages.length < opts.limit));
+  } while (cursor && allMessages.length < cap);
 
   // Slack returns newest-first; reverse to chronological
   return allMessages.reverse();
@@ -74,14 +81,32 @@ export async function fetchChannelHistory(
  * Returns replies only (excludes the parent message).
  */
 export async function fetchThreadReplies(channelId: string, threadTs: string): Promise<SlackMessage[]> {
-  const data = await slackGet<{ messages: SlackMessage[] }>("conversations.replies", {
-    channel: channelId,
-    ts: threadTs,
-    limit: "200",
-  });
+  const allReplies: SlackMessage[] = [];
+  let cursor: string | undefined;
 
-  // First message is the parent; skip it
-  return data.messages.slice(1);
+  do {
+    const params: Record<string, string> = {
+      channel: channelId,
+      ts: threadTs,
+      limit: "200",
+    };
+    if (cursor) params.cursor = cursor;
+
+    const data = await slackGet<{
+      messages: SlackMessage[];
+      has_more: boolean;
+      response_metadata?: { next_cursor?: string };
+    }>("conversations.replies", params);
+
+    // First page includes the parent as message[0]; skip it
+    const replies = allReplies.length === 0 ? data.messages.slice(1) : data.messages;
+    allReplies.push(...replies);
+    cursor = data.response_metadata?.next_cursor || undefined;
+
+    if (cursor) await sleep(300);
+  } while (cursor);
+
+  return allReplies;
 }
 
 /**
@@ -111,12 +136,18 @@ export async function fetchChannelInfo(channelId: string): Promise<{
   };
 }
 
-/** User cache to avoid repeated lookups within a single run. */
+/** User cache to avoid repeated lookups within a single run. Max 500 entries. */
 const userCache = new Map<string, SlackUser>();
+const USER_CACHE_MAX = 500;
+
+/** Clear the user cache between task runs to avoid stale data. */
+export function clearUserCache(): void {
+  userCache.clear();
+}
 
 /**
  * Resolve a Slack user ID to profile info.
- * Results are cached for the lifetime of the process.
+ * Results are cached for the current run (call clearUserCache() between runs).
  */
 export async function resolveUser(userId: string): Promise<SlackUser> {
   const cached = userCache.get(userId);
@@ -145,6 +176,11 @@ export async function resolveUser(userId: string): Promise<SlackUser> {
     isBot: data.user.is_bot,
   };
 
+  if (userCache.size >= USER_CACHE_MAX) {
+    // Evict oldest entry
+    const firstKey = userCache.keys().next().value;
+    if (firstKey) userCache.delete(firstKey);
+  }
   userCache.set(userId, user);
   return user;
 }
@@ -165,6 +201,3 @@ export async function downloadFile(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

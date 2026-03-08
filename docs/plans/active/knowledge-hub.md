@@ -99,8 +99,9 @@ New tables (all following existing ID prefix conventions):
 ## Status
 
 - [x] Plan
-- [ ] Schema + migration
-- [ ] Slack ingestion task
+- [x] Schema + migration
+- [x] Slack ingestion task
+- [x] API endpoints (channel management + manual ingest trigger)
 - [ ] Normalisation task
 - [ ] Digest task
-- [ ] API endpoints for portal UI
+- [ ] Portal UI

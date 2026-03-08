@@ -7,6 +7,11 @@ import type { SlackMessage, SlackUser } from "./types";
 export const URL_PATTERN = /https?:\/\/[^\s<>|]+/g;
 export const DRIVE_PATTERN = /https?:\/\/(?:docs|drive)\.google\.com\/[^\s<>|]+/g;
 
+/** Create a fresh drive link regex (avoids stateful lastIndex issues with global regexes). */
+export function makeDrivePattern(): RegExp {
+  return /https?:\/\/(?:docs|drive)\.google\.com\/[^\s<>|]+/g;
+}
+
 /** System subtypes we skip entirely during ingestion. */
 export const SKIP_SUBTYPES = new Set([
   "channel_join",
@@ -75,7 +80,8 @@ export function extractLinks(text: string, attachments?: SlackMessage["attachmen
     if (att.title_link) {
       const cleaned = cleanSlackUrl(att.title_link);
       if (!allLinks.includes(cleaned)) allLinks.push(cleaned);
-      if (DRIVE_PATTERN.test(att.title_link) && !driveLinks.includes(cleaned)) {
+      // Use fresh regex to avoid stateful lastIndex bug with global /g flag
+      if (makeDrivePattern().test(att.title_link) && !driveLinks.includes(cleaned)) {
         driveLinks.push(cleaned);
       }
     }

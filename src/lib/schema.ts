@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, boolean, unique, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean, unique, integer, index } from "drizzle-orm/pg-core";
 import { createObjectId } from "./ids";
 
 export const users = pgTable("users", {
@@ -418,12 +418,11 @@ export const knowledgeChannels = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createObjectId("kchan")),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id),
+    accountId: text("account_id").references(() => accounts.id), // nullable for general/product channels
     slackChannelId: text("slack_channel_id").notNull(),
     slackChannelName: text("slack_channel_name").notNull(),
-    channelType: text("channel_type").notNull().default("shared"), // 'shared' | 'internal'
+    channelType: text("channel_type").notNull().default("shared"), // 'shared' | 'internal' (legacy, use channelCategory)
+    channelCategory: text("channel_category").notNull().default("client_shared"), // 'client_shared' | 'client_internal' | 'general' | 'product' | 'ops'
     workspaceId: text("workspace_id"),
     active: boolean("active").notNull().default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -461,9 +460,7 @@ export const knowledgeEvents = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createObjectId("kevt")),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id),
+    accountId: text("account_id").references(() => accounts.id), // nullable for general/product channels
     channelId: text("channel_id")
       .notNull()
       .references(() => knowledgeChannels.id),
@@ -487,29 +484,40 @@ export const knowledgeEvents = pgTable(
   },
   (table) => ({
     uniqueSourceRef: unique().on(table.channelId, table.sourceRef),
+    accountMessageAtIdx: index("knowledge_events_account_message_at_idx").on(table.accountId, table.messageAt),
+    channelCreatedAtIdx: index("knowledge_events_channel_created_at_idx").on(table.channelId, table.createdAt),
   })
 );
 
-export const knowledgeUnits = pgTable("knowledge_units", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => createObjectId("kunit")),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id),
-  unitType: text("unit_type").notNull(), // KnowledgeUnitType
-  content: text("content").notNull(),
-  author: text("author"),
-  assignee: text("assignee"),
-  dueDate: timestamp("due_date"),
-  visibility: text("visibility").notNull().default("shared"),
-  confidence: integer("confidence").notNull().default(80), // 0-100
-  sourceEventIds: jsonb("source_event_ids").$type<string[]>().notNull().default([]),
-  supersededBy: text("superseded_by"), // ID of newer unit that replaces this one
-  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
-  extractedAt: timestamp("extracted_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const knowledgeUnits = pgTable(
+  "knowledge_units",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("kunit")),
+    accountId: text("account_id").references(() => accounts.id), // nullable for internal/product units
+    channelId: text("channel_id").references(() => knowledgeChannels.id),
+    unitType: text("unit_type").notNull(), // KnowledgeUnitType
+    content: text("content").notNull(),
+    author: text("author"), // who said/created the thing
+    assignee: text("assignee"), // who needs to act on it
+    assigneeContactId: text("assignee_contact_id").references(() => contacts.id),
+    requestedBy: text("requested_by"), // who asked for it
+    requestedByUserId: text("requested_by_user_id").references(() => users.id),
+    status: text("status").notNull().default("open"), // 'open' | 'done' | 'superseded'
+    dueDate: timestamp("due_date"),
+    visibility: text("visibility").notNull().default("shared"),
+    confidence: integer("confidence").notNull().default(80), // 0-100
+    sourceEventIds: jsonb("source_event_ids").$type<string[]>().notNull().default([]),
+    supersededBy: text("superseded_by"), // ID of newer unit that replaces this one
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    extractedAt: timestamp("extracted_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    accountUnitTypeIdx: index("knowledge_units_account_unit_type_idx").on(table.accountId, table.unitType),
+  })
+);
 
 export const knowledgeState = pgTable(
   "knowledge_state",

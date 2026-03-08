@@ -11,7 +11,7 @@ import "dotenv/config";
 
 const SLACK_API = "https://slack.com/api";
 const TOKEN = process.env.KNOWLEDGE_SLACKBOT_TOKEN;
-const CHANNEL = "C0A4A5PKUQ5"; // mvrx-60x
+const CHANNEL = process.argv[2] || process.env.KNOWLEDGE_TEST_CHANNEL || "C0A4A5PKUQ5"; // default: mvrx-60x
 
 if (!TOKEN) {
   console.error("KNOWLEDGE_SLACKBOT_TOKEN not set in .env.local");

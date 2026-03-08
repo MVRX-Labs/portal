@@ -409,3 +409,124 @@ export const engagementRawResults = pgTable(
     uniqueProfileItem: unique().on(table.profileId, table.apifyItemId),
   })
 );
+
+// --- Knowledge Hub tables ---
+
+export const knowledgeChannels = pgTable(
+  "knowledge_channels",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("kchan")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    slackChannelId: text("slack_channel_id").notNull(),
+    slackChannelName: text("slack_channel_name").notNull(),
+    channelType: text("channel_type").notNull().default("shared"), // 'shared' | 'internal'
+    workspaceId: text("workspace_id"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueChannel: unique().on(table.slackChannelId),
+  })
+);
+
+export const knowledgeSyncState = pgTable(
+  "knowledge_sync_state",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("ksync")),
+    channelId: text("channel_id")
+      .notNull()
+      .references(() => knowledgeChannels.id),
+    lastMessageTs: text("last_message_ts"), // Slack timestamp of last synced message
+    lastSyncedAt: timestamp("last_synced_at"),
+    lastSyncError: text("last_sync_error"),
+    messagesIngested: integer("messages_ingested").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueChannelSync: unique().on(table.channelId),
+  })
+);
+
+export const knowledgeEvents = pgTable(
+  "knowledge_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("kevt")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    channelId: text("channel_id")
+      .notNull()
+      .references(() => knowledgeChannels.id),
+    source: text("source").notNull().default("slack"), // 'slack' | 'granola' | 'drive' | 'crm'
+    sourceRef: text("source_ref").notNull(), // Slack ts, drive doc id, etc.
+    threadRef: text("thread_ref"), // Parent message ts (for thread replies)
+    authorSlackId: text("author_slack_id"),
+    authorName: text("author_name"),
+    authorSide: text("author_side"), // 'mvrx' | 'client'
+    visibility: text("visibility").notNull().default("shared"), // 'shared' | 'internal'
+    contentType: text("content_type").notNull().default("text"), // media type
+    rawContent: text("raw_content").notNull(),
+    mediaUrl: text("media_url"),
+    resolvedContent: text("resolved_content"), // Transcription, fetched doc text, etc.
+    links: jsonb("links").$type<string[]>().default([]),
+    driveLinks: jsonb("drive_links").$type<string[]>().default([]),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    messageAt: timestamp("message_at").notNull(), // When the original message was sent
+    processedAt: timestamp("processed_at"), // When normalisation ran on this event
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSourceRef: unique().on(table.channelId, table.sourceRef),
+  })
+);
+
+export const knowledgeUnits = pgTable("knowledge_units", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("kunit")),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  unitType: text("unit_type").notNull(), // KnowledgeUnitType
+  content: text("content").notNull(),
+  author: text("author"),
+  assignee: text("assignee"),
+  dueDate: timestamp("due_date"),
+  visibility: text("visibility").notNull().default("shared"),
+  confidence: integer("confidence").notNull().default(80), // 0-100
+  sourceEventIds: jsonb("source_event_ids").$type<string[]>().notNull().default([]),
+  supersededBy: text("superseded_by"), // ID of newer unit that replaces this one
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  extractedAt: timestamp("extracted_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const knowledgeState = pgTable(
+  "knowledge_state",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("kstate")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    stateType: text("state_type").notNull(), // 'brief' | 'open_items' | 'activity_log'
+    content: text("content").notNull(),
+    version: integer("version").notNull().default(1),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueAccountState: unique().on(table.accountId, table.stateType),
+  })
+);

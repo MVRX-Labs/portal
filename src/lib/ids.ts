@@ -29,6 +29,11 @@ const PREFIXES = {
   mpost: "mpost",
   msnap: "msnap",
   arpt: "arpt",
+  kchan: "kchan",
+  ksync: "ksync",
+  kevt: "kevt",
+  kunit: "kunit",
+  kstate: "kstate",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -51,6 +56,11 @@ export type ManagedProfileId = `mprof_${string}`;
 export type ManagedPostId = `mpost_${string}`;
 export type ManagedPostSnapshotId = `msnap_${string}`;
 export type AnalyticsReportId = `arpt_${string}`;
+export type KnowledgeChannelId = `kchan_${string}`;
+export type KnowledgeSyncId = `ksync_${string}`;
+export type KnowledgeEventId = `kevt_${string}`;
+export type KnowledgeUnitId = `kunit_${string}`;
+export type KnowledgeStateId = `kstate_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -69,7 +79,12 @@ export type ObjectId =
   | ManagedProfileId
   | ManagedPostId
   | ManagedPostSnapshotId
-  | AnalyticsReportId;
+  | AnalyticsReportId
+  | KnowledgeChannelId
+  | KnowledgeSyncId
+  | KnowledgeEventId
+  | KnowledgeUnitId
+  | KnowledgeStateId;
 
 type PrefixToId = {
   user: UserId;
@@ -90,6 +105,11 @@ type PrefixToId = {
   mpost: ManagedPostId;
   msnap: ManagedPostSnapshotId;
   arpt: AnalyticsReportId;
+  kchan: KnowledgeChannelId;
+  ksync: KnowledgeSyncId;
+  kevt: KnowledgeEventId;
+  kunit: KnowledgeUnitId;
+  kstate: KnowledgeStateId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -127,6 +147,11 @@ export function prefixForTable(table: string): Prefix {
     managed_posts: "mpost",
     managed_post_snapshots: "msnap",
     analytics_reports: "arpt",
+    knowledge_channels: "kchan",
+    knowledge_sync_state: "ksync",
+    knowledge_events: "kevt",
+    knowledge_units: "kunit",
+    knowledge_state: "kstate",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

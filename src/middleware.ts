@@ -76,5 +76,6 @@ export const config = {
     "/linkedin-engagement/:path*",
     "/leads/:path*",
     "/analytics/:path*",
+    "/api/knowledge/:path*",
   ],
 };

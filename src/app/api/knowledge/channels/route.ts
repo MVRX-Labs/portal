@@ -10,9 +10,8 @@ import { db } from "@/lib/db";
 import { knowledgeChannels, knowledgeSyncState, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { fetchChannelInfo } from "@/lib/knowledge/slack-client";
-
-const VALID_CHANNEL_TYPES = new Set(["shared", "internal"]);
-const VALID_CHANNEL_CATEGORIES = new Set(["client_shared", "client_internal", "general", "product", "ops"]);
+import { parseBody } from "@/lib/api-schemas/common";
+import { registerChannelBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
   const isAdmin = req.headers.get("x-user-admin") === "true";
@@ -20,30 +19,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { accountId, slackChannelId, channelType, channelCategory } = body;
+  const { data, error } = await parseBody(req, registerChannelBodySchema);
+  if (error) return error;
 
-  if (!slackChannelId) {
-    return NextResponse.json({ error: "slackChannelId required" }, { status: 400 });
-  }
-
-  if (channelType && !VALID_CHANNEL_TYPES.has(channelType)) {
-    return NextResponse.json({ error: "channelType must be 'shared' or 'internal'" }, { status: 400 });
-  }
-
-  if (channelCategory && !VALID_CHANNEL_CATEGORIES.has(channelCategory)) {
-    return NextResponse.json(
-      { error: "channelCategory must be 'client_shared' | 'client_internal' | 'general' | 'product' | 'ops'" },
-      { status: 400 },
-    );
-  }
-
-  // accountId required for client channels, optional for general/product/ops
+  const { accountId, slackChannelId, channelType, channelCategory } = data;
   const category = channelCategory ?? "client_shared";
-  const isClientChannel = category === "client_shared" || category === "client_internal";
-  if (isClientChannel && !accountId) {
-    return NextResponse.json({ error: "accountId required for client channels" }, { status: 400 });
-  }
 
   // Verify account exists (if provided)
   if (accountId) {

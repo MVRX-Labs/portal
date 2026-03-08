@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
 import type { knowledgeSlackIngestChannel } from "@/trigger/knowledge-slack-ingest";
+import { parseBodyOptional } from "@/lib/api-schemas/common";
+import { triggerIngestBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
   const isAdmin = req.headers.get("x-user-admin") === "true";
@@ -14,8 +16,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const { channelDbId } = body;
+  const { data } = await parseBodyOptional(req, triggerIngestBodySchema);
+  const { channelDbId } = data;
 
   if (channelDbId) {
     // Trigger single channel ingestion via Trigger.dev

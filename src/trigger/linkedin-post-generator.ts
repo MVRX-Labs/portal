@@ -12,6 +12,7 @@ import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, createGoogleDoc } from "@/lib/gdrive";
 import { getRandomHookTemplates, formatHookTemplatesForPrompt } from "./linkedin-hook-templates";
+import { findPosterProfile, findRelevantContext, buildPosterBackgroundText } from "./linkedin-poster-profiles";
 
 interface LinkedInPostGeneratorPayload {
   runId: string;
@@ -39,7 +40,8 @@ function buildPrompt(
   posterRole: string,
   hasScrapedData: boolean,
   hasVoiceContext: boolean,
-  sourceUrls: string[]
+  sourceUrls: string[],
+  hasPosterBackground: boolean
 ): string {
   const randomHooks = getRandomHookTemplates(5);
   const hookInspiration = formatHookTemplatesForPrompt(randomHooks);
@@ -50,6 +52,8 @@ function buildPrompt(
   const fileInstructions = [
     "Read source-material.txt for the raw material to base the post on.",
     hasSourceUrls && "Read source-urls.txt for links detected in the source material (including meeting-note links).",
+    hasPosterBackground &&
+      "Read poster-background.txt for verified background context about the poster and any relevant programmes, organisations, or initiatives mentioned in the source material. Use this as ground-truth context when writing: it contains facts about who they are, what they work on, and what they care about. Do NOT regurgitate this background wholesale; instead, let it inform your tone, framing, and the specific details you choose to include or emphasise.",
     hasVoiceContext &&
       "Read voice-context.txt for the client's style guide, past posts, or tone description. Analyze it for voice patterns before writing.",
     hasScrapedData &&
@@ -362,6 +366,21 @@ export const linkedinPostGeneratorTask = task({
         await writeFile(join(sessionDir, "voice-context.txt"), voiceContext, "utf-8");
       }
 
+      // Look up known poster profile and any relevant organisational context
+      const posterProfile = findPosterProfile(posterName);
+      const relevantContexts = findRelevantContext(sourceMaterial, posterProfile);
+      const posterBackgroundText = buildPosterBackgroundText(posterProfile, relevantContexts);
+      let hasPosterBackground = false;
+
+      if (posterBackgroundText) {
+        await writeFile(join(sessionDir, "poster-background.txt"), posterBackgroundText, "utf-8");
+        hasPosterBackground = true;
+        logger.info("Poster background context injected", {
+          knownProfile: !!posterProfile,
+          contextBlocks: relevantContexts.length,
+        });
+      }
+
       let hasScrapedData = false;
       if (useLinkedinProfile && linkedinUrl) {
         logger.info("Scraping LinkedIn profile via Apify", {
@@ -392,7 +411,7 @@ export const linkedinPostGeneratorTask = task({
         }
       }
 
-      const prompt = buildPrompt(posterName, posterRole, hasScrapedData, !!voiceContext, sourceUrls);
+      const prompt = buildPrompt(posterName, posterRole, hasScrapedData, !!voiceContext, sourceUrls, hasPosterBackground);
 
       const genStep = hasLinkedinScrape ? 2 : 1;
       metadata.set("progress", {

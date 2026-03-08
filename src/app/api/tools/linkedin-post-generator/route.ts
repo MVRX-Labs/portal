@@ -4,6 +4,7 @@ import { toolRuns, contacts, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinPostGeneratorTask } from "@/trigger/linkedin-post-generator";
+import { findPosterProfile } from "@/trigger/linkedin-poster-profiles";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -38,15 +39,18 @@ export async function POST(request: NextRequest) {
   }
 
   const dynamicContact = contact as unknown as Record<string, unknown>;
+  const knownProfile = findPosterProfile(contact.name);
   const posterRole =
     (typeof dynamicContact.role === "string" && dynamicContact.role) ||
     (typeof dynamicContact.title === "string" && dynamicContact.title) ||
     (typeof dynamicContact.jobTitle === "string" && dynamicContact.jobTitle) ||
     (typeof dynamicContact.headline === "string" && dynamicContact.headline) ||
+    knownProfile?.fallbackRole ||
     "Unknown role";
 
   const useLinkedinProfile = inputs.useLinkedinProfile === true || inputs.useLinkedinProfile === "true";
-  const linkedinUrl = useLinkedinProfile && contact.linkedinUrl ? contact.linkedinUrl : undefined;
+  const contactLinkedinUrl = contact.linkedinUrl || knownProfile?.linkedinUrl;
+  const linkedinUrl = useLinkedinProfile && contactLinkedinUrl ? contactLinkedinUrl : undefined;
 
   const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
 

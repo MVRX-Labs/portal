@@ -43,6 +43,22 @@ export interface ToolField {
 
 export const TOOLS: ToolConfig[] = [
   {
+    id: "engagement-bot",
+    name: "Engagement Bot",
+    description:
+      "Monitor external LinkedIn profiles, surface new posts in Slack, and generate AI-powered comments for quick engagement.",
+    href: "/linkedin-engagement",
+    fields: [],
+  },
+  {
+    id: "post-analytics",
+    name: "Post Analytics",
+    description:
+      "Track your managed clients' LinkedIn post performance with automated weekly reports, engagement snapshots, and week-over-week growth metrics delivered to Slack.",
+    href: "/analytics",
+    fields: [],
+  },
+  {
     id: "linkedin-audit",
     name: "LinkedIn Profile Audit",
     description: "Analyze a LinkedIn profile and generate optimization recommendations.",

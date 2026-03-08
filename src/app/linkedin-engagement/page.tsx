@@ -189,9 +189,26 @@ function EngagementContent() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">Engagement Bot</h1>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-[var(--muted)] mb-2">
         Track external LinkedIn profiles and engage with their posts via Slack.
       </p>
+
+      {/* How it works */}
+      <details className="mb-4 text-sm">
+        <summary className="text-[var(--accent)] cursor-pointer hover:underline">How does this work?</summary>
+        <div className="mt-2 p-3 rounded bg-[var(--input)] border border-[var(--border)] space-y-2 text-[var(--muted)]">
+          <p><strong className="text-white">1. Add profiles</strong> — Enter LinkedIn URLs of people you want to monitor (prospects, industry leaders, etc). You can optionally set a persona that shapes the tone of AI-generated comments.</p>
+          <p><strong className="text-white">2. Configure Slack</strong> — Set the Slack channel ID where post cards will be sent.</p>
+          <p><strong className="text-white">3. Scrape</strong> — Click &quot;Scrape All&quot; to pull recent posts (last 24h) from each profile. New posts appear as interactive cards in your Slack channel.</p>
+          <p><strong className="text-white">4. Engage via Slack</strong> — Each card has action buttons:</p>
+          <ul className="list-disc list-inside pl-2 space-y-1">
+            <li><strong className="text-white">Comment</strong> — AI generates a context-aware comment you can copy and post on LinkedIn.</li>
+            <li><strong className="text-white">Like / Repost</strong> — Flags the post for manual action on LinkedIn (these actions are not automated).</li>
+            <li><strong className="text-white">Skip</strong> — Dismiss the post.</li>
+          </ul>
+          <p><strong className="text-white">CSV upload</strong> — Bulk add profiles via CSV with a &quot;linkedin&quot; column containing profile URLs.</p>
+        </div>
+      </details>
 
       {status && (
         <div className="text-sm px-3 py-2 mb-4 rounded bg-[var(--input)] border border-[var(--border)]">
@@ -373,8 +390,10 @@ function EngagementContent() {
                 <div key={p.id} className="text-sm py-2 border-b border-[var(--border)] last:border-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
-                      p.engagementStatus === "commented" ? "bg-green-500/20 text-green-400" :
+                      p.engagementStatus === "engaged" || p.engagementStatus === "awaiting_action" ? "bg-green-500/20 text-green-400" :
                       p.engagementStatus === "sent_to_slack" ? "bg-blue-500/20 text-blue-400" :
+                      p.engagementStatus === "failed" ? "bg-red-500/20 text-red-400" :
+                      p.engagementStatus === "skip" ? "bg-yellow-500/20 text-yellow-400" :
                       "bg-gray-500/20 text-gray-400"
                     }`}>
                       {p.engagementStatus || "new"}

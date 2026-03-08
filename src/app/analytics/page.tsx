@@ -151,9 +151,26 @@ function AnalyticsContent() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">Post Analytics</h1>
-      <p className="text-sm text-[var(--muted)] mb-4">
+      <p className="text-sm text-[var(--muted)] mb-2">
         Track performance of posts published by your managed client LinkedIn profiles.
       </p>
+
+      {/* How it works */}
+      <details className="mb-4 text-sm">
+        <summary className="text-[var(--accent)] cursor-pointer hover:underline">How does this work?</summary>
+        <div className="mt-2 p-3 rounded bg-[var(--input)] border border-[var(--border)] space-y-2 text-[var(--muted)]">
+          <p><strong className="text-white">1. Add managed profiles</strong> — Enter your client&apos;s LinkedIn profile URLs. These are profiles you manage or ghostwrite for.</p>
+          <p><strong className="text-white">2. Configure Slack</strong> — Set one or more Slack channel IDs (comma-separated) to receive automated weekly reports.</p>
+          <p><strong className="text-white">3. Automatic weekly reports</strong> — Every Monday at 7 AM UTC, the system scrapes each profile&apos;s posts, captures engagement snapshots, and sends a Slack report with:</p>
+          <ul className="list-disc list-inside pl-2 space-y-1">
+            <li>New posts published that week</li>
+            <li>Biggest movers — posts with the most engagement growth</li>
+            <li>Week-over-week engagement deltas (likes, comments, reposts)</li>
+          </ul>
+          <p><strong className="text-white">4. Manual reports</strong> — Click &quot;Run Report&quot; anytime to trigger an on-demand scrape and report.</p>
+          <p><strong className="text-white">5. Dashboard</strong> — View aggregate KPIs, per-profile breakdowns, and expand each profile to see individual post performance.</p>
+        </div>
+      </details>
 
       {status && (
         <div className="text-sm px-3 py-2 mb-4 rounded bg-[var(--input)] border border-[var(--border)]">

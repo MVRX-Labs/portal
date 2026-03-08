@@ -5,6 +5,14 @@ import { useAccount } from "@/components/account-provider";
 import { ProfileCard, ProfilesTable } from "./profile-card";
 import { Delta } from "./shared";
 import type { AnalyticsData, ManagedProfile } from "./types";
+import { apiFetch, apiMutate } from "@/lib/api-client";
+import {
+  analyticsConfigResponseSchema,
+  analyticsDataSchema,
+  getAnalyticsProfilesResponseSchema,
+  managedProfileSchema,
+  analyticsScrapeResponseSchema,
+} from "@/lib/api-schemas/analytics";
 
 function AnalyticsContent() {
   const { account } = useAccount();
@@ -25,37 +33,29 @@ function AnalyticsContent() {
   const fetchSlackConfig = useCallback(async () => {
     if (!base) return;
     try {
-      const res = await fetch(`${base}/config`);
-      if (res.ok) {
-        const d = await res.json();
-        const ch = d.analyticsSlackChannel || "";
-        setSlackChannel(ch);
-        setSlackChannelSaved(ch);
-      }
-    } catch { /* ignore */ }
+      const d = await apiFetch(`${base}/config`, analyticsConfigResponseSchema);
+      const ch = d.analyticsSlackChannel || "";
+      setSlackChannel(ch);
+      setSlackChannelSaved(ch);
+    } catch {
+      /* ignore */
+    }
   }, [base]);
 
   const saveSlackChannel = async () => {
     if (!base) return;
     setSavingSlack(true);
     try {
-      const res = await fetch(`${base}/config`, {
+      const d = await apiMutate(`${base}/config`, analyticsConfigResponseSchema, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ analyticsSlackChannel: slackChannel }),
+        body: { analyticsSlackChannel: slackChannel },
       });
-      if (res.ok) {
-        const d = await res.json();
-        const ch = d.analyticsSlackChannel || "";
-        setSlackChannel(ch);
-        setSlackChannelSaved(ch);
-        setStatus("Slack channel saved.");
-      } else {
-        const err = await res.json();
-        setStatus(err.error || "Failed to save Slack channel.");
-      }
-    } catch {
-      setStatus("Failed to save Slack channel.");
+      const ch = d.analyticsSlackChannel || "";
+      setSlackChannel(ch);
+      setSlackChannelSaved(ch);
+      setStatus("Slack channel saved.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to save Slack channel.");
     }
     setSavingSlack(false);
   };
@@ -64,58 +64,39 @@ function AnalyticsContent() {
     if (!base) return;
     setLoading(true);
     try {
-      const [analyticsRes, profilesRes] = await Promise.all([
-        fetch(base),
-        fetch(`${base}/profiles`),
-      ]);
       const [analyticsData, profilesData] = await Promise.all([
-        analyticsRes.json().catch(() => null),
-        profilesRes.json().catch(() => null),
+        apiFetch(base, analyticsDataSchema),
+        apiFetch(`${base}/profiles`, getAnalyticsProfilesResponseSchema),
       ]);
-
-      if (analyticsRes.ok && analyticsData?.profiles) {
-        setData(analyticsData as AnalyticsData);
-      } else {
-        setData(null);
-        const errorMessage =
-          (analyticsData && typeof analyticsData.error === "string" && analyticsData.error) ||
-          "Failed to load analytics.";
-        setStatus(errorMessage);
-      }
-
-      if (profilesRes.ok && Array.isArray(profilesData)) {
-        setProfiles(profilesData as ManagedProfile[]);
-      } else {
-        setProfiles([]);
-      }
-    } catch {
-      setStatus("Failed to load analytics.");
+      setData(analyticsData);
+      setProfiles(profilesData as ManagedProfile[]);
+    } catch (err) {
+      setData(null);
+      setProfiles([]);
+      setStatus(err instanceof Error ? err.message : "Failed to load analytics.");
     }
     setLoading(false);
   }, [base]);
 
-  useEffect(() => { fetchData(); fetchSlackConfig(); }, [fetchData, fetchSlackConfig]);
+  useEffect(() => {
+    fetchData();
+    fetchSlackConfig();
+  }, [fetchData, fetchSlackConfig]);
 
   const addProfile = async () => {
     if (!base || !profileUrl) return;
     setAddingProfile(true);
     try {
-      const res = await fetch(`${base}/profiles`, {
+      await apiMutate(`${base}/profiles`, managedProfileSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkedin_url: profileUrl, display_name: profileName }),
+        body: { linkedin_url: profileUrl, display_name: profileName },
       });
-      if (res.ok) {
-        setProfileUrl("");
-        setProfileName("");
-        setStatus("Profile added.");
-        await fetchData();
-      } else {
-        const err = await res.json();
-        setStatus(err.error || "Failed to add profile.");
-      }
-    } catch {
-      setStatus("Failed to add profile.");
+      setProfileUrl("");
+      setProfileName("");
+      setStatus("Profile added.");
+      await fetchData();
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to add profile.");
     }
     setAddingProfile(false);
   };
@@ -125,16 +106,16 @@ function AnalyticsContent() {
     setRunning(true);
     setStatus("Running weekly report (scrape + report + Slack)...");
     try {
-      const res = await fetch(`${base}/scrape`, { method: "POST" });
-      const result = await res.json();
-      if (res.ok) {
-        const triggered = typeof result.triggered === "number" ? result.triggered : 0;
-        setStatus(`Report triggered for ${triggered} profile${triggered === 1 ? "" : "s"}. Data will update once complete.`);
-      } else {
-        setStatus(result.error || "Report failed.");
-      }
-    } catch {
-      setStatus("Report failed.");
+      const result = await apiMutate(`${base}/scrape`, analyticsScrapeResponseSchema, {
+        method: "POST",
+        body: {},
+      });
+      const triggered = result.triggered ?? 0;
+      setStatus(
+        `Report triggered for ${triggered} profile${triggered === 1 ? "" : "s"}. Data will update once complete.`
+      );
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Report failed.");
     }
     setRunning(false);
   };
@@ -159,33 +140,62 @@ function AnalyticsContent() {
       <details className="mb-4 text-sm">
         <summary className="text-[var(--accent)] cursor-pointer hover:underline">How does this work?</summary>
         <div className="mt-2 p-3 rounded bg-[var(--input)] border border-[var(--border)] space-y-2 text-[var(--muted)]">
-          <p><strong className="text-white">1. Add managed profiles</strong> — Enter your client&apos;s LinkedIn profile URLs. These are profiles you manage or ghostwrite for.</p>
-          <p><strong className="text-white">2. Configure Slack</strong> — Set one or more Slack channel IDs (comma-separated) to receive automated weekly reports.</p>
-          <p><strong className="text-white">3. Automatic weekly reports</strong> — Every Monday at 7 AM UTC, the system scrapes each profile&apos;s posts, captures engagement snapshots, and sends a Slack report with:</p>
+          <p>
+            <strong className="text-white">1. Add managed profiles</strong> — Enter your client&apos;s LinkedIn profile
+            URLs. These are profiles you manage or ghostwrite for.
+          </p>
+          <p>
+            <strong className="text-white">2. Configure Slack</strong> — Set one or more Slack channel IDs
+            (comma-separated) to receive automated weekly reports.
+          </p>
+          <p>
+            <strong className="text-white">3. Automatic weekly reports</strong> — Every Monday at 7 AM UTC, the system
+            scrapes each profile&apos;s posts, captures engagement snapshots, and sends a Slack report with:
+          </p>
           <ul className="list-disc list-inside pl-2 space-y-1">
             <li>New posts published that week</li>
             <li>Biggest movers — posts with the most engagement growth</li>
             <li>Week-over-week engagement deltas (likes, comments, reposts)</li>
           </ul>
-          <p><strong className="text-white">4. Manual reports</strong> — Click &quot;Run Report&quot; anytime to trigger an on-demand scrape and report.</p>
-          <p><strong className="text-white">5. Dashboard</strong> — View aggregate KPIs, per-profile breakdowns, and expand each profile to see individual post performance.</p>
+          <p>
+            <strong className="text-white">4. Manual reports</strong> — Click &quot;Run Report&quot; anytime to trigger
+            an on-demand scrape and report.
+          </p>
+          <p>
+            <strong className="text-white">5. Dashboard</strong> — View aggregate KPIs, per-profile breakdowns, and
+            expand each profile to see individual post performance.
+          </p>
         </div>
       </details>
 
       {status && (
         <div className="text-sm px-3 py-2 mb-4 rounded bg-[var(--input)] border border-[var(--border)]">
           {status}
-          <button onClick={() => setStatus(null)} className="ml-2 text-[var(--muted)] hover:text-white">&times;</button>
+          <button onClick={() => setStatus(null)} className="ml-2 text-[var(--muted)] hover:text-white">
+            &times;
+          </button>
         </div>
       )}
 
       {/* Slack channel config */}
       <div className="card mb-4">
         <h2 className="text-sm font-semibold mb-2">Slack Weekly Reports</h2>
-        <p className="text-xs text-[var(--muted)] mb-2">Set Slack channel IDs to receive weekly analytics reports. Separate multiple channels with commas.</p>
+        <p className="text-xs text-[var(--muted)] mb-2">
+          Set Slack channel IDs to receive weekly analytics reports. Separate multiple channels with commas.
+        </p>
         <div className="flex gap-2 items-center">
-          <input type="text" value={slackChannel} onChange={(e) => setSlackChannel(e.target.value)} placeholder="C0AJLSV0M1A, C0BKL2V1M2B" className="w-64" />
-          <button onClick={saveSlackChannel} disabled={savingSlack || slackChannel === slackChannelSaved} className="btn-primary text-sm">
+          <input
+            type="text"
+            value={slackChannel}
+            onChange={(e) => setSlackChannel(e.target.value)}
+            placeholder="C0AJLSV0M1A, C0BKL2V1M2B"
+            className="w-64"
+          />
+          <button
+            onClick={saveSlackChannel}
+            disabled={savingSlack || slackChannel === slackChannelSaved}
+            className="btn-primary text-sm"
+          >
             {savingSlack ? "Saving..." : "Save"}
           </button>
           {slackChannelSaved && <span className="text-xs text-green-400">Active</span>}
@@ -195,25 +205,35 @@ function AnalyticsContent() {
       {/* Add managed profile */}
       <div className="card mb-4">
         <h2 className="text-sm font-semibold mb-2">Add Managed Profile</h2>
-        <p className="text-xs text-[var(--muted)] mb-2">Your client&apos;s LinkedIn profiles. Analytics tracks original posts from these profiles.</p>
+        <p className="text-xs text-[var(--muted)] mb-2">
+          Your client&apos;s LinkedIn profiles. Analytics tracks original posts from these profiles.
+        </p>
         <div className="flex gap-2 items-end">
           <div className="flex-1">
-            <input type="text" value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://linkedin.com/in/client-name" className="w-full" />
+            <input
+              type="text"
+              value={profileUrl}
+              onChange={(e) => setProfileUrl(e.target.value)}
+              placeholder="https://linkedin.com/in/client-name"
+              className="w-full"
+            />
           </div>
           <div className="w-48">
-            <input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Display name" className="w-full" />
+            <input
+              type="text"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              placeholder="Display name"
+              className="w-full"
+            />
           </div>
-          <button onClick={addProfile} disabled={addingProfile || !profileUrl} className="btn-primary text-sm">{addingProfile ? "Adding..." : "Add"}</button>
+          <button onClick={addProfile} disabled={addingProfile || !profileUrl} className="btn-primary text-sm">
+            {addingProfile ? "Adding..." : "Add"}
+          </button>
         </div>
       </div>
 
-      {profiles.length > 0 && (
-        <ProfilesTable
-          profiles={profiles}
-          running={running}
-          onRunReport={runReport}
-        />
-      )}
+      {profiles.length > 0 && <ProfilesTable profiles={profiles} running={running} onRunReport={runReport} />}
 
       {loading ? (
         <p className="text-sm text-[var(--muted)]">Loading analytics...</p>
@@ -228,7 +248,9 @@ function AnalyticsContent() {
             <div className="card">
               <div className="text-2xl font-light">{data.totals.totalEngagement.toLocaleString()}</div>
               {data.totals.hasComparison && (
-                <div className="text-sm mt-0.5"><Delta value={data.totals.deltaEngagement} /></div>
+                <div className="text-sm mt-0.5">
+                  <Delta value={data.totals.deltaEngagement} />
+                </div>
               )}
               <div className="text-xs text-[var(--muted)] uppercase tracking-wide mt-1">Total Engagement</div>
             </div>
@@ -238,9 +260,7 @@ function AnalyticsContent() {
             </div>
             <div className="card">
               <div className="text-2xl font-light">
-                {data.totals.hasComparison ? (
-                  <Delta value={data.totals.deltaEngagement} />
-                ) : "—"}
+                {data.totals.hasComparison ? <Delta value={data.totals.deltaEngagement} /> : "—"}
               </div>
               <div className="text-xs text-[var(--muted)] uppercase tracking-wide mt-1">Weekly Growth</div>
             </div>
@@ -252,9 +272,7 @@ function AnalyticsContent() {
               key={profile.profileId}
               profile={profile}
               isExpanded={expandedProfile === profile.profileId}
-              onToggle={() => setExpandedProfile(
-                expandedProfile === profile.profileId ? null : profile.profileId
-              )}
+              onToggle={() => setExpandedProfile(expandedProfile === profile.profileId ? null : profile.profileId)}
             />
           ))}
         </>

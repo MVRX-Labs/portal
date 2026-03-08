@@ -1,6 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import type { GetLeadsResponse } from "@/lib/api-schemas/leads";
+import { getLeadsResponseSchema, scrapeLeadsResponseSchema } from "@/lib/api-schemas/leads";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAccount } from "@/components/account-provider";
 
@@ -62,9 +65,8 @@ function LeadsContent() {
     if (contactFilter) params.set("contactId", contactFilter);
 
     try {
-      const res = await fetch(`/api/accounts/${account.id}/leads?${params}`);
-      const data = await res.json();
-      setLeads(data.leads || []);
+      const data = await apiFetch(`/api/accounts/${account.id}/leads?${params}`, getLeadsResponseSchema);
+      setLeads((data.leads || []) as Lead[]);
       setPagination(data.pagination || null);
     } catch {
       // ignore
@@ -98,27 +100,19 @@ function LeadsContent() {
     setScrapeStatus(null);
 
     try {
-      const res = await fetch(`/api/accounts/${account.id}/leads/scrape`, {
+      const data = await apiMutate(`/api/accounts/${account.id}/leads/scrape`, scrapeLeadsResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           ...(contactFilter ? { contactId: contactFilter } : {}),
           daysBack,
-        }),
+        },
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setScrapeStatus(data.error || "Failed to trigger scrape");
-      } else {
-        const labels = (data.sources || []).map(
-          (s: { sourceType: string; linkedinUrl: string }) =>
-            `${s.sourceType === "company" ? "Company" : "Personal"}: ${s.linkedinUrl}`
-        );
-        setScrapeStatus(`Scraping ${labels.join(", ")}. Results will appear here shortly.`);
-      }
-    } catch {
-      setScrapeStatus("Failed to trigger scrape");
+      const labels = (data.sources || []).map(
+        (s) => `${s.sourceType === "company" ? "Company" : "Personal"}: ${s.linkedinUrl}`
+      );
+      setScrapeStatus(`Scraping ${labels.join(", ")}. Results will appear here shortly.`);
+    } catch (err) {
+      setScrapeStatus(err instanceof Error ? err.message : "Failed to trigger scrape");
     } finally {
       scrapingRef.current = false;
       setScraping(false);

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAccount, type Account } from "./account-provider";
+import { getAccountsResponseSchema, createAccountResponseSchema } from "@/lib/api-schemas/accounts";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 
 export function AccountSelector() {
   const { account, setAccount } = useAccount();
@@ -22,8 +24,7 @@ export function AccountSelector() {
     const timer = setTimeout(async () => {
       try {
         const params = query ? `?q=${encodeURIComponent(query)}` : "";
-        const res = await fetch(`/api/accounts${params}`);
-        const data = await res.json();
+        const data = await apiFetch(`/api/accounts${params}`, getAccountsResponseSchema);
         setResults(data.accounts || []);
       } catch {
         // ignore
@@ -60,28 +61,24 @@ export function AccountSelector() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/accounts", {
+      const data = await apiMutate("/api/accounts", createAccountResponseSchema, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           name: newName.trim(),
-          industry: newIndustry.trim() || null,
-          website: newWebsite.trim() || null,
-          linkedinUrl: newLinkedinUrl.trim() || null,
+          industry: newIndustry.trim() || undefined,
+          website: newWebsite.trim() || undefined,
+          linkedinUrl: newLinkedinUrl.trim() || undefined,
           engagementScrapeEnabled: newEngagementScrape,
-        }),
+        },
       });
-      const data = await res.json();
-      if (res.ok) {
-        setAccount(data.account.id);
-        setShowCreate(false);
-        setOpen(false);
-        setNewName("");
-        setNewIndustry("");
-        setNewWebsite("");
-        setNewLinkedinUrl("");
-        setNewEngagementScrape(false);
-      }
+      setAccount(data.account.id);
+      setShowCreate(false);
+      setOpen(false);
+      setNewName("");
+      setNewIndustry("");
+      setNewWebsite("");
+      setNewLinkedinUrl("");
+      setNewEngagementScrape(false);
     } catch {
       // ignore
     } finally {

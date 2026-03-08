@@ -4,6 +4,8 @@ import { toolRuns, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { gtmStrategyTask } from "@/trigger/gtm-strategy";
+import { parseBody } from "@/lib/api-schemas/common";
+import { gtmStrategyBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -13,25 +15,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: {
-    accountId?: string | null;
-    industry?: string;
-    targetAudience?: string;
-    productDescription?: string;
-    model?: string;
-  };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.industry || !inputs.targetAudience || !inputs.productDescription) {
-    return NextResponse.json(
-      { error: "industry, targetAudience, and productDescription are required" },
-      { status: 400 }
-    );
-  }
+  const { data: inputs, error } = await parseBody(request, gtmStrategyBodySchema);
+  if (error) return error;
 
   let companyName = "Unknown";
   if (inputs.accountId) {

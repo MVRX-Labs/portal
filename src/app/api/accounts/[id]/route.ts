@@ -4,6 +4,8 @@ import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { isObjectId } from "@/lib/ids";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
+import { parseBody } from "@/lib/api-schemas/common";
+import { updateAccountBodySchema } from "@/lib/api-schemas/accounts";
 
 export const maxDuration = 300;
 
@@ -47,23 +49,22 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await request.json();
-  const { name, industry, website, linkedinUrl, engagementScrapeEnabled, summary, ownerId, mrr, mrrCurrency, hidden, engagementSlackChannel } =
-    body;
+  const { data, error } = await parseBody(request, updateAccountBodySchema);
+  if (error) return error;
 
   const column = isObjectId(id, "acct") ? accounts.id : accounts.slug;
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (name !== undefined) updates.name = name;
-  if (industry !== undefined) updates.industry = industry;
-  if (website !== undefined) updates.website = website;
-  if (linkedinUrl !== undefined) updates.linkedinUrl = linkedinUrl;
-  if (engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = engagementScrapeEnabled;
-  if (summary !== undefined) updates.summary = summary;
-  if (ownerId !== undefined) updates.ownerId = ownerId || null;
-  if (mrr !== undefined) updates.mrr = mrr;
-  if (mrrCurrency !== undefined) updates.mrrCurrency = mrrCurrency;
-  if (hidden !== undefined) updates.hidden = hidden;
-  if (engagementSlackChannel !== undefined) updates.engagementSlackChannel = engagementSlackChannel;
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.industry !== undefined) updates.industry = data.industry;
+  if (data.website !== undefined) updates.website = data.website;
+  if (data.linkedinUrl !== undefined) updates.linkedinUrl = data.linkedinUrl;
+  if (data.engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = data.engagementScrapeEnabled;
+  if (data.summary !== undefined) updates.summary = data.summary;
+  if (data.ownerId !== undefined) updates.ownerId = data.ownerId || null;
+  if (data.mrr !== undefined) updates.mrr = data.mrr;
+  if (data.mrrCurrency !== undefined) updates.mrrCurrency = data.mrrCurrency;
+  if (data.hidden !== undefined) updates.hidden = data.hidden;
+  if (data.engagementSlackChannel !== undefined) updates.engagementSlackChannel = data.engagementSlackChannel;
 
   const [account] = await db.update(accounts).set(updates).where(eq(column, id)).returning();
 

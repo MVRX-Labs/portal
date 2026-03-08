@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { parseBody } from "@/lib/api-schemas/common";
+import { createUserBodySchema, updateUserBodySchema } from "@/lib/api-schemas/admin";
 
 export const maxDuration = 300;
 
@@ -20,17 +22,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { name, email, isAdmin } = body;
-
-  if (!name || !email) {
-    return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, createUserBodySchema);
+  if (error) return error;
 
   try {
     const [user] = await db
       .insert(users)
-      .values({ name, email, isAdmin: isAdmin || false })
+      .values({ name: data.name, email: data.email, isAdmin: data.isAdmin || false })
       .returning({
         id: users.id,
         name: users.name,
@@ -49,19 +47,15 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const body = await request.json();
-  const { id, name, email, isAdmin } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: "User ID is required" }, { status: 400 });
-  }
+  const { data, error } = await parseBody(request, updateUserBodySchema);
+  if (error) return error;
 
   const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name;
-  if (email !== undefined) updates.email = email;
-  if (isAdmin !== undefined) updates.isAdmin = isAdmin;
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.email !== undefined) updates.email = data.email;
+  if (data.isAdmin !== undefined) updates.isAdmin = data.isAdmin;
 
-  const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning({
+  const [user] = await db.update(users).set(updates).where(eq(users.id, data.id)).returning({
     id: users.id,
     name: users.name,
     email: users.email,

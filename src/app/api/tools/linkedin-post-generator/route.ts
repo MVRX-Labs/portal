@@ -4,6 +4,8 @@ import { toolRuns, contacts, accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinPostGeneratorTask } from "@/trigger/linkedin-post-generator";
+import { parseBody } from "@/lib/api-schemas/common";
+import { linkedinPostGeneratorBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -13,23 +15,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: {
-    contactId?: string;
-    useLinkedinProfile?: string | boolean;
-    sourceMaterial?: string;
-    voiceContext?: string;
-    model?: string;
-    accountId?: string;
-  };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.contactId || !inputs.sourceMaterial) {
-    return NextResponse.json({ error: "contactId and sourceMaterial are required" }, { status: 400 });
-  }
+  const { data: inputs, error } = await parseBody(request, linkedinPostGeneratorBodySchema);
+  if (error) return error;
 
   const [contact] = await db.select().from(contacts).where(eq(contacts.id, inputs.contactId));
 

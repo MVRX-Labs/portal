@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAccount, type Contact } from "./account-provider";
+import { getContactsResponseSchema } from "@/lib/api-schemas/contacts";
+import { apiFetch } from "@/lib/api-client";
 import { CreateContactModal } from "./create-contact-modal";
 
 interface ContactPickerProps {
@@ -25,8 +27,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
       try {
         const params = new URLSearchParams({ accountId: account.id });
         if (query) params.set("q", query);
-        const res = await fetch(`/api/contacts?${params}`);
-        const data = await res.json();
+        const data = await apiFetch(`/api/contacts?${params}`, getContactsResponseSchema);
         setResults(data.contacts || []);
       } catch {
         // ignore
@@ -50,8 +51,7 @@ export function ContactPicker({ value, onChange, required }: ContactPickerProps)
     // Otherwise fetch it
     (async () => {
       try {
-        const res = await fetch(`/api/contacts?accountId=${account?.id}`);
-        const data = await res.json();
+        const data = await apiFetch(`/api/contacts?accountId=${account?.id}`, getContactsResponseSchema);
         const contact = (data.contacts || []).find((c: Contact) => c.id === value);
         if (contact) setSelectedContact(contact);
       } catch {

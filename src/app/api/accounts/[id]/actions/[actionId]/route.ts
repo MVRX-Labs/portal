@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accountActions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
+import { parseBody } from "@/lib/api-schemas/common";
+import { updateActionBodySchema } from "@/lib/api-schemas/actions";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string; actionId: string }> }) {
   const { id, actionId } = await params;
-  const body = await request.json();
-  const { title, description, status, dueDate, assigneeId } = body;
+  const { data, error } = await parseBody(request, updateActionBodySchema);
+  if (error) return error;
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (title !== undefined) updates.title = title;
-  if (description !== undefined) updates.description = description;
-  if (status !== undefined) updates.status = status;
-  if (dueDate !== undefined) updates.dueDate = dueDate ? new Date(dueDate) : null;
-  if (assigneeId !== undefined) updates.assigneeId = assigneeId || null;
+  if (data.title !== undefined) updates.title = data.title;
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.status !== undefined) updates.status = data.status;
+  if (data.dueDate !== undefined) updates.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+  if (data.assigneeId !== undefined) updates.assigneeId = data.assigneeId || null;
 
   const [action] = await db
     .update(accountActions)

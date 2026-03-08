@@ -4,6 +4,8 @@ import { toolRuns, accounts, contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinAuditTask } from "@/trigger/linkedin-audit";
+import { parseBody } from "@/lib/api-schemas/common";
+import { linkedinAuditBodySchema } from "@/lib/api-schemas/tools";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -13,16 +15,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let inputs: { contactId?: string; accountId?: string | null; model?: string };
-  try {
-    inputs = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  if (!inputs.contactId) {
-    return NextResponse.json({ error: "A contact is required" }, { status: 400 });
-  }
+  const { data: inputs, error } = await parseBody(request, linkedinAuditBodySchema);
+  if (error) return error;
 
   const [contact] = await db.select().from(contacts).where(eq(contacts.id, inputs.contactId));
 

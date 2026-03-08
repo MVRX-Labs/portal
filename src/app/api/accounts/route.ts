@@ -35,15 +35,18 @@ export async function GET(request: NextRequest) {
       mrrCurrency: accounts.mrrCurrency,
       lastMeetingAt: accounts.lastMeetingAt,
       nextMeetingAt: accounts.nextMeetingAt,
+      engagementSlackChannel: accounts.engagementSlackChannel,
+      analyticsSlackChannel: accounts.analyticsSlackChannel,
       autoCreated: accounts.autoCreated,
       hidden: accounts.hidden,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
-      contactCount: sql<number>`(select count(*) from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as(
-        "contact_count"
-      ),
+      contactCount:
+        sql<number>`(select count(*)::int from ${contacts} where ${contacts.accountId} = ${accounts.id})`.as(
+          "contact_count"
+        ),
       pendingActionCount:
-        sql<number>`(select count(*) from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as(
+        sql<number>`(select count(*)::int from ${accountActions} where ${accountActions.accountId} = ${accounts.id} and ${accountActions.status} != 'completed')`.as(
           "pending_action_count"
         ),
     })

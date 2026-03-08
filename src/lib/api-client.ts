@@ -1,13 +1,32 @@
 import type { ZodType } from "zod";
+import { ZodError } from "zod";
+import { toast } from "@/lib/toast";
 
 export async function apiFetch<T>(url: string, schema: ZodType<T>, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    const msg = `Failed to fetch ${url}: ${err instanceof Error ? err.message : "network error"}`;
+    toast.error(msg);
+    throw new Error(msg);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(body.error || `API error: ${res.status}`);
+    const msg = body.error || `API error: ${res.status}`;
+    toast.error(`${url}: ${msg}`);
+    throw new Error(msg);
   }
   const json = await res.json();
-  return schema.parse(json);
+  try {
+    return schema.parse(json);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      const issues = err.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
+      toast.error(`${url}: invalid response — ${issues}`);
+    }
+    throw err;
+  }
 }
 
 export async function apiMutate<T>(

@@ -48,6 +48,14 @@ function relativeDate(iso: string | null): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+function dueDateStyle(iso: string): string {
+  const due = new Date(iso);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return due < now ? "text-(--destructive)" : "text-(--muted)";
+}
+
 function ExpandedView({
   account,
   users,
@@ -64,6 +72,7 @@ function ExpandedView({
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingActions, setLoadingActions] = useState(true);
   const [newActionTitle, setNewActionTitle] = useState("");
+  const [newActionDueDate, setNewActionDueDate] = useState("");
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
@@ -125,9 +134,10 @@ function ExpandedView({
     try {
       await apiMutate(`/api/accounts/${account.id}/actions`, createActionResponseSchema, {
         method: "POST",
-        body: { title: newActionTitle.trim() },
+        body: { title: newActionTitle.trim(), dueDate: newActionDueDate || null },
       });
       setNewActionTitle("");
+      setNewActionDueDate("");
       await fetchActions();
     } catch {
       // ignore
@@ -376,7 +386,9 @@ function ExpandedView({
                   >
                     <span className="text-sm flex-1 truncate">{action.title}</span>
                     {action.dueDate && (
-                      <span className="text-xs text-(--muted) whitespace-nowrap">Due {formatDate(action.dueDate)}</span>
+                      <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
+                        Due {relativeDate(action.dueDate)}
+                      </span>
                     )}
                     <span className="badge badge-pending">{action.status}</span>
                     <button
@@ -402,6 +414,14 @@ function ExpandedView({
                   onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
                   placeholder="Add an action..."
                   className="flex-1"
+                />
+                <input
+                  type="date"
+                  value={newActionDueDate}
+                  onChange={(e) => setNewActionDueDate(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
+                  className="text-sm w-36"
+                  title="Due date (optional)"
                 />
                 <button
                   onClick={handleAddAction}

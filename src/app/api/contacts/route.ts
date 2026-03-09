@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       personalEmail: data.personalEmail || null,
       linkedinUrl: data.linkedinUrl || null,
       contentVoiceGuidance: data.contentVoiceGuidance || null,
+      notes: data.notes || null,
       engagementScrapeEnabled: data.engagementScrapeEnabled || false,
     })
     .returning();

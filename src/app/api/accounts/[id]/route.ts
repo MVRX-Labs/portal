@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (data.website !== undefined) updates.website = data.website;
   if (data.linkedinUrl !== undefined) updates.linkedinUrl = data.linkedinUrl;
   if (data.engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = data.engagementScrapeEnabled;
-  if (data.summary !== undefined) updates.summary = data.summary;
+  if (data.notes !== undefined) updates.notes = data.notes;
   if (data.contentVoiceGuidance !== undefined) updates.contentVoiceGuidance = data.contentVoiceGuidance;
   if (data.ownerId !== undefined) updates.ownerId = data.ownerId || null;
   if (data.mrr !== undefined) updates.mrr = data.mrr;

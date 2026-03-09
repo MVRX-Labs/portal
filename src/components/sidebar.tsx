@@ -109,6 +109,17 @@ export function Sidebar() {
               <span className="text-base">⚙</span>
               User Management
             </Link>
+            <Link
+              href={`/admin/secrets${qs}`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin/secrets")
+                  ? "bg-(--input) text-white"
+                  : "text-(--muted) hover:text-white hover:bg-(--input)"
+              }`}
+            >
+              <span className="text-base">🔑</span>
+              Secrets
+            </Link>
           </>
         )}
       </nav>

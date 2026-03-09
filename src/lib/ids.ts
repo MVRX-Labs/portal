@@ -29,6 +29,8 @@ const PREFIXES = {
   mpost: "mpost",
   msnap: "msnap",
   arpt: "arpt",
+  sectype: "sectype",
+  secret: "secret",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -51,6 +53,8 @@ export type ManagedProfileId = `mprof_${string}`;
 export type ManagedPostId = `mpost_${string}`;
 export type ManagedPostSnapshotId = `msnap_${string}`;
 export type AnalyticsReportId = `arpt_${string}`;
+export type SecretTypeId = `sectype_${string}`;
+export type SecretId = `secret_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -69,7 +73,9 @@ export type ObjectId =
   | ManagedProfileId
   | ManagedPostId
   | ManagedPostSnapshotId
-  | AnalyticsReportId;
+  | AnalyticsReportId
+  | SecretTypeId
+  | SecretId;
 
 type PrefixToId = {
   user: UserId;
@@ -90,6 +96,8 @@ type PrefixToId = {
   mpost: ManagedPostId;
   msnap: ManagedPostSnapshotId;
   arpt: AnalyticsReportId;
+  sectype: SecretTypeId;
+  secret: SecretId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -127,6 +135,8 @@ export function prefixForTable(table: string): Prefix {
     managed_posts: "mpost",
     managed_post_snapshots: "msnap",
     analytics_reports: "arpt",
+    secret_types: "sectype",
+    secrets: "secret",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

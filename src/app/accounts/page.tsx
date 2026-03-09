@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-schemas/actions";
 import { updateContactBodySchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
 import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
+import { NotesField } from "@/components/notes-field";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -76,7 +77,7 @@ function ExpandedView({
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
-  const [summary, setSummary] = useState(account.summary || "");
+  const [notes, setNotes] = useState(account.notes || "");
   const [contentVoiceGuidance, setContentVoiceGuidance] = useState(account.contentVoiceGuidance || "");
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
@@ -92,7 +93,7 @@ function ExpandedView({
 
   // Reset editable fields when account changes
   useEffect(() => {
-    setSummary(account.summary || "");
+    setNotes(account.notes || "");
     setContentVoiceGuidance(account.contentVoiceGuidance || "");
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
@@ -101,7 +102,7 @@ function ExpandedView({
     setDirty(false);
   }, [
     account.id,
-    account.summary,
+    account.notes,
     account.contentVoiceGuidance,
     account.ownerId,
     account.mrr,
@@ -186,7 +187,7 @@ function ExpandedView({
       await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
         method: "PUT",
         body: {
-          summary: summary || null,
+          notes: notes || null,
           contentVoiceGuidance: contentVoiceGuidance || null,
           ownerId: ownerId || null,
           mrr: mrrCents,
@@ -197,7 +198,7 @@ function ExpandedView({
       const ownerUser = users.find((u) => u.id === ownerId);
       onSave({
         ...account,
-        summary: summary || null,
+        notes: notes || null,
         contentVoiceGuidance: contentVoiceGuidance || null,
         ownerId: ownerId || null,
         ownerName: ownerUser?.name || null,
@@ -221,6 +222,7 @@ function ExpandedView({
       personalEmail: contact.personalEmail,
       linkedinUrl: contact.linkedinUrl,
       contentVoiceGuidance: contact.contentVoiceGuidance,
+      notes: contact.notes,
       engagementScrapeEnabled: contact.engagementScrapeEnabled,
     });
   };
@@ -237,6 +239,7 @@ function ExpandedView({
           personalEmail: contactEdits.personalEmail || null,
           linkedinUrl: contactEdits.linkedinUrl || null,
           contentVoiceGuidance: contactEdits.contentVoiceGuidance || null,
+          notes: contactEdits.notes || null,
           engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
         },
       });
@@ -372,6 +375,10 @@ function ExpandedView({
                           />
                         </div>
                       </div>
+                      <NotesField
+                        value={contactEdits.notes || ""}
+                        onChange={(v) => setContactEdits((prev) => ({ ...prev, notes: v }))}
+                      />
                       <div className="flex items-center justify-between pt-1">
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
@@ -469,16 +476,12 @@ function ExpandedView({
         <div className="border-t border-(--border) pt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <label className="block text-xs text-(--muted) mb-1">Summary</label>
-              <textarea
-                value={summary}
-                onChange={(e) => {
-                  setSummary(e.target.value);
+              <NotesField
+                value={notes}
+                onChange={(v) => {
+                  setNotes(v);
                   setDirty(true);
                 }}
-                placeholder="Describe the state of this account..."
-                rows={2}
-                className="w-full"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -673,7 +676,7 @@ function AccountsContent() {
           <thead>
             <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="px-3 py-2 font-medium">Account</th>
-              <th className="px-3 py-2 font-medium">Summary</th>
+              <th className="px-3 py-2 font-medium">Notes</th>
               <th className="px-3 py-2 font-medium">Owner</th>
               <th className="px-3 py-2 font-medium text-right">MRR</th>
               <th className="px-3 py-2 font-medium">Last Meeting</th>
@@ -739,7 +742,7 @@ function AccountsContent() {
                       </div>
                     </td>
                     <td className="px-3 py-1.5 max-w-xs">
-                      <span className="text-(--muted) truncate block">{account.summary || "\u2014"}</span>
+                      <span className="text-(--muted) truncate block">{account.notes || "\u2014"}</span>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       {account.ownerName || <span className="text-(--muted)">Unassigned</span>}

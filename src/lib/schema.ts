@@ -24,7 +24,7 @@ export const accounts = pgTable("accounts", {
   linkedinUrl: text("linkedin_url"),
   engagementScrapeEnabled: boolean("engagement_scrape_enabled").notNull().default(false),
   googleDriveFolderId: text("google_drive_folder_id"),
-  summary: text("summary"),
+  notes: text("notes"),
   contentVoiceGuidance: text("content_voice_guidance"),
   ownerId: text("owner_id").references(() => users.id),
   mrr: integer("mrr").notNull().default(0),
@@ -51,6 +51,7 @@ export const contacts = pgTable("contacts", {
   personalEmail: text("personal_email"),
   linkedinUrl: text("linkedin_url"),
   contentVoiceGuidance: text("content_voice_guidance"),
+  notes: text("notes"),
   engagementScrapeEnabled: boolean("engagement_scrape_enabled").notNull().default(false),
   nextMeetingAt: timestamp("next_meeting_at"),
   lastMeetingAt: timestamp("last_meeting_at"),
@@ -411,3 +412,31 @@ export const engagementRawResults = pgTable(
     uniqueProfileItem: unique().on(table.profileId, table.apifyItemId),
   })
 );
+
+// --- Secrets tables ---
+
+export const secretTypes = pgTable("secret_types", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("sectype")),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const secrets = pgTable("secrets", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("secret")),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  contactId: text("contact_id").references(() => contacts.id),
+  typeId: text("type_id")
+    .notNull()
+    .references(() => secretTypes.id),
+  name: text("name").notNull(),
+  value: text("value").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       linkedinUrl: accounts.linkedinUrl,
       engagementScrapeEnabled: accounts.engagementScrapeEnabled,
       googleDriveFolderId: accounts.googleDriveFolderId,
-      summary: accounts.summary,
+      notes: accounts.notes,
       contentVoiceGuidance: accounts.contentVoiceGuidance,
       ownerId: accounts.ownerId,
       ownerName: users.name,

@@ -21,3 +21,5 @@ src/app/linkedin-engagement/page.tsx
 src/lib/schema.ts
 src/lib/seo-audit-docx-builder.ts
 src/lib/gtm-docx-builder.ts
+src/lib/audit-docx-builder.ts
+src/lib/sentiment-docx-builder.ts

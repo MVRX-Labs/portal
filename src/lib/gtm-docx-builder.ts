@@ -14,6 +14,7 @@ import {
   LevelFormat,
   VerticalAlign,
   TableLayoutType,
+  ExternalHyperlink,
 } from "docx";
 import type { GTMStrategyContent } from "./gtm-schema";
 
@@ -548,10 +549,9 @@ function signOff(): Paragraph[] {
     }),
     new Paragraph({
       children: [
-        tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", {
-          bold: true,
-          size: S.body,
-          color: C.brandBlue,
+        new ExternalHyperlink({
+          link: "https://cal.com/romil-depala-sabsp0/30min",
+          children: [tr("Book a Call", { bold: true, size: S.body, color: C.brandBlue })],
         }),
       ],
     }),

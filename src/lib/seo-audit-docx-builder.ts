@@ -28,6 +28,7 @@ const C = {
   orange: "F39C12",
   red: "E74C3C",
   tableBorder: "DDDDDD",
+  tableRowAlt: "F3F5F8",
 } as const;
 const S = {
   brand: 40,
@@ -106,7 +107,7 @@ function bulletItem(text: string): Paragraph {
 
 function hCell(text: string, w?: number): TableCell {
   return new TableCell({
-    shading: { fill: C.brandBlue, type: ShadingType.CLEAR, color: "auto" },
+    shading: { fill: C.darkNavy, type: ShadingType.CLEAR, color: "auto" },
     borders: BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(w ? { width: colW(w) } : {}),
@@ -118,8 +119,9 @@ function hCell(text: string, w?: number): TableCell {
     ],
   });
 }
-function bCell(text: string, opts?: { bold?: boolean; color?: string; w?: number }): TableCell {
+function bCell(text: string, opts?: { bold?: boolean; color?: string; w?: number; fill?: string }): TableCell {
   return new TableCell({
+    ...(opts?.fill ? { shading: { fill: opts.fill, type: ShadingType.CLEAR, color: "auto" } } : {}),
     borders: BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(opts?.w ? { width: colW(opts.w) } : {}),
@@ -132,12 +134,13 @@ function bCell(text: string, opts?: { bold?: boolean; color?: string; w?: number
   });
 }
 
-function makeTable(cols: number[], headers: string[], rowFn: () => TableRow[]): Table {
+function makeTable(cols: number[], headers: string[], rowFn: (rowFill: (idx: number) => string) => TableRow[]): Table {
+  const altFill = (idx: number) => (idx % 2 === 0 ? C.tableRowAlt : C.white);
   return new Table({
     width: { size: CONTENT_WIDTH, type: WidthType.DXA },
     columnWidths: cols.map((p) => Math.round((CONTENT_WIDTH * p) / 100)),
     layout: TableLayoutType.FIXED,
-    rows: [new TableRow({ children: headers.map((h, i) => hCell(h, cols[i])) }), ...rowFn()],
+    rows: [new TableRow({ children: headers.map((h, i) => hCell(h, cols[i])) }), ...rowFn(altFill)],
   });
 }
 
@@ -217,21 +220,24 @@ export async function buildSeoAuditDocx(content: SEOAuditContent): Promise<Buffe
   // 2. Category Breakdown
   ch.push(pageBreak(), sectionHeading("2. Category Breakdown"));
   ch.push(
-    makeTable([22, 10, 10, 10, 10, 10, 28], ["Category", "Score", "Weight", "Pass", "Warn", "Fail", "Top Issue"], () =>
-      content.categoryBreakdown.map(
-        (c) =>
-          new TableRow({
-            children: [
-              bCell(c.category, { bold: true }),
-              bCell(`${c.score}`, { color: scoreColor(c.score) }),
-              bCell(c.weight),
-              bCell(`${c.passCount}`, { color: C.green }),
-              bCell(`${c.warnCount}`, { color: C.orange }),
-              bCell(`${c.failCount}`, { color: C.red }),
-              bCell(c.topIssue || "\u2014"),
-            ],
-          })
-      )
+    makeTable(
+      [22, 10, 10, 10, 10, 10, 28],
+      ["Category", "Score", "Weight", "Pass", "Warn", "Fail", "Top Issue"],
+      (rowFill) =>
+        content.categoryBreakdown.map(
+          (c, i) =>
+            new TableRow({
+              children: [
+                bCell(c.category, { bold: true, fill: rowFill(i) }),
+                bCell(`${c.score}`, { color: scoreColor(c.score), fill: rowFill(i) }),
+                bCell(c.weight, { fill: rowFill(i) }),
+                bCell(`${c.passCount}`, { color: C.green, fill: rowFill(i) }),
+                bCell(`${c.warnCount}`, { color: C.orange, fill: rowFill(i) }),
+                bCell(`${c.failCount}`, { color: C.red, fill: rowFill(i) }),
+                bCell(c.topIssue || "\u2014", { fill: rowFill(i) }),
+              ],
+            })
+        )
     )
   );
 
@@ -239,15 +245,19 @@ export async function buildSeoAuditDocx(content: SEOAuditContent): Promise<Buffe
   ch.push(pageBreak(), sectionHeading("3. Critical Issues"));
   if (content.criticalIssues.length > 0) {
     ch.push(
-      makeTable([10, 15, 20, 55], ["Severity", "Category", "Rule", "Fix Recommendation"], () =>
+      makeTable([10, 15, 20, 55], ["Severity", "Category", "Rule", "Fix Recommendation"], (rowFill) =>
         content.criticalIssues.map(
-          (i) =>
+          (issue, idx) =>
             new TableRow({
               children: [
-                bCell(i.severity.toUpperCase(), { bold: true, color: sevColor(i.severity) }),
-                bCell(i.category, { bold: true }),
-                bCell(i.rule),
-                bCell(i.fixRecommendation),
+                bCell(issue.severity.toUpperCase(), {
+                  bold: true,
+                  color: sevColor(issue.severity),
+                  fill: rowFill(idx),
+                }),
+                bCell(issue.category, { bold: true, fill: rowFill(idx) }),
+                bCell(issue.rule, { fill: rowFill(idx) }),
+                bCell(issue.fixRecommendation, { fill: rowFill(idx) }),
               ],
             })
         )
@@ -273,16 +283,16 @@ export async function buildSeoAuditDocx(content: SEOAuditContent): Promise<Buffe
   // 5. Action Plan
   ch.push(pageBreak(), sectionHeading("5. Prioritised Action Plan"));
   ch.push(
-    makeTable([8, 15, 37, 25, 15], ["#", "Category", "Action", "Impact", "Effort"], () =>
+    makeTable([8, 15, 37, 25, 15], ["#", "Category", "Action", "Impact", "Effort"], (rowFill) =>
       content.prioritizedActionPlan.map(
-        (a) =>
+        (a, idx) =>
           new TableRow({
             children: [
-              bCell(`${a.priority}`, { bold: true }),
-              bCell(a.category, { bold: true }),
-              bCell(a.action),
-              bCell(a.expectedImpact),
-              bCell(a.effort.toUpperCase(), { bold: true, color: effColor(a.effort) }),
+              bCell(`${a.priority}`, { bold: true, fill: rowFill(idx) }),
+              bCell(a.category, { bold: true, fill: rowFill(idx) }),
+              bCell(a.action, { fill: rowFill(idx) }),
+              bCell(a.expectedImpact, { fill: rowFill(idx) }),
+              bCell(a.effort.toUpperCase(), { bold: true, color: effColor(a.effort), fill: rowFill(idx) }),
             ],
           })
       )

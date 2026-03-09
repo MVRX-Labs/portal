@@ -4,7 +4,7 @@
 
 ## Summary
 
-A scheduled Trigger.dev task that runs hourly during UK working hours. It uses Claude to read the codebase, brainstorm product improvement ideas, pick the best one, implement it as a PR, append a one-liner to `IDEAS.md`, and notify Slack.
+A scheduled Trigger.dev task that runs once daily (9 AM UK) on weekdays. It uses Claude to read the codebase, brainstorm product improvement ideas, pick the best one, implement it as a PR, append a one-liner to `IDEAS.md`, and notify Slack.
 
 ## Design Decisions
 

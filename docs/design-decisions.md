@@ -92,6 +92,6 @@ Key architectural decisions and their rationale. Check here before making change
 
 ## Idea Generator: Autonomous PR Bot
 
-**Decision:** A scheduled Trigger.dev task (`idea-generator`) autonomously generates product ideas and opens PRs, running hourly during UK working hours.
+**Decision:** A scheduled Trigger.dev task (`idea-generator`) autonomously generates product ideas and opens PRs, running once daily (9 AM UK) on weekdays.
 
 **Why:** Keeps a steady stream of small improvements flowing without requiring manual effort. Uses a two-phase Claude approach: Phase 1 (ideation) reads the codebase and optionally web-searches; Phase 2 (implementation) writes the code. Randomised scope/strategy per run avoids repetition. Logs total cost per run.

@@ -80,7 +80,7 @@ async function runClaudeAgent(
 
 export const ideaGeneratorTask = schedules.task({
   id: "idea-generator",
-  cron: { pattern: "0 9-17 * * 1-5", timezone: "Europe/London" },
+  cron: { pattern: "0 9 * * 1-5", timezone: "Europe/London" },
   maxDuration: 3600,
   retry: { maxAttempts: 1 },
   run: async () => {

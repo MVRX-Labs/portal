@@ -2,15 +2,13 @@ import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
 import {
   calendarEvents,
-  calendarEventAccounts,
-  calendarEventContacts,
   calendarSyncState,
-  accounts,
-  contacts,
   users,
 } from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
 import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
+import { gatherMeetingBriefing } from "@/lib/meeting-briefing";
+import { generateTalkingPoints, buildBriefingSlackBlocks } from "@/lib/meeting-briefing-slack";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
@@ -25,7 +23,7 @@ export const calendarMeetingNotifier = schedules.task({
   run: async () => {
     if (!process.env.SLACKBOT_TOKEN) {
       logger.warn("SLACKBOT_TOKEN not configured, skipping");
-      return { notified: 0, total: 0 };
+      return { notified: 0, total: 0, briefings: 0 };
     }
 
     const now = new Date();
@@ -47,6 +45,7 @@ export const calendarMeetingNotifier = schedules.task({
     logger.info(`Found ${upcomingEvents.length} upcoming meetings to notify about`);
 
     let notified = 0;
+    let briefings = 0;
 
     for (const event of upcomingEvents) {
       // Resolve the owning user via calendarSyncState
@@ -75,98 +74,40 @@ export const calendarMeetingNotifier = schedules.task({
         continue;
       }
 
-      // Get linked accounts
-      const linkedAccounts = await db
-        .select({
-          accountName: accounts.name,
-          matchConfidence: calendarEventAccounts.matchConfidence,
-        })
-        .from(calendarEventAccounts)
-        .innerJoin(accounts, eq(calendarEventAccounts.accountId, accounts.id))
-        .where(eq(calendarEventAccounts.eventId, event.id));
-
-      // Get linked contacts
-      const linkedContacts = await db
-        .select({
-          contactName: contacts.name,
-          attendeeEmail: calendarEventContacts.attendeeEmail,
-          matchConfidence: calendarEventContacts.matchConfidence,
-        })
-        .from(calendarEventContacts)
-        .innerJoin(contacts, eq(calendarEventContacts.contactId, contacts.id))
-        .where(eq(calendarEventContacts.eventId, event.id));
-
-      const startTimeStr = event.startTime.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Europe/London",
-      });
-
-      // Build a lookup of attendee email → response status from the event's attendees JSONB
       const attendees = (event.attendees ?? []) as Array<{
         email: string;
         responseStatus?: string;
       }>;
-      const responseByEmail = new Map(attendees.map((a) => [a.email.toLowerCase(), a.responseStatus]));
 
-      const responseLabel = (status: string | undefined): string => {
-        switch (status) {
-          case "accepted":
-            return "accepted";
-          case "tentative":
-            return "tentative";
-          case "declined":
-            return "declined";
-          default:
-            return "awaiting response";
-        }
-      };
-
-      const accountLines = linkedAccounts.map((a) => {
-        const tag = a.matchConfidence === "auto_created" ? " _(auto-created)_" : "";
-        return `  • ${a.accountName}${tag}`;
+      // Attempt to build a rich briefing for events with linked accounts
+      const briefing = await gatherMeetingBriefing(event.id, {
+        summary: event.summary,
+        startTime: event.startTime,
+        htmlLink: event.htmlLink,
+        attendees,
       });
-
-      const contactLines = linkedContacts.map((c) => {
-        const tag = c.matchConfidence === "auto_created" ? " _(auto-created)_" : "";
-        const status = responseByEmail.get(c.attendeeEmail.toLowerCase());
-        return `  • ${c.contactName} (${c.attendeeEmail}) — ${responseLabel(status)}${tag}`;
-      });
-
-      const descriptionSnippet = event.description
-        ? event.description.length > 150
-          ? event.description.slice(0, 150) + "…"
-          : event.description
-        : null;
-
-      const textLines = [
-        `:calendar: *Upcoming Meeting in ~30 minutes*`,
-        `*Title:* ${event.summary || "(No title)"}`,
-        `*Time:* ${startTimeStr} UK`,
-        event.location ? `*Location:* ${event.location}` : null,
-        event.htmlLink ? `<${event.htmlLink}|Open in Calendar>` : null,
-        descriptionSnippet ? `` : null,
-        descriptionSnippet ? `*Description:*` : null,
-        descriptionSnippet ? descriptionSnippet : null,
-        ``,
-        accountLines.length > 0 ? `*Accounts:*` : null,
-        ...(accountLines.length > 0 ? accountLines : []),
-        ``,
-        contactLines.length > 0 ? `*External Contacts:*` : null,
-        ...(contactLines.length > 0 ? contactLines : []),
-      ]
-        .filter((line): line is string => line !== null)
-        .join("\n");
-
-      const fallbackText = `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`;
 
       try {
-        await sendSlackDM(slackUserId, fallbackText, [
-          {
-            type: "section",
-            text: { type: "mrkdwn", text: textLines },
-          },
-        ]);
+        if (briefing) {
+          // Generate AI talking points — wrapped in try/catch so failure doesn't block notification
+          let talkingPoints: string[] | null = null;
+          try {
+            talkingPoints = await generateTalkingPoints(briefing);
+            logger.info(`Generated ${talkingPoints.length} talking points for event ${event.id}`);
+          } catch (aiErr) {
+            logger.warn(`AI talking points generation failed for event ${event.id}, sending briefing without them`, {
+              error: aiErr instanceof Error ? aiErr.message : String(aiErr),
+            });
+          }
+
+          const { text, blocks } = buildBriefingSlackBlocks(briefing, talkingPoints);
+          await sendSlackDM(slackUserId, text, blocks);
+          briefings++;
+        } else {
+          // Fallback: simple notification for events without linked accounts
+          const { text, blocks } = buildSimpleNotification(event, attendees);
+          await sendSlackDM(slackUserId, text, blocks);
+        }
 
         // Mark as notified to prevent duplicates
         await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));
@@ -179,8 +120,57 @@ export const calendarMeetingNotifier = schedules.task({
       }
     }
 
-    logger.info(`Sent ${notified} Slack DM notifications out of ${upcomingEvents.length} upcoming events`);
+    logger.info(
+      `Sent ${notified} Slack DM notifications (${briefings} with briefings) out of ${upcomingEvents.length} upcoming events`,
+    );
 
-    return { notified, total: upcomingEvents.length };
+    return { notified, total: upcomingEvents.length, briefings };
   },
 });
+
+// ---------------------------------------------------------------------------
+// Simple fallback notification (original format for events with no linked accounts)
+// ---------------------------------------------------------------------------
+
+function buildSimpleNotification(
+  event: {
+    summary: string | null;
+    startTime: Date;
+    location: string | null;
+    htmlLink: string | null;
+    description: string | null;
+  },
+  attendees: Array<{ email: string; responseStatus?: string }>,
+): { text: string; blocks: Record<string, unknown>[] } {
+  const startTimeStr = event.startTime.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/London",
+  });
+
+  const descriptionSnippet = event.description
+    ? event.description.length > 150
+      ? event.description.slice(0, 150) + "…"
+      : event.description
+    : null;
+
+  const textLines = [
+    `:calendar: *Upcoming Meeting in ~30 minutes*`,
+    `*Title:* ${event.summary || "(No title)"}`,
+    `*Time:* ${startTimeStr} UK`,
+    event.location ? `*Location:* ${event.location}` : null,
+    event.htmlLink ? `<${event.htmlLink}|Open in Calendar>` : null,
+    descriptionSnippet ? `` : null,
+    descriptionSnippet ? `*Description:*` : null,
+    descriptionSnippet ? descriptionSnippet : null,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
+  const fallbackText = `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`;
+
+  return {
+    text: fallbackText,
+    blocks: [{ type: "section", text: { type: "mrkdwn", text: textLines } }],
+  };
+}

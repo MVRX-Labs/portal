@@ -4,7 +4,10 @@ import { mkdir, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
@@ -123,16 +126,21 @@ export const seoAuditTask = task({
     const { runId, websiteUrl, crawlMode, categories, includeCwv, accountName, model } = payload;
 
     const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
+    logger.info("Getting started");
 
     try {
       const totalSteps = 5;
       metadata.set("progress", { step: "Preparing audit", stepNumber: 1, totalSteps, percentage: 0 });
 
-      await mkdir(sessionDir, { recursive: true });
+      await logger.trace("prepare-audit", async (span) => {
+        span.setAttribute("websiteUrl", websiteUrl);
+        span.setAttribute("crawlMode", crawlMode);
+        await mkdir(sessionDir, { recursive: true });
 
-      // Initialise seomator config in session directory
-      logger.info("Initialising seomator config", { sessionDir });
-      execSync("seomator init -y", { cwd: sessionDir, timeout: 30000, stdio: "pipe" });
+        // Initialise seomator config in session directory
+        logger.info("Initialising seomator config", { sessionDir });
+        await execAsync("seomator init -y", { cwd: sessionDir, timeout: 30000 });
+      });
 
       metadata.set("progress", { step: "Running SEO audit", stepNumber: 2, totalSteps, percentage: 10 });
 
@@ -141,89 +149,111 @@ export const seoAuditTask = task({
       const outputPath = join(sessionDir, "audit-results.json");
       const fullCmd = `${auditCmd} -o ${outputPath}`;
 
-      logger.info("Running seomator audit", { command: fullCmd, runId });
-      const auditTimeout = crawlMode === "crawl-100" ? 600000 : crawlMode === "crawl-50" ? 300000 : 120000;
-      const auditOutput = execSync(fullCmd, { cwd: sessionDir, timeout: auditTimeout, stdio: "pipe", maxBuffer: 50 * 1024 * 1024 });
-      logger.info(`Seomator audit complete: ${auditOutput.toString().slice(0, 200)}`);
+      await logger.trace("run-seomator-audit", async (span) => {
+        span.setAttribute("command", fullCmd);
+        span.setAttribute("crawlMode", crawlMode);
+        logger.info("Running seomator audit", { command: fullCmd, runId });
+        const auditTimeout = crawlMode === "crawl-100" ? 2000000 : crawlMode === "crawl-50" ? 800000 : 300000;
+        const { stdout } = await execAsync(fullCmd, {
+          cwd: sessionDir,
+          timeout: auditTimeout,
+          maxBuffer: 50 * 1024 * 1024,
+        });
+        logger.info(`Seomator audit complete: ${stdout.slice(0, 200)}`);
+      });
 
       metadata.set("progress", { step: "Analysing audit results", stepNumber: 3, totalSteps, percentage: 35 });
 
       const preparedDate = currentMonth();
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
 
-      logger.info("Starting Claude analysis", { runId, websiteUrl, model: resolvedModel });
-
-      const abortController = new AbortController();
-      signal.addEventListener("abort", () => abortController.abort());
-
       let output = "";
-      const claudeStart = Date.now();
+      await logger.trace("analyse-with-claude", async (span) => {
+        span.setAttribute("websiteUrl", websiteUrl);
+        span.setAttribute("model", resolvedModel);
+        logger.info("Starting Claude analysis", { runId, websiteUrl, model: resolvedModel });
 
-      for await (const message of query({
-        prompt: SEO_ANALYSIS_PROMPT(websiteUrl, preparedDate),
-        options: {
-          model: resolvedModel,
-          abortController,
-          cwd: sessionDir,
-          allowedTools: ["Read", "Glob"],
-          permissionMode: "bypassPermissions",
-          allowDangerouslySkipPermissions: true,
-          maxTurns: 30,
-          persistSession: false,
-        },
-      })) {
-        if (message.type === "system" && "subtype" in message && message.subtype === "init") {
-          logger.info("Claude session initialized", { model: (message as any).model });
-        }
+        const abortController = new AbortController();
+        signal.addEventListener("abort", () => abortController.abort());
 
-        if (message.type === "assistant" && message.message?.content) {
-          for (const block of message.message.content) {
-            if ("text" in block && block.text) {
-              const preview = block.text.length > 150 ? block.text.slice(0, 150) + "..." : block.text;
-              logger.info(`Claude: ${preview}`);
-            } else if ("name" in block) {
-              logger.info(`Tool call: ${(block as any).name}`);
+        const claudeStart = Date.now();
+
+        for await (const message of query({
+          prompt: SEO_ANALYSIS_PROMPT(websiteUrl, preparedDate),
+          options: {
+            model: resolvedModel,
+            abortController,
+            cwd: sessionDir,
+            allowedTools: ["Read", "Glob"],
+            permissionMode: "bypassPermissions",
+            allowDangerouslySkipPermissions: true,
+            maxTurns: 30,
+            persistSession: false,
+          },
+        })) {
+          if (message.type === "system" && "subtype" in message && message.subtype === "init") {
+            logger.info("Claude session initialized", { model: (message as any).model });
+          }
+
+          if (message.type === "assistant" && message.message?.content) {
+            for (const block of message.message.content) {
+              if ("text" in block && block.text) {
+                const preview = block.text.length > 150 ? block.text.slice(0, 150) + "..." : block.text;
+                logger.info(`Claude: ${preview}`);
+              } else if ("name" in block) {
+                logger.info(`Tool call: ${(block as any).name}`);
+              }
+            }
+          }
+
+          if (message.type === "result") {
+            if (message.subtype === "success") {
+              output = message.result;
+              const cost = message.total_cost_usd.toFixed(4);
+              logger.info(`Claude finished: ${message.num_turns} turns, $${cost}, ${message.duration_ms}ms`);
+            } else {
+              const msg = message as any;
+              const errors = msg.errors ? msg.errors.join("; ") : msg.subtype;
+              throw new Error(`Claude finished with ${msg.subtype}: ${errors}`);
             }
           }
         }
 
-        if (message.type === "result") {
-          if (message.subtype === "success") {
-            output = message.result;
-            const cost = message.total_cost_usd.toFixed(4);
-            logger.info(`Claude finished: ${message.num_turns} turns, $${cost}, ${message.duration_ms}ms`);
-          } else {
-            const msg = message as any;
-            const errors = msg.errors ? msg.errors.join("; ") : msg.subtype;
-            throw new Error(`Claude finished with ${msg.subtype}: ${errors}`);
-          }
-        }
-      }
-
-      const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
-      logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
+        const claudeElapsed = ((Date.now() - claudeStart) / 1000).toFixed(1);
+        logger.info(`Claude finished in ${claudeElapsed}s (output: ${output.length} chars)`);
+      });
 
       metadata.set("progress", { step: "Building document", stepNumber: 4, totalSteps, percentage: 70 });
 
-      const json = extractJSON(output);
-      const content: SEOAuditContent = JSON.parse(json);
-
-      logger.info("Building DOCX");
-      const buf = await buildSeoAuditDocx(content);
+      const buf = await logger.trace("build-docx", async (span) => {
+        span.setAttribute("websiteUrl", websiteUrl);
+        const json = extractJSON(output);
+        const content: SEOAuditContent = JSON.parse(json);
+        logger.info("Building DOCX");
+        return buildSeoAuditDocx(content);
+      });
 
       metadata.set("progress", { step: "Uploading to Google Drive", stepNumber: 5, totalSteps, percentage: 85 });
 
-      const rootFolderId = getGeneratedMaterialsFolderId();
-      let targetFolderId = rootFolderId;
-      if (accountName) {
-        targetFolderId = await findOrCreateFolder(accountName, rootFolderId);
-      }
+      const driveFile = await logger.trace("upload-to-drive", async (span) => {
+        span.setAttribute("websiteUrl", websiteUrl);
+        span.setAttribute("accountName", accountName ?? "");
+        const rootFolderId = getGeneratedMaterialsFolderId();
+        let targetFolderId = rootFolderId;
+        if (accountName) {
+          targetFolderId = await findOrCreateFolder(accountName, rootFolderId);
+        }
+
+        const urlHost = new URL(websiteUrl).hostname;
+        const filename = `MVRX | ${urlHost} | SEO Audit.docx`;
+        const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        const file = await uploadFile(filename, buf, DOCX_MIME, targetFolderId);
+        logger.info(`DOCX uploaded to Google Drive: ${file.webViewLink} (${(buf.length / 1024).toFixed(0)} KB)`);
+        return file;
+      });
 
       const urlHost = new URL(websiteUrl).hostname;
       const filename = `MVRX | ${urlHost} | SEO Audit.docx`;
-      const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      const driveFile = await uploadFile(filename, buf, DOCX_MIME, targetFolderId);
-      logger.info(`DOCX uploaded to Google Drive: ${driveFile.webViewLink} (${(buf.length / 1024).toFixed(0)} KB)`);
 
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 

@@ -30,7 +30,7 @@ Key architectural decisions and their rationale. Check here before making change
 
 **Decision:** Calendar sync runs on a schedule (every 30 min) using Google's incremental `syncToken`, not push notifications.
 
-**Why:** Google Calendar push notifications require channel management (expiry, renewal, public endpoint). 30-min latency is acceptable for meeting prep. See `docs/plans/active/calendar-automation.md` for full architecture.
+**Why:** Google Calendar push notifications require channel management (expiry, renewal, public endpoint). 30-min latency is acceptable for meeting prep. See `docs/plans/completed/calendar-automation.md` for full architecture.
 
 ---
 
@@ -79,6 +79,14 @@ Key architectural decisions and their rationale. Check here before making change
 **Decision:** Outbound LinkedIn engagement (commenting, liking, reposting) is orchestrated via Slack interactive messages, not a portal UI.
 
 **Why:** The workflow is: scrape recent posts from tracked LinkedIn profiles → post a Slack card for each → team member clicks an action button → `engagement-slack-action` task generates a comment (if needed) and marks the post. Slack is where the team already works; building a dedicated UI would add friction. Accounts opt in per-channel via `accounts.engagementSlackChannel`. The scraper (`outbound-engagement-scrape`) uses Apify and is rate-limited to 2 concurrent jobs via a Trigger.dev queue.
+
+---
+
+## LinkedIn Analytics: Managed Profiles vs Engagement Profiles
+
+**Decision:** Client LinkedIn profiles tracked for analytics (`managedProfiles`) are a separate concept from external profiles tracked for outbound engagement (`engagementProfiles`).
+
+**Why:** The workflows are orthogonal. Engagement profiles are targets we want to interact with; managed profiles are our clients' own profiles whose post performance we measure and report on. Keeping them in separate tables (`managed_profiles`, `managed_posts`, `managed_post_snapshots`, `analytics_reports`) prevents the engagement bot's state from bleeding into analytics and vice versa. The `weekly-analytics` task scrapes managed profiles every Monday and sends a performance summary to the account's `analyticsSlackChannel`.
 
 ---
 

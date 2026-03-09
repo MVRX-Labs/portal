@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/sidebar";
 import { AccountProvider } from "@/components/account-provider";
 import { AccountWarningBanner } from "@/components/account-warning-banner";
 import { Toaster } from "@/components/toaster";
+import { VersionRefreshNotice } from "@/components/version-refresh-notice";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           )}
         </SessionProvider>
         <Toaster />
+        <VersionRefreshNotice />
       </body>
     </html>
   );

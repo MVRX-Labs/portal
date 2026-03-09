@@ -188,6 +188,45 @@ export const TOOLS: ToolConfig[] = [
     ],
   },
   {
+    id: "seo-audit",
+    name: "Website SEO Audit",
+    description:
+      "Audit a website for SEO, performance, security, accessibility, and technical issues across 251 rules using SEOmator.",
+    href: "/tools/seo-audit",
+    fields: [
+      {
+        name: "websiteUrl",
+        label: "Website URL",
+        type: "text",
+        placeholder: "https://example.com",
+        required: true,
+      },
+      {
+        name: "crawlMode",
+        label: "Crawl Mode",
+        type: "select",
+        required: true,
+        options: [
+          { label: "Single Page", value: "single" },
+          { label: "Multi-page Crawl (up to 20 pages)", value: "crawl-20" },
+          { label: "Deep Crawl (up to 50 pages)", value: "crawl-50" },
+          { label: "Full Crawl (up to 100 pages)", value: "crawl-100" },
+        ],
+      },
+      {
+        name: "categories",
+        label: "Focus Categories (Optional)",
+        type: "text",
+        placeholder: "core,performance,security,links,images — leave empty for all",
+      },
+      {
+        name: "includeCwv",
+        label: "Include Core Web Vitals & JS rendering analysis (slower)",
+        type: "checkbox",
+      },
+    ],
+  },
+  {
     id: "outbound-sequence",
     name: "Outbound Sequence Generator",
     description: "Generate multi-step outbound sequences for email and LinkedIn outreach.",

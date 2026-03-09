@@ -18,7 +18,7 @@ import type { SEOAuditContent } from "@/lib/seo-audit-schema";
 import { resolveModel, MODEL_MAP, currentMonth, extractJSON } from "@/lib/audit-utils";
 
 function buildAuditCommand(url: string, crawlMode: string, categories?: string, includeCwv?: boolean): string {
-  const parts = ["seomator", "audit", url, "--format", "json"];
+  const parts = ["npx", "seomator", "audit", url, "--format", "json"];
 
   if (crawlMode !== "single") {
     parts.push("--crawl");
@@ -139,7 +139,7 @@ export const seoAuditTask = task({
 
         // Initialise seomator config in session directory
         logger.info("Initialising seomator config", { sessionDir });
-        await execAsync("seomator init -y", { cwd: sessionDir, timeout: 30000 });
+        await execAsync("npx seomator init -y", { cwd: sessionDir, timeout: 30000 });
       });
 
       metadata.set("progress", { step: "Running SEO audit", stepNumber: 2, totalSteps, percentage: 10 });

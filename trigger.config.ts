@@ -1,4 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
+import { additionalPackages } from "@trigger.dev/build/extensions/core";
 
 export default defineConfig({
   project: "proj_omchykblaxtcsrpezhql",
@@ -18,6 +19,11 @@ export default defineConfig({
   dirs: ["./src/trigger"],
   build: {
     external: ["@anthropic-ai/claude-agent-sdk", "postgres"],
+    extensions: [
+      additionalPackages({
+        packages: ["@seomator/seo-audit"],
+      }),
+    ],
   },
   machine: "small-2x",
 });

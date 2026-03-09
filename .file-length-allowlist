@@ -19,3 +19,4 @@ src/app/admin/calendar/page.tsx
 src/trigger/calendar-sync.ts
 src/app/linkedin-engagement/page.tsx
 src/lib/schema.ts
+src/lib/seo-audit-docx-builder.ts

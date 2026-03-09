@@ -209,7 +209,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                         })
                       }
                     />
-                    <span className="text-(--muted)">Enable LinkedIn profile scraping</span>
+                    <span className="text-(--muted)">{field.label}</span>
                   </label>
                 ) : field.type === "textarea" ? (
                   <textarea

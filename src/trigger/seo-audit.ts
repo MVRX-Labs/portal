@@ -18,7 +18,7 @@ import type { SEOAuditContent } from "@/lib/seo-audit-schema";
 import { resolveModel, MODEL_MAP, currentMonth, extractJSON } from "@/lib/audit-utils";
 
 function buildAuditCommand(url: string, crawlMode: string, categories?: string, includeCwv?: boolean): string {
-  const parts = ["npx", "seomator", "audit", url, "--format", "json"];
+  const parts = ["seomator", "audit", url, "--format", "json"];
 
   if (crawlMode !== "single") {
     parts.push("--crawl");
@@ -126,6 +126,7 @@ export const seoAuditTask = task({
     const { runId, websiteUrl, crawlMode, categories, includeCwv, accountName, model } = payload;
 
     const sessionDir = join(tmpdir(), `claude-session-${randomUUID()}`);
+    const execEnv = { ...process.env, PATH: `${join(process.cwd(), "node_modules", ".bin")}:${process.env.PATH}` };
     logger.info("Getting started");
 
     try {
@@ -139,7 +140,7 @@ export const seoAuditTask = task({
 
         // Initialise seomator config in session directory
         logger.info("Initialising seomator config", { sessionDir });
-        await execAsync("npx seomator init -y", { cwd: sessionDir, timeout: 30000 });
+        await execAsync("seomator init -y", { cwd: sessionDir, timeout: 30000, env: execEnv });
       });
 
       metadata.set("progress", { step: "Running SEO audit", stepNumber: 2, totalSteps, percentage: 10 });
@@ -158,6 +159,7 @@ export const seoAuditTask = task({
           cwd: sessionDir,
           timeout: auditTimeout,
           maxBuffer: 50 * 1024 * 1024,
+          env: execEnv,
         });
         logger.info(`Seomator audit complete: ${stdout.slice(0, 200)}`);
       });

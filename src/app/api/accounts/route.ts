@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       engagementScrapeEnabled: accounts.engagementScrapeEnabled,
       googleDriveFolderId: accounts.googleDriveFolderId,
       summary: accounts.summary,
+      contentVoiceGuidance: accounts.contentVoiceGuidance,
       ownerId: accounts.ownerId,
       ownerName: users.name,
       mrr: accounts.mrr,
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       linkedinUrl: data.linkedinUrl || null,
       engagementScrapeEnabled: data.engagementScrapeEnabled || false,
       googleDriveFolderId,
+      contentVoiceGuidance: null,
     })
     .returning();
 

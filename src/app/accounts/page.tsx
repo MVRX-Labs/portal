@@ -77,6 +77,7 @@ function ExpandedView({
 
   // Editable fields
   const [summary, setSummary] = useState(account.summary || "");
+  const [contentVoiceGuidance, setContentVoiceGuidance] = useState(account.contentVoiceGuidance || "");
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
   const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
@@ -92,12 +93,21 @@ function ExpandedView({
   // Reset editable fields when account changes
   useEffect(() => {
     setSummary(account.summary || "");
+    setContentVoiceGuidance(account.contentVoiceGuidance || "");
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
     setMrrCurrency(account.mrrCurrency || "$");
     setEngagementScrapeEnabled(account.engagementScrapeEnabled);
     setDirty(false);
-  }, [account.id, account.summary, account.ownerId, account.mrr, account.mrrCurrency, account.engagementScrapeEnabled]);
+  }, [
+    account.id,
+    account.summary,
+    account.contentVoiceGuidance,
+    account.ownerId,
+    account.mrr,
+    account.mrrCurrency,
+    account.engagementScrapeEnabled,
+  ]);
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -177,6 +187,7 @@ function ExpandedView({
         method: "PUT",
         body: {
           summary: summary || null,
+          contentVoiceGuidance: contentVoiceGuidance || null,
           ownerId: ownerId || null,
           mrr: mrrCents,
           mrrCurrency,
@@ -187,6 +198,7 @@ function ExpandedView({
       onSave({
         ...account,
         summary: summary || null,
+        contentVoiceGuidance: contentVoiceGuidance || null,
         ownerId: ownerId || null,
         ownerName: ownerUser?.name || null,
         mrr: mrrCents,
@@ -208,6 +220,7 @@ function ExpandedView({
       accountEmail: contact.accountEmail,
       personalEmail: contact.personalEmail,
       linkedinUrl: contact.linkedinUrl,
+      contentVoiceGuidance: contact.contentVoiceGuidance,
       engagementScrapeEnabled: contact.engagementScrapeEnabled,
     });
   };
@@ -223,6 +236,7 @@ function ExpandedView({
           accountEmail: contactEdits.accountEmail || null,
           personalEmail: contactEdits.personalEmail || null,
           linkedinUrl: contactEdits.linkedinUrl || null,
+          contentVoiceGuidance: contactEdits.contentVoiceGuidance || null,
           engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
         },
       });
@@ -340,6 +354,20 @@ function ExpandedView({
                             type="email"
                             value={contactEdits.personalEmail || ""}
                             onChange={(e) => setContactEdits((prev) => ({ ...prev, personalEmail: e.target.value }))}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex-1 pr-3">
+                          <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
+                          <textarea
+                            value={contactEdits.contentVoiceGuidance || ""}
+                            onChange={(e) =>
+                              setContactEdits((prev) => ({ ...prev, contentVoiceGuidance: e.target.value }))
+                            }
+                            placeholder="e.g. US spelling. No abbreviations. Avoid vague claims."
+                            rows={3}
                             className="w-full text-sm"
                           />
                         </div>
@@ -500,6 +528,19 @@ function ExpandedView({
                 </div>
               </div>
             </div>
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
+            <textarea
+              value={contentVoiceGuidance}
+              onChange={(e) => {
+                setContentVoiceGuidance(e.target.value);
+                setDirty(true);
+              }}
+              placeholder="Default instructions for generated LinkedIn posts for this account."
+              rows={3}
+              className="w-full"
+            />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
             <input

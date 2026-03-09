@@ -34,14 +34,26 @@ export async function POST(request: NextRequest) {
 
   const useLinkedinProfile = inputs.useLinkedinProfile === true || inputs.useLinkedinProfile === "true";
   const linkedinUrl = useLinkedinProfile && contact.linkedinUrl ? contact.linkedinUrl : undefined;
-
-  const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
+  const resolvedAccountId = (typeof inputs.accountId === "string" && inputs.accountId) || contact.accountId;
 
   let accountName: string | undefined;
-  if (accountId) {
-    const [account] = await db.select({ name: accounts.name }).from(accounts).where(eq(accounts.id, accountId));
+  let accountContentVoiceGuidance: string | null = null;
+  if (resolvedAccountId) {
+    const [account] = await db
+      .select({ name: accounts.name, contentVoiceGuidance: accounts.contentVoiceGuidance })
+      .from(accounts)
+      .where(eq(accounts.id, resolvedAccountId));
     accountName = account?.name;
+    accountContentVoiceGuidance = account?.contentVoiceGuidance ?? null;
   }
+
+  const resolvedVoiceContext = [
+    accountContentVoiceGuidance ? `Account-level content voice guidance:\n${accountContentVoiceGuidance}` : null,
+    contact.contentVoiceGuidance ? `Contact-level content voice guidance:\n${contact.contentVoiceGuidance}` : null,
+    inputs.voiceContext ? `Run-specific voice context:\n${inputs.voiceContext}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const [run] = await db
     .insert(toolRuns)
@@ -52,10 +64,14 @@ export async function POST(request: NextRequest) {
         ...inputs,
         contactName: contact.name,
         posterRole,
+        accountId: resolvedAccountId,
         linkedinUrl: linkedinUrl ?? null,
+        accountContentVoiceGuidance,
+        contactContentVoiceGuidance: contact.contentVoiceGuidance ?? null,
+        resolvedVoiceContext: resolvedVoiceContext || null,
       },
       userId,
-      accountId,
+      accountId: resolvedAccountId,
     })
     .returning();
 
@@ -69,7 +85,7 @@ export async function POST(request: NextRequest) {
       posterName: contact.name,
       posterRole,
       sourceMaterial: inputs.sourceMaterial,
-      voiceContext: inputs.voiceContext,
+      voiceContext: resolvedVoiceContext || undefined,
       linkedinUrl,
       useLinkedinProfile,
       model: inputs.model,

@@ -441,21 +441,21 @@ function ExpandedView({
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-[1fr_7rem_auto] gap-2">
                 <input
                   type="text"
                   value={newActionTitle}
                   onChange={(e) => setNewActionTitle(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
                   placeholder="Add an action..."
-                  className="flex-1"
+                  className="min-w-0"
                 />
                 <input
                   type="date"
                   value={newActionDueDate}
                   onChange={(e) => setNewActionDueDate(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
-                  className="text-sm w-36"
+                  className="text-sm min-w-0 max-w-full"
                   title="Due date (optional)"
                 />
                 <button

@@ -1,5 +1,4 @@
 import { task, logger, metadata } from "@trigger.dev/sdk/v3";
-import { query } from "@anthropic-ai/claude-agent-sdk";
 import { execSync } from "child_process";
 import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
@@ -8,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackSuggestionNotification } from "@/lib/slack";
+import { runClaudeAgent } from "@/lib/claude-agent";
 import { TOOLS } from "@/lib/types";
 
 interface ImplementSuggestionPayload {
@@ -103,40 +103,12 @@ export const implementSuggestionTask = task({
       const prompt = buildPrompt(toolId, toolName, description);
       logger.info("Starting Claude Agent SDK", { model: "claude-opus-4-6" });
 
-      let claudeOutput = "";
-      for await (const message of query({
-        prompt,
-        options: {
-          model: "claude-opus-4-6",
-          cwd: cloneDir,
-          allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"],
-          permissionMode: "bypassPermissions",
-          allowDangerouslySkipPermissions: true,
-          maxTurns: 50,
-          persistSession: false,
-        },
-      })) {
-        if (message.type === "assistant" && message.message?.content) {
-          for (const block of message.message.content) {
-            if ("name" in block) {
-              logger.info(`Tool call: ${(block as any).name}`);
-            }
-          }
-        }
-
-        if (message.type === "result") {
-          if (message.subtype === "success") {
-            claudeOutput = message.result;
-            logger.info(
-              `Claude finished: ${message.num_turns} turns, $${message.total_cost_usd.toFixed(4)}, ${message.duration_ms}ms`
-            );
-          } else {
-            const msg = message as any;
-            const errors = msg.errors ? msg.errors.join("; ") : msg.subtype;
-            throw new Error(`Claude finished with ${msg.subtype}: ${errors}`);
-          }
-        }
-      }
+      const result = await runClaudeAgent(prompt, cloneDir, {
+        allowedTools: ["Bash", "Read", "Write", "Edit", "Glob", "Grep"],
+        maxTurns: 50,
+      });
+      const claudeOutput = result.output;
+      logger.info(`Claude finished: ${result.turns} turns, $${result.costUsd.toFixed(4)}, ${result.durationMs}ms`);
 
       // 4. Commit
       metadata.set("progress", { step: "Committing changes", percentage: 60 });

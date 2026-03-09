@@ -227,4 +227,37 @@ export const TOOLS: ToolConfig[] = [
       },
     ],
   },
+  {
+    id: "ingest-skill",
+    name: "Ingest Skill",
+    description:
+      "Import a third-party Claude Skill and auto-implement it as a native portal tool. Creates a PR for review.",
+    href: "/tools/ingest-skill",
+    fields: [
+      {
+        name: "skillUrl",
+        label: "Skill URL",
+        type: "text",
+        placeholder: "https://skills.sh/...",
+      },
+      {
+        name: "skillMd",
+        label: "Or paste SKILL.md content",
+        type: "textarea",
+        placeholder: "---\nname: my-skill\ndescription: ...\n---\n\nInstructions...",
+      },
+      {
+        name: "slug",
+        label: "Tool slug (optional)",
+        type: "text",
+        placeholder: "seo-audit",
+      },
+      {
+        name: "notes",
+        label: "Notes for implementation (optional)",
+        type: "textarea",
+        placeholder: "Any additional context or instructions for how to implement this skill...",
+      },
+    ],
+  },
 ];

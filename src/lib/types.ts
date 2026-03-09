@@ -175,7 +175,7 @@ export const TOOLS: ToolConfig[] = [
         name: "sourceMaterial",
         label: "Source Material",
         type: "textarea",
-        placeholder: "Meeting notes, topic brief, news article, or brain dump of ideas...",
+        placeholder: "Blog link, meeting notes, topic brief, news article, or brain dump of ideas. A link is optional.",
         required: true,
       },
       {

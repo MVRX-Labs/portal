@@ -11,6 +11,7 @@ import {
 } from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
 import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
+import { gatherAccountContext, generateBriefing } from "@/lib/meeting-briefing";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
@@ -78,6 +79,7 @@ export const calendarMeetingNotifier = schedules.task({
       // Get linked accounts
       const linkedAccounts = await db
         .select({
+          accountId: calendarEventAccounts.accountId,
           accountName: accounts.name,
           matchConfidence: calendarEventAccounts.matchConfidence,
         })
@@ -95,6 +97,22 @@ export const calendarMeetingNotifier = schedules.task({
         .from(calendarEventContacts)
         .innerJoin(contacts, eq(calendarEventContacts.contactId, contacts.id))
         .where(eq(calendarEventContacts.eventId, event.id));
+
+      // Generate AI meeting prep briefing
+      let briefingText: string | null = null;
+      const uniqueAccountIds = [...new Set(linkedAccounts.map((a) => a.accountId))];
+      if (uniqueAccountIds.length > 0) {
+        try {
+          const contexts = await Promise.all(uniqueAccountIds.map((id) => gatherAccountContext(id)));
+          const contactNames = linkedContacts.map((c) => c.contactName);
+          briefingText = await generateBriefing(event.summary, contactNames, contexts);
+          logger.info(`Generated AI briefing for event ${event.id}`);
+        } catch (err) {
+          logger.warn(`AI briefing generation failed for event ${event.id}, sending basic notification`, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
 
       const startTimeStr = event.startTime.toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -160,13 +178,35 @@ export const calendarMeetingNotifier = schedules.task({
 
       const fallbackText = `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`;
 
-      try {
-        await sendSlackDM(slackUserId, fallbackText, [
-          {
-            type: "section",
-            text: { type: "mrkdwn", text: textLines },
+      const blocks: Record<string, unknown>[] = [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: textLines },
+        },
+      ];
+
+      if (briefingText) {
+        blocks.push({ type: "divider" });
+        blocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:brain: *AI Meeting Prep*\n\n${briefingText}`,
           },
-        ]);
+        });
+        blocks.push({
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: ":sparkles: _AI Meeting Prep — generated from account data, action items, and engagement history_",
+            },
+          ],
+        });
+      }
+
+      try {
+        await sendSlackDM(slackUserId, fallbackText, blocks);
 
         // Mark as notified to prevent duplicates
         await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));

@@ -101,7 +101,7 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 **Scheduled tasks:**
 
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
-- `calendar-meeting-notifier` — Meeting prep notifications
+- `calendar-meeting-notifier` — Meeting prep notifications with AI-generated briefings (talking points + agenda via `src/lib/meeting-briefing.ts`, depends on `@anthropic-ai/claude-agent-sdk` and `MODEL_MAP` from `src/lib/audit-utils`)
 - `linkedin-engagement-scheduler` — Periodic engagement scraping
 - `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every active managed profile
 - `idea-generator` — Hourly AI-driven idea bot: generates a product idea, implements it, opens a PR (Mon–Fri, 9am–5pm London)

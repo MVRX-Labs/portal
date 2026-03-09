@@ -199,7 +199,7 @@ You can also trigger background jobs directly via the Trigger.dev MCP or SDK, by
 | `linkedin-engagement-scrape`    | `{ accountId, contactId, linkedinUrl, sourceType: "company"\|"personal", runId? }`                                          |
 | `account-enrichment`            | `{ accountId, domain }`                                                                                                     |
 | `calendar-sync`                 | (no payload — scheduled task, but can be triggered manually)                                                                |
-| `calendar-meeting-notifier`     | (no payload — scheduled task)                                                                                               |
+| `calendar-meeting-notifier`     | (no payload — scheduled task; includes AI briefing with talking points + agenda for linked accounts)                         |
 | `linkedin-engagement-scheduler` | (no payload — scheduled task)                                                                                               |
 
 ### Via Trigger.dev MCP

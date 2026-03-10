@@ -105,3 +105,11 @@ export const outboundSequenceBodySchema = z
   .passthrough();
 
 export type OutboundSequenceBody = z.infer<typeof outboundSequenceBodySchema>;
+
+// POST /api/tools/growth-report
+export const growthReportBodySchema = z.object({
+  accountId: z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first")),
+  model: z.string().optional(),
+});
+
+export type GrowthReportBody = z.infer<typeof growthReportBodySchema>;

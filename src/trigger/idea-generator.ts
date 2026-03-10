@@ -115,22 +115,8 @@ export const ideaGeneratorTask = schedules.task({
         `Implementation finished: ${implResult.turns} turns, $${implResult.costUsd.toFixed(4)}, ${implResult.durationMs}ms`
       );
 
-      // 6. Append to IDEAS.md
-      metadata.set("progress", { step: "Updating IDEAS.md", percentage: 70 });
-      const ideasPath = join(cloneDir, "IDEAS.md");
-      let ideasContent = "";
-      try {
-        ideasContent = await readFile(ideasPath, "utf-8");
-      } catch {
-        ideasContent = "# IDEAS\n\n";
-      }
-      const newLine = `- ${ts}: ${idea.title}\n`;
-      if (!ideasContent.includes(idea.title)) {
-        await writeFile(ideasPath, ideasContent.trimEnd() + "\n" + newLine, "utf-8");
-      }
-
-      // 7. Commit and push
-      metadata.set("progress", { step: "Committing and pushing", percentage: 75 });
+      // 6. Commit implementation changes to feature branch
+      metadata.set("progress", { step: "Committing implementation", percentage: 70 });
       exec("git add -A", cloneDir);
       const diffStat = exec("git diff --cached --stat", cloneDir);
       if (!diffStat) {
@@ -141,6 +127,25 @@ export const ideaGeneratorTask = schedules.task({
       const commitMessage = `idea: ${idea.title.slice(0, 72)}`;
       exec(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, cloneDir);
       exec(`git push origin ${branchName}`, cloneDir);
+
+      // 7. Push IDEAS.md update directly to main (prevents repeat ideas)
+      metadata.set("progress", { step: "Updating IDEAS.md on main", percentage: 75 });
+      exec("git checkout main", cloneDir);
+      const ideasPath = join(cloneDir, "IDEAS.md");
+      let ideasContent = "";
+      try {
+        ideasContent = await readFile(ideasPath, "utf-8");
+      } catch {
+        ideasContent = "# IDEAS\n\n";
+      }
+      const newLine = `- ${ts}: ${idea.title}\n`;
+      if (!ideasContent.includes(idea.title)) {
+        await writeFile(ideasPath, ideasContent.trimEnd() + "\n" + newLine, "utf-8");
+        exec("git add IDEAS.md", cloneDir);
+        exec(`git commit -m "ideas: add ${idea.title.slice(0, 60).replace(/"/g, '\\"')}"`, cloneDir);
+        exec("git push origin main", cloneDir);
+        logger.info("IDEAS.md pushed to main");
+      }
       logger.info("Pushed to GitHub", { branchName });
 
       // 8. Create PR

@@ -6,7 +6,7 @@ export interface IdeaConfig {
 
 export function randomizeConfig(): IdeaConfig {
   return {
-    scope: Math.random() < 0.6 ? "small" : "big",
+    scope: Math.random() < 0.4 ? "small" : "big",
     multiIdea: Math.random() < 0.4,
     useWebSearch: Math.random() < 0.3,
   };

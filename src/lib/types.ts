@@ -227,6 +227,14 @@ export const TOOLS: ToolConfig[] = [
     ],
   },
   {
+    id: "growth-report",
+    name: "Complete Growth Report",
+    description:
+      "Generate a full SEO & growth strategy report with traffic analysis, competitive benchmarking, LinkedIn audit, AI visibility, and pricing — modelled on our golden client reports.",
+    href: "/tools/growth-report",
+    fields: [],
+  },
+  {
     id: "outbound-sequence",
     name: "Outbound Sequence Generator",
     description: "Generate multi-step outbound sequences for email and LinkedIn outreach.",

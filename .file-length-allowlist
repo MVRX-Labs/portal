@@ -23,3 +23,6 @@ src/lib/seo-audit-docx-builder.ts
 src/lib/gtm-docx-builder.ts
 src/lib/audit-docx-builder.ts
 src/lib/sentiment-docx-builder.ts
+src/lib/growth-report/placeholder-data.ts
+src/lib/types.ts
+docs/plans/active/growth-report-population.md

@@ -11,6 +11,7 @@ import {
 } from "@/lib/schema";
 import { eq, and, gte, lt, isNull } from "drizzle-orm";
 import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
+import { meetingPrepTask } from "./meeting-prep";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
@@ -161,7 +162,7 @@ export const calendarMeetingNotifier = schedules.task({
       const fallbackText = `Upcoming meeting: ${event.summary || "(No title)"} at ${startTimeStr}`;
 
       try {
-        await sendSlackDM(slackUserId, fallbackText, [
+        const dmResult = await sendSlackDM(slackUserId, fallbackText, [
           {
             type: "section",
             text: { type: "mrkdwn", text: textLines },
@@ -172,6 +173,21 @@ export const calendarMeetingNotifier = schedules.task({
         await db.update(calendarEvents).set({ notifiedAt: new Date() }).where(eq(calendarEvents.id, event.id));
 
         notified++;
+
+        // Trigger AI meeting prep briefing if event has linked accounts
+        if (linkedAccounts.length > 0 && dmResult.ts) {
+          await meetingPrepTask
+            .trigger({
+              eventId: event.id,
+              slackUserId,
+              notificationTs: dmResult.ts,
+            })
+            .catch((triggerErr) => {
+              logger.warn(`Failed to trigger meeting-prep for event ${event.id}`, {
+                error: triggerErr instanceof Error ? triggerErr.message : String(triggerErr),
+              });
+            });
+        }
       } catch (err) {
         logger.error(`Failed to send Slack DM for event ${event.id} to ${syncRow.userName}`, {
           error: err instanceof Error ? err.message : String(err),

@@ -193,26 +193,43 @@ export async function resolveSlackUserId(userId: string, email: string): Promise
   }
 }
 
-export async function sendSlackDM(slackUserId: string, text: string, blocks: Record<string, unknown>[]): Promise<void> {
+async function postSlackBotMessage(
+  body: Record<string, unknown>,
+  label: string,
+): Promise<{ ok: boolean; ts: string }> {
   const token = process.env.SLACKBOT_TOKEN;
   if (!token) {
-    console.warn("SLACKBOT_TOKEN not configured, skipping DM");
-    return;
+    console.warn(`SLACKBOT_TOKEN not configured, skipping ${label}`);
+    return { ok: false, ts: "" };
   }
-
   const res = await fetch("https://slack.com/api/chat.postMessage", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ channel: slackUserId, text, blocks }),
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-
   const data = await res.json();
-  if (!data.ok) {
-    throw new Error(`Slack chat.postMessage failed: ${data.error}`);
-  }
+  if (!data.ok) throw new Error(`Slack ${label} failed: ${data.error}`);
+  return { ok: true, ts: data.ts as string };
+}
+
+export async function sendSlackDM(
+  slackUserId: string,
+  text: string,
+  blocks: Record<string, unknown>[],
+): Promise<{ ok: boolean; ts: string }> {
+  return postSlackBotMessage({ channel: slackUserId, text, blocks }, "chat.postMessage");
+}
+
+export async function sendSlackThreadReply(
+  slackUserId: string,
+  threadTs: string,
+  text: string,
+  blocks: Record<string, unknown>[],
+): Promise<void> {
+  await postSlackBotMessage(
+    { channel: slackUserId, text, blocks, thread_ts: threadTs },
+    "chat.postMessage (thread reply)",
+  );
 }
 
 export async function sendAnalyticsSlackMessage(

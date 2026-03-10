@@ -1,3 +1,10 @@
+export type MetricStatus = "good" | "warning" | "bad" | "info";
+
+export interface MetricValue {
+  value: string;
+  status: MetricStatus;
+}
+
 export interface GrowthReportContent {
   companyName: string;
   websiteUrl: string;
@@ -6,15 +13,15 @@ export interface GrowthReportContent {
   dataSources: string[];
 
   keyMetrics: {
-    monthlyVisits: string;
-    countryRank: string;
-    domainRating: string;
-    onSiteScore: string;
-    searchTraffic: string;
-    backlinks: string;
-    igFollowers: string;
-    tiktokFollowers: string;
-    linkedinFollowers: string;
+    monthlyVisits: MetricValue;
+    countryRank: MetricValue;
+    domainRating: MetricValue;
+    onSiteScore: MetricValue;
+    searchTraffic: MetricValue;
+    backlinks: MetricValue;
+    igFollowers: MetricValue;
+    tiktokFollowers: MetricValue;
+    linkedinFollowers: MetricValue;
   };
 
   executiveSummary: { overview: string; keyConclusion: string };
@@ -151,7 +158,7 @@ export interface GrowthReportContent {
   };
 
   measurementFramework: {
-    targets: { label: string; value: string }[];
+    targets: { label: string; value: string; status: MetricStatus }[];
     cadence: string[];
   };
 

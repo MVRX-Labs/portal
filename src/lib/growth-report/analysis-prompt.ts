@@ -32,9 +32,15 @@ interface GrowthReportContent {
   preparedFor: string; // "${companyName}"
   dataSources: string[]; // List actual sources used (e.g. "SimilarWeb", "Ahrefs", etc.)
   keyMetrics: {
-    monthlyVisits: string; countryRank: string; domainRating: string;
-    onSiteScore: string; searchTraffic: string; backlinks: string;
-    igFollowers: string; tiktokFollowers: string; linkedinFollowers: string;
+    monthlyVisits: { value: string; status: "good" | "warning" | "bad" | "info" };
+    countryRank: { value: string; status: "good" | "warning" | "bad" | "info" };
+    domainRating: { value: string; status: "good" | "warning" | "bad" | "info" };
+    onSiteScore: { value: string; status: "good" | "warning" | "bad" | "info" };
+    searchTraffic: { value: string; status: "good" | "warning" | "bad" | "info" };
+    backlinks: { value: string; status: "good" | "warning" | "bad" | "info" };
+    igFollowers: { value: string; status: "good" | "warning" | "bad" | "info" };
+    tiktokFollowers: { value: string; status: "good" | "warning" | "bad" | "info" };
+    linkedinFollowers: { value: string; status: "good" | "warning" | "bad" | "info" };
   };
   executiveSummary: { overview: string; keyConclusion: string; };
   trafficAnalysis: {
@@ -120,7 +126,7 @@ interface GrowthReportContent {
     }>; // 15-30 initiatives, stack-ranked by impact-to-effort
   };
   measurementFramework: {
-    targets: Array<{ label: string; value: string; }>; // 6 targets with current→target format
+    targets: Array<{ label: string; value: string; status: "good" | "warning" | "bad" | "info" }>; // 6 targets
     cadence: string[]; // Weekly, Monthly, Quarterly, Ongoing
   };
   redditAudit?: { // Only include if reddit data available
@@ -143,12 +149,13 @@ interface GrowthReportContent {
 4. **LinkedIn post analysis:** Classify each company post into themes (Milestone, Product, Event, Hiring, Philosophy, etc.). Calculate average engagement per theme. Score founder posts on Hook/CTA/Story (x/10) and overall (0-100).
 5. **LinkedIn strategy:** Based on post analysis, create per-person content strategies with 3-4 themes and percentages. Tailor to each person's background and strengths.
 6. **Master strategy:** Create 15-30 initiatives across Tech SEO, AI Visibility, Social SEO, LinkedIn, Content, Authority, Entity SEO, Distribution. Rank by impact-to-effort ratio. Use specific metrics from the data.
-7. **Measurement targets:** Set realistic 12-month targets based on current baselines from the data.
+7. **Measurement targets:** Set realistic 12-month targets based on current baselines from the data. Assign a status to each target: "info" for aspirational targets, "good" for areas where the company is already strong, "warning" for areas needing improvement, "bad" for areas significantly underperforming.
 8. **Social SEO core problem:** Calculate the follower-to-traffic conversion rate and frame it as the key missed opportunity.
 9. **AI visibility:** Map each bot's status from the robots.txt analysis. For SERP queries, check if the target site appears in results.
 10. **Entity SEO:** Cross-reference Crunchbase vs Tracxn data — inconsistencies are findings, not errors.
 11. **If data is missing** for a section (scraper failed), include the section with a note that data was unavailable.
-12. **keyMetrics:** Use real numbers from the data. Format large numbers with K/M suffixes.
+12. **keyMetrics:** Use real numbers from the data. Format large numbers with K/M suffixes. Assign a status to each metric: "good" = strong/above benchmark, "warning" = needs improvement, "bad" = significantly weak, "info" = neutral/contextual.
+13. **Finding format:** Write each finding as "Key metric or finding: Explanation and analysis." The text before the first colon will appear bold in the report — make it a specific metric, number, or concise finding label.
 
 CRITICAL: Your final text response MUST contain the raw JSON object directly.
 Do NOT wrap it in markdown code fences. Do NOT use any tool to save the JSON.

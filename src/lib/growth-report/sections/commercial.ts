@@ -1,10 +1,9 @@
 import { Paragraph, Table, TableRow } from "docx";
 import type { GrowthReportContent } from "../schema";
-import { sectionH, subH, bullet, bodyP, emptyPara, pageBreak, makeTable, bCell, altFill, signOff } from "../styles";
+import { sectionH, subH, bullet, bodyP, emptyPara, makeTable, bCell, signOff, pageBreak } from "../styles";
 
 export function caseStudiesSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [
-    pageBreak(),
     sectionH("Case Studies: MVRX Labs SEO Results"),
     bodyP("Selected examples of SEO work delivered by MVRX Labs for high-growth technology companies."),
   ];
@@ -16,9 +15,9 @@ export function caseStudiesSection(c: GrowthReportContent): (Paragraph | Table)[
         [25, 75],
         ["", "DETAIL"],
         cs.details.map(
-          (d, i) =>
+          (d) =>
             new TableRow({
-              children: [bCell(d.label, { bold: true, fill: altFill(i) }), bCell(d.value, { fill: altFill(i) })],
+              children: [bCell(d.label, { bold: true }), bCell(d.value)],
             })
         )
       )
@@ -33,7 +32,6 @@ export function caseStudiesSection(c: GrowthReportContent): (Paragraph | Table)[
 export function sowSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const s = c.statementOfWork;
   return [
-    pageBreak(),
     sectionH("Statement of Work"),
     bodyP(s.scopeDescription),
     emptyPara(),
@@ -45,13 +43,9 @@ export function sowSection(c: GrowthReportContent): (Paragraph | Table)[] {
       [35, 25, 40],
       ["DELIVERABLE", "FREQUENCY", "FORMAT"],
       s.deliverables.map(
-        (d, i) =>
+        (d) =>
           new TableRow({
-            children: [
-              bCell(d.deliverable, { bold: true, fill: altFill(i) }),
-              bCell(d.frequency, { fill: altFill(i) }),
-              bCell(d.format, { fill: altFill(i) }),
-            ],
+            children: [bCell(d.deliverable, { bold: true }), bCell(d.frequency), bCell(d.format)],
           })
       )
     ),
@@ -61,13 +55,9 @@ export function sowSection(c: GrowthReportContent): (Paragraph | Table)[] {
       [22, 18, 60],
       ["PHASE", "TIMING", "KEY MILESTONES"],
       s.timeline.map(
-        (t, i) =>
+        (t) =>
           new TableRow({
-            children: [
-              bCell(t.phase, { bold: true, fill: altFill(i) }),
-              bCell(t.timing, { fill: altFill(i) }),
-              bCell(t.milestones, { fill: altFill(i) }),
-            ],
+            children: [bCell(t.phase, { bold: true }), bCell(t.timing), bCell(t.milestones)],
           })
       )
     ),
@@ -76,7 +66,7 @@ export function sowSection(c: GrowthReportContent): (Paragraph | Table)[] {
 
 export function pricingSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const p = c.pricing;
-  const out: (Paragraph | Table)[] = [pageBreak(), sectionH("Pricing Proposal"), bodyP(p.introduction)];
+  const out: (Paragraph | Table)[] = [sectionH("Pricing Proposal"), bodyP(p.introduction)];
 
   for (const opt of p.options) {
     out.push(emptyPara(), subH(opt.name), bodyP(opt.description));
@@ -86,16 +76,12 @@ export function pricingSection(c: GrowthReportContent): (Paragraph | Table)[] {
         ["COMPONENT", "DETAIL", "MONTHLY"],
         [
           ...opt.components.map(
-            (comp, i) =>
+            (comp) =>
               new TableRow({
-                children: [
-                  bCell(comp.component, { bold: true, fill: altFill(i) }),
-                  bCell(comp.detail, { fill: altFill(i) }),
-                  bCell(comp.monthly, { fill: altFill(i) }),
-                ],
+                children: [bCell(comp.component, { bold: true }), bCell(comp.detail), bCell(comp.monthly)],
               })
           ),
-          new TableRow({ children: [bCell("TOTAL", { bold: true }), bCell("", {}), bCell(opt.total, { bold: true })] }),
+          new TableRow({ children: [bCell("TOTAL", { bold: true }), bCell(""), bCell(opt.total, { bold: true })] }),
         ]
       )
     );

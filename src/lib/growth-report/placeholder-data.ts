@@ -18,15 +18,15 @@ export const placeholderReport: GrowthReportContent = {
     "Crunchbase",
   ],
   keyMetrics: {
-    monthlyVisits: "1.2M",
-    countryRank: "#1,450",
-    domainRating: "58",
-    onSiteScore: "72/100",
-    searchTraffic: "44.2%",
-    backlinks: "12,400",
-    igFollowers: "180K",
-    tiktokFollowers: "15.3K",
-    linkedinFollowers: "8,200",
+    monthlyVisits: { value: "1.2M", status: "good" },
+    countryRank: { value: "#1,450", status: "warning" },
+    domainRating: { value: "58", status: "warning" },
+    onSiteScore: { value: "72/100", status: "warning" },
+    searchTraffic: { value: "44.2%", status: "warning" },
+    backlinks: { value: "12,400", status: "info" },
+    igFollowers: { value: "180K", status: "good" },
+    tiktokFollowers: { value: "15.3K", status: "warning" },
+    linkedinFollowers: { value: "8,200", status: "info" },
   },
   executiveSummary: {
     overview:
@@ -64,7 +64,7 @@ export const placeholderReport: GrowthReportContent = {
       { metric: "Dofollow Referring Domains", value: "145" },
     ],
     findings: [
-      "DR 58 is solid but below top competitors (DR 65-76). Link building is the primary lever.",
+      "DR 58 is solid but below top competitors (DR 65-76): Link building is the primary lever.",
       "Dofollow ratio is low: Only 210 dofollow backlinks. Most links are nofollow from press/social.",
       "890 referring domains: Reasonable diversity. Target: 1,500+ domains within 12 months.",
     ],
@@ -226,8 +226,8 @@ export const placeholderReport: GrowthReportContent = {
       },
     ],
     findings: [
-      "Acme has the 3rd best bounce rate in the set (46.2%). Outperforms Competitor C (49.1%).",
-      "DR 58 beats Competitor C (52) but trails Competitor A (72) significantly.",
+      "Acme has the 3rd best bounce rate in the set (46.2%): Outperforms Competitor C (49.1%).",
+      "DR 58 beats Competitor C (52) but trails Competitor A (72) significantly: Primary authority gap.",
       "Search share gap vs Competitor A: 44.2% vs 60.1%. Matching their share = +190K monthly visits from search.",
       "Referring domain gap: 890 vs Competitor A 8,200. Primary authority gap to close.",
     ],
@@ -264,10 +264,10 @@ export const placeholderReport: GrowthReportContent = {
       },
     ],
     findings: [
-      "Blog content is the strongest SEO asset on the site. Blog posts score 85-90/100 vs 64-76 for other page types.",
+      "Blog content is the strongest SEO asset on the site: Blog posts score 85-90/100 vs 64-76 for other page types.",
       "Top article is the template: 2,800 words, proper H1, Article schema, 90/100. Blueprint for all future content.",
       "Broken URL detected: One blog post returns 404. Existing backlinks and rankings being lost.",
-      "Blog-to-product internal linking needs strengthening. Deep-link to specific PDPs, not just collection pages.",
+      "Blog-to-product internal linking needs strengthening: Deep-link to specific PDPs, not just collection pages.",
     ],
   },
   linkedinAudit: {
@@ -349,9 +349,9 @@ export const placeholderReport: GrowthReportContent = {
       },
     ],
     findings: [
-      "CEO engagement rate of 3.2% is strong (2-4x benchmark). Volume is the bottleneck — only ~5 visible posts.",
-      "Co-founder is completely untapped. 1,800 followers, zero posts. Immediate activation opportunity.",
-      "Company page over-indexes on events (35%) and hiring (22%). Shift to milestones and product content.",
+      "CEO engagement rate of 3.2% is strong (2-4x benchmark): Volume is the bottleneck — only ~5 visible posts.",
+      "Co-founder is completely untapped: 1,800 followers, zero posts. Immediate activation opportunity.",
+      "Company page over-indexes on events (35%) and hiring (22%): Shift to milestones and product content.",
     ],
   },
   socialSeo: {
@@ -365,7 +365,7 @@ export const placeholderReport: GrowthReportContent = {
     ],
     findings: [
       "TikTok keyword strategy: 400 videos but only 15.3K followers = low discoverability. Script around search keywords.",
-      "Pinterest: High-intent wellness audience. Blog content is highly pinnable. Currently unmeasured.",
+      "Pinterest opportunity: High-intent wellness audience. Blog content is highly pinnable. Currently unmeasured.",
       "Cross-channel content flooding: Deploy same keyword themes across blog + TikTok + IG + LinkedIn + Reddit.",
     ],
   },
@@ -398,9 +398,9 @@ export const placeholderReport: GrowthReportContent = {
       { query: '"Best [product type] UK buy"', result: "\u2717 Absent", whoRanks: "Competitor B, Amazon, H&B" },
     ],
     findings: [
-      "Company is completely absent from Google for category-level queries. Traffic is almost entirely branded search + direct.",
-      "No AI comprehension file exists. Zero AI engine visibility.",
-      "Cracking category organic discovery is the single biggest growth opportunity.",
+      "Company is completely absent from Google for category-level queries: Traffic is almost entirely branded search + direct.",
+      "No AI comprehension file exists: Zero AI engine visibility.",
+      "Cracking category organic discovery: The single biggest growth opportunity.",
     ],
   },
   entitySeo: {
@@ -594,12 +594,12 @@ export const placeholderReport: GrowthReportContent = {
   },
   measurementFramework: {
     targets: [
-      { label: "TRAFFIC", value: "1.2M\u21921.8M" },
-      { label: "SEARCH SHARE", value: "44%\u219255%" },
-      { label: "DR", value: "58\u219265+" },
-      { label: "REF DOMAINS", value: "890\u21921.5K+" },
-      { label: "COUNTRY RANK", value: "#1,450\u2192#1,000" },
-      { label: "AI CITATIONS", value: "Top 5" },
+      { label: "TRAFFIC", value: "1.2M\u21921.8M", status: "info" },
+      { label: "SEARCH SHARE", value: "44%\u219255%", status: "warning" },
+      { label: "DR", value: "58\u219265+", status: "warning" },
+      { label: "REF DOMAINS", value: "890\u21921.5K+", status: "info" },
+      { label: "COUNTRY RANK", value: "#1,450\u2192#1,000", status: "info" },
+      { label: "AI CITATIONS", value: "Top 5", status: "bad" },
     ],
     cadence: [
       "Weekly: Automated site crawl (50 pages), broken link check, index coverage monitor.",
@@ -640,14 +640,14 @@ export const placeholderReport: GrowthReportContent = {
       },
     ],
     findings: [
-      "Brand awareness exists on Reddit but trust lags behind. Multiple 'is it legit?' queries.",
-      "One negative UX complaint has highest visibility. Should be addressed.",
-      "No official brand presence on Reddit. Zero value-first content posted.",
+      "Brand awareness exists on Reddit but trust lags behind: Multiple 'is it legit?' queries.",
+      "One negative UX complaint has highest visibility: Should be addressed.",
+      "No official brand presence on Reddit: Zero value-first content posted.",
     ],
     recommendations: [
-      "Build authority in relevant subreddits with genuine, value-first content.",
-      "Address trust questions proactively with transparency about processes.",
-      "Fix any UX issues highlighted in negative posts.",
+      "Build authority in relevant subreddits: Genuine, value-first content approach.",
+      "Address trust questions proactively: Transparency about processes and sourcing.",
+      "Fix any UX issues highlighted in negative posts: Checkout flow is the main complaint.",
     ],
   },
   caseStudies: [

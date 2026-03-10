@@ -1,6 +1,6 @@
 import { Paragraph, Table, TableRow } from "docx";
 import type { GrowthReportContent } from "../schema";
-import { sectionH, subH, bullet, emptyPara, pageBreak, makeTable, bCell, altFill, statRow, C } from "../styles";
+import { sectionH, subH, bullet, emptyPara, makeTable, bCell, statRow, C } from "../styles";
 
 function effortColor(e: string): string {
   const l = e.toLowerCase();
@@ -8,7 +8,7 @@ function effortColor(e: string): string {
 }
 
 export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const out: (Paragraph | Table)[] = [pageBreak(), sectionH("LinkedIn Content Strategy")];
+  const out: (Paragraph | Table)[] = [sectionH("LinkedIn Content Strategy")];
 
   for (const person of c.linkedinStrategy.people) {
     out.push(subH(`${person.name}: ${person.frequency}`));
@@ -25,14 +25,9 @@ export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Ta
         [25, 20, 20, 20],
         ["THEME", "CURRENT", "TARGET", "CHANGE"],
         c.linkedinStrategy.companyRebalance.map(
-          (r, i) =>
+          (r) =>
             new TableRow({
-              children: [
-                bCell(r.theme, { bold: true, fill: altFill(i) }),
-                bCell(r.current, { fill: altFill(i) }),
-                bCell(r.target, { fill: altFill(i) }),
-                bCell(r.change, { fill: altFill(i) }),
-              ],
+              children: [bCell(r.theme), bCell(r.current), bCell(r.target), bCell(r.change)],
             })
         )
       )
@@ -44,25 +39,24 @@ export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Ta
 
 export function masterStrategySection(c: GrowthReportContent): (Paragraph | Table)[] {
   return [
-    pageBreak(),
     sectionH(`Master Strategy: ${c.masterStrategy.initiatives.length} Stack-Ranked Initiatives`),
     emptyPara(),
     makeTable(
       [4, 18, 8, 7, 9, 8, 8, 14, 18],
       ["#", "INITIATIVE", "IMPACT", "EFFORT", "TIMELINE", "OWNER", "CAT", "METRIC", "NOTE"],
       c.masterStrategy.initiatives.map(
-        (init, i) =>
+        (init) =>
           new TableRow({
             children: [
-              bCell(`${init.num}`, { bold: true, fill: altFill(i) }),
-              bCell(init.initiative, { fill: altFill(i) }),
-              bCell(init.impact, { bold: true, fill: altFill(i) }),
-              bCell(init.effort, { bold: true, color: effortColor(init.effort), fill: altFill(i) }),
-              bCell(init.timeline, { fill: altFill(i) }),
-              bCell(init.owner, { fill: altFill(i) }),
-              bCell(init.category, { fill: altFill(i) }),
-              bCell(init.metric, { fill: altFill(i) }),
-              bCell(init.note, { fill: altFill(i) }),
+              bCell(`${init.num}`, { bold: true }),
+              bCell(init.initiative),
+              bCell(init.impact, { bold: true }),
+              bCell(init.effort, { bold: true, color: effortColor(init.effort) }),
+              bCell(init.timeline),
+              bCell(init.owner),
+              bCell(init.category),
+              bCell(init.metric),
+              bCell(init.note),
             ],
           })
       )
@@ -75,11 +69,14 @@ export function measurementSection(c: GrowthReportContent): (Paragraph | Table)[
   const row1 = m.targets.slice(0, 3);
   const row2 = m.targets.slice(3, 6);
   return [
-    pageBreak(),
     sectionH("Measurement Framework"),
     emptyPara(),
-    ...(row1.length ? [statRow(row1.map((t) => [t.label, t.value] as [string, string]))] : []),
-    ...(row2.length ? [emptyPara(), statRow(row2.map((t) => [t.label, t.value] as [string, string]))] : []),
+    ...(row1.length
+      ? [statRow(row1.map((t) => [t.label, t.value, t.status] as [string, string, typeof t.status]))]
+      : []),
+    ...(row2.length
+      ? [emptyPara(), statRow(row2.map((t) => [t.label, t.value, t.status] as [string, string, typeof t.status]))]
+      : []),
     emptyPara(),
     subH("Tracking Cadence"),
     ...m.cadence.map((c) => bullet(c)),

@@ -199,9 +199,10 @@ function signOff(): Paragraph[] {
     new Paragraph({ children: [tr("For implementation support and growth programmes:", { size: S.body })] }),
     new Paragraph({
       children: [
+        tr("Book a call: ", { size: S.body }),
         new ExternalHyperlink({
           link: "https://cal.com/romil-depala-sabsp0/30min",
-          children: [tr("Book a Call", { bold: true, size: S.body, color: C.brandBlue })],
+          children: [tr("cal.com/romil-depala-sabsp0/30min", { bold: true, size: S.body, color: C.brandBlue })],
         }),
       ],
     }),

@@ -1,23 +1,10 @@
 import { Paragraph, Table, TableRow } from "docx";
 import type { GrowthReportContent } from "../schema";
-import {
-  sectionH,
-  subH,
-  dataSourceP,
-  bullet,
-  bodyP,
-  emptyPara,
-  pageBreak,
-  makeTable,
-  bCell,
-  altFill,
-  statRow,
-} from "../styles";
+import { sectionH, subH, dataSourceP, bullet, bodyP, emptyPara, makeTable, bCell, statRow } from "../styles";
 
 export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const li = c.linkedinAudit;
   const out: (Paragraph | Table)[] = [
-    pageBreak(),
     sectionH("LinkedIn Audit"),
     dataSourceP(li.dataSources),
     emptyPara(),
@@ -33,15 +20,15 @@ export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table
         [18, 8, 10, 10, 10, 44],
         ["THEME", "#", "AVG LIKE", "AVG CMT", "AVG RPT", "ASSESSMENT"],
         li.companyThemes.map(
-          (t, i) =>
+          (t) =>
             new TableRow({
               children: [
-                bCell(t.theme, { bold: true, fill: altFill(i) }),
-                bCell(`${t.count}`, { fill: altFill(i) }),
-                bCell(t.avgLikes, { fill: altFill(i) }),
-                bCell(t.avgComments, { fill: altFill(i) }),
-                bCell(t.avgReposts, { fill: altFill(i) }),
-                bCell(t.assessment, { fill: altFill(i) }),
+                bCell(t.theme),
+                bCell(`${t.count}`),
+                bCell(t.avgLikes),
+                bCell(t.avgComments),
+                bCell(t.avgReposts),
+                bCell(t.assessment),
               ],
             })
         )
@@ -56,17 +43,17 @@ export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table
         [22, 8, 8, 8, 8, 8, 8, 8],
         ["POST", "LIKES", "CMT", "ENG%", "HOOK", "CTA", "STORY", "SCORE"],
         li.founderPosts.map(
-          (p, i) =>
+          (p) =>
             new TableRow({
               children: [
-                bCell(p.post, { bold: true, fill: altFill(i) }),
-                bCell(`${p.likes}`, { fill: altFill(i) }),
-                bCell(`${p.comments}`, { fill: altFill(i) }),
-                bCell(p.engRate, { fill: altFill(i) }),
-                bCell(p.hook, { fill: altFill(i) }),
-                bCell(p.cta, { fill: altFill(i) }),
-                bCell(p.story, { fill: altFill(i) }),
-                bCell(`${p.score}`, { fill: altFill(i) }),
+                bCell(p.post),
+                bCell(`${p.likes}`),
+                bCell(`${p.comments}`),
+                bCell(p.engRate),
+                bCell(p.hook),
+                bCell(p.cta),
+                bCell(p.story),
+                bCell(`${p.score}`),
               ],
             })
         )
@@ -81,24 +68,18 @@ export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table
 export function socialSeoSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const s = c.socialSeo;
   return [
-    pageBreak(),
     sectionH("Social SEO: Data-Backed Findings"),
     dataSourceP(s.dataSources),
     emptyPara(),
-    bodyP(s.coreProblem),
+    bodyP(s.coreProblem, { bold: true }),
     emptyPara(),
     makeTable(
       [20, 20, 30, 30],
       ["PLATFORM", "FOLLOWERS", "CONTENT", "TRAFFIC IMPACT"],
       s.platforms.map(
-        (p, i) =>
+        (p) =>
           new TableRow({
-            children: [
-              bCell(p.platform, { bold: true, fill: altFill(i) }),
-              bCell(p.followers, { fill: altFill(i) }),
-              bCell(p.content, { fill: altFill(i) }),
-              bCell(p.trafficImpact, { fill: altFill(i) }),
-            ],
+            children: [bCell(p.platform), bCell(p.followers), bCell(p.content), bCell(p.trafficImpact)],
           })
       )
     ),
@@ -110,7 +91,6 @@ export function socialSeoSection(c: GrowthReportContent): (Paragraph | Table)[] 
 export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)[] {
   const a = c.aiVisibility;
   return [
-    pageBreak(),
     sectionH("AI Visibility & Technical AI Seeding"),
     dataSourceP(a.dataSources),
     emptyPara(),
@@ -118,14 +98,9 @@ export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)
       [25, 20, 25, 30],
       ["BOT / FILE", "STATUS", "IMPACT", "ACTION"],
       a.botStatus.map(
-        (b, i) =>
+        (b) =>
           new TableRow({
-            children: [
-              bCell(b.bot, { bold: true, fill: altFill(i) }),
-              bCell(b.status, { fill: altFill(i) }),
-              bCell(b.impact, { fill: altFill(i) }),
-              bCell(b.action, { fill: altFill(i) }),
-            ],
+            children: [bCell(b.bot), bCell(b.status), bCell(b.impact), bCell(b.action)],
           })
       )
     ),
@@ -135,13 +110,9 @@ export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)
       [35, 20, 45],
       ["QUERY TESTED", "RESULT", "WHO RANKS INSTEAD"],
       a.shareOfModel.map(
-        (s, i) =>
+        (s) =>
           new TableRow({
-            children: [
-              bCell(s.query, { bold: true, fill: altFill(i) }),
-              bCell(s.result, { fill: altFill(i) }),
-              bCell(s.whoRanks, { fill: altFill(i) }),
-            ],
+            children: [bCell(s.query), bCell(s.result), bCell(s.whoRanks)],
           })
       )
     ),
@@ -153,7 +124,6 @@ export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)
 export function entitySeoSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const e = c.entitySeo;
   return [
-    pageBreak(),
     sectionH("Local Entity SEO"),
     dataSourceP(e.dataSources),
     emptyPara(),
@@ -161,14 +131,9 @@ export function entitySeoSection(c: GrowthReportContent): (Paragraph | Table)[] 
       [22, 15, 30, 33],
       ["PLATFORM", "STATUS", "DATA", "ACTION"],
       e.platforms.map(
-        (p, i) =>
+        (p) =>
           new TableRow({
-            children: [
-              bCell(p.platform, { bold: true, fill: altFill(i) }),
-              bCell(p.status, { fill: altFill(i) }),
-              bCell(p.data, { fill: altFill(i) }),
-              bCell(p.action, { fill: altFill(i) }),
-            ],
+            children: [bCell(p.platform), bCell(p.status), bCell(p.data), bCell(p.action)],
           })
       )
     ),
@@ -181,7 +146,6 @@ export function redditSection(c: GrowthReportContent): (Paragraph | Table)[] {
   if (!c.redditAudit) return [];
   const r = c.redditAudit;
   return [
-    pageBreak(),
     sectionH("Reddit Presence Audit"),
     dataSourceP(r.dataSource),
     bodyP(r.overview),
@@ -197,15 +161,15 @@ export function redditSection(c: GrowthReportContent): (Paragraph | Table)[] {
       [22, 14, 8, 8, 12, 36],
       ["POST", "SUBREDDIT", "SCORE", "CMTS", "TYPE", "DETAIL"],
       r.mentions.map(
-        (m, i) =>
+        (m) =>
           new TableRow({
             children: [
-              bCell(m.post, { bold: true, fill: altFill(i) }),
-              bCell(m.subreddit, { fill: altFill(i) }),
-              bCell(m.score, { fill: altFill(i) }),
-              bCell(m.comments, { fill: altFill(i) }),
-              bCell(m.type, { fill: altFill(i) }),
-              bCell(m.detail, { fill: altFill(i) }),
+              bCell(m.post),
+              bCell(m.subreddit),
+              bCell(m.score),
+              bCell(m.comments),
+              bCell(m.type),
+              bCell(m.detail),
             ],
           })
       )

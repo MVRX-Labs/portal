@@ -1,4 +1,4 @@
-import { Paragraph, AlignmentType, Table } from "docx";
+import { Paragraph, Table } from "docx";
 import type { GrowthReportContent } from "../schema";
 import { tr, emptyPara, C, SZ, statRow, bodyP } from "../styles";
 
@@ -66,30 +66,30 @@ export function coverPage(c: GrowthReportContent): (Paragraph | Table)[] {
   ];
 }
 
-export function keyMetricCards(c: GrowthReportContent): (Paragraph | Table)[] {
+/** Executive summary with KPI stat cards (semantic colors) */
+export function executiveSummary(c: GrowthReportContent): (Paragraph | Table)[] {
   const m = c.keyMetrics;
   return [
+    bodyP(c.executiveSummary.overview),
     emptyPara(),
     statRow([
-      ["MONTHLY VISITS", m.monthlyVisits],
-      ["COUNTRY RANK", m.countryRank],
-      ["DOMAIN RATING", m.domainRating],
+      ["MONTHLY VISITS", m.monthlyVisits.value, m.monthlyVisits.status],
+      ["COUNTRY RANK", m.countryRank.value, m.countryRank.status],
+      ["DOMAIN RATING", m.domainRating.value, m.domainRating.status],
     ]),
     emptyPara(),
     statRow([
-      ["ON-SITE SCORE", m.onSiteScore],
-      ["SEARCH TRAFFIC", m.searchTraffic],
-      ["BACKLINKS", m.backlinks],
+      ["ON-SITE SCORE", m.onSiteScore.value, m.onSiteScore.status],
+      ["SEARCH TRAFFIC", m.searchTraffic.value, m.searchTraffic.status],
+      ["BACKLINKS", m.backlinks.value, m.backlinks.status],
     ]),
     emptyPara(),
     statRow([
-      ["IG FOLLOWERS", m.igFollowers],
-      ["TIKTOK", m.tiktokFollowers],
-      ["LINKEDIN (CO)", m.linkedinFollowers],
+      ["IG FOLLOWERS", m.igFollowers.value, m.igFollowers.status],
+      ["TIKTOK", m.tiktokFollowers.value, m.tiktokFollowers.status],
+      ["LINKEDIN (CO)", m.linkedinFollowers.value, m.linkedinFollowers.status],
     ]),
+    emptyPara(),
+    bodyP(c.executiveSummary.keyConclusion, { bold: true }),
   ];
-}
-
-export function executiveSummary(c: GrowthReportContent): (Paragraph | Table)[] {
-  return [bodyP(c.executiveSummary.overview), emptyPara(), bodyP(c.executiveSummary.keyConclusion, { bold: true })];
 }

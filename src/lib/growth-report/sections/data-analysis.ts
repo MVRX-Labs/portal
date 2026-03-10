@@ -5,21 +5,18 @@ import {
   subH,
   dataSourceP,
   bullet,
-  bodyP,
   emptyPara,
-  pageBreak,
   makeTable,
   hCell,
   bCell,
-  altFill,
   scoreColor,
   statRow,
+  C,
 } from "../styles";
 
 export function trafficSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const t = c.trafficAnalysis;
   return [
-    pageBreak(),
     sectionH("Traffic & Audience Analysis"),
     dataSourceP(t.dataSource),
     emptyPara(),
@@ -27,20 +24,28 @@ export function trafficSection(c: GrowthReportContent): (Paragraph | Table)[] {
       [50, 50],
       ["METRIC", "VALUE"],
       t.metrics.map(
-        (m, i) =>
+        (m) =>
           new TableRow({
-            children: [bCell(m.metric, { bold: true, fill: altFill(i) }), bCell(m.value, { fill: altFill(i) })],
+            children: [bCell(m.metric), bCell(m.value)],
           })
       )
     ),
     emptyPara(),
     subH("Traffic Sources"),
-    statRow([
-      ["SEARCH", t.trafficSources.search],
-      ["DIRECT", t.trafficSources.direct],
-      ["REFERRAL", t.trafficSources.referral],
-      ["SOCIAL", t.trafficSources.social],
-    ]),
+    makeTable(
+      [25, 25, 25, 25],
+      ["SEARCH", "DIRECT", "REFERRAL", "SOCIAL"],
+      [
+        new TableRow({
+          children: [
+            bCell(t.trafficSources.search, { bold: true }),
+            bCell(t.trafficSources.direct, { bold: true }),
+            bCell(t.trafficSources.referral, { bold: true }),
+            bCell(t.trafficSources.social, { bold: true }),
+          ],
+        }),
+      ]
+    ),
     emptyPara(),
     ...t.findings.map((f) => bullet(f)),
   ];
@@ -49,7 +54,6 @@ export function trafficSection(c: GrowthReportContent): (Paragraph | Table)[] {
 export function domainAuthoritySection(c: GrowthReportContent): (Paragraph | Table)[] {
   const d = c.domainAuthority;
   return [
-    pageBreak(),
     sectionH("Domain Authority & Backlink Profile"),
     dataSourceP(d.dataSource),
     emptyPara(),
@@ -57,9 +61,9 @@ export function domainAuthoritySection(c: GrowthReportContent): (Paragraph | Tab
       [50, 50],
       ["METRIC", "VALUE"],
       d.metrics.map(
-        (m, i) =>
+        (m) =>
           new TableRow({
-            children: [bCell(m.metric, { bold: true, fill: altFill(i) }), bCell(m.value, { fill: altFill(i) })],
+            children: [bCell(m.metric), bCell(m.value)],
           })
       )
     ),
@@ -77,7 +81,6 @@ export function siteAuditSection(c: GrowthReportContent): (Paragraph | Table)[] 
   const row1 = catEntries.slice(0, 3);
   const row2 = catEntries.slice(3, 6);
   return [
-    pageBreak(),
     sectionH(`On-Site SEO Audit (${s.summaryStats.pagesAudited} Pages)`),
     dataSourceP(s.dataSource),
     emptyPara(),
@@ -95,18 +98,18 @@ export function siteAuditSection(c: GrowthReportContent): (Paragraph | Table)[] 
       [20, 8, 8, 8, 8, 8, 8, 10, 10],
       ["PAGE", "SCORE", "META", "HEAD", "CONT", "TECH", "SCHEMA", "WORDS", "TYPE"],
       s.pageBreakdown.map(
-        (p, i) =>
+        (p) =>
           new TableRow({
             children: [
-              bCell(p.page, { bold: true, fill: altFill(i) }),
-              bCell(`${p.score}`, { color: scoreColor(p.score), fill: altFill(i) }),
-              bCell(`${p.meta}`, { fill: altFill(i) }),
-              bCell(`${p.headings}`, { fill: altFill(i) }),
-              bCell(`${p.content}`, { fill: altFill(i) }),
-              bCell(`${p.technical}`, { fill: altFill(i) }),
-              bCell(`${p.schema}`, { fill: altFill(i) }),
-              bCell(p.words, { fill: altFill(i) }),
-              bCell(p.type, { fill: altFill(i) }),
+              bCell(p.page),
+              bCell(`${p.score}`, { color: scoreColor(p.score) }),
+              bCell(`${p.meta}`),
+              bCell(`${p.headings}`),
+              bCell(`${p.content}`),
+              bCell(`${p.technical}`),
+              bCell(`${p.schema}`),
+              bCell(p.words),
+              bCell(p.type),
             ],
           })
       )
@@ -120,7 +123,6 @@ export function siteAuditSection(c: GrowthReportContent): (Paragraph | Table)[] 
 export function competitiveSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const b = c.competitiveBenchmarking;
   return [
-    pageBreak(),
     sectionH("Competitive Benchmarking"),
     dataSourceP(b.dataSources),
     emptyPara(),
@@ -128,18 +130,18 @@ export function competitiveSection(c: GrowthReportContent): (Paragraph | Table)[
       [15, 10, 8, 7, 12, 10, 10, 10, 8],
       ["SITE", "VISITS", "RANK", "DR", "BACKLINKS", "REF DOM", "SEARCH", "BOUNCE", "PG/VIS"],
       b.competitors.map(
-        (r, i) =>
+        (r) =>
           new TableRow({
             children: [
-              bCell(r.site, { bold: true, fill: altFill(i) }),
-              bCell(r.visits, { fill: altFill(i) }),
-              bCell(r.countryRank, { fill: altFill(i) }),
-              bCell(r.dr, { fill: altFill(i) }),
-              bCell(r.backlinks, { fill: altFill(i) }),
-              bCell(r.refDomains, { fill: altFill(i) }),
-              bCell(r.search, { fill: altFill(i) }),
-              bCell(r.bounce, { fill: altFill(i) }),
-              bCell(r.pagesPerVisit, { fill: altFill(i) }),
+              bCell(r.site),
+              bCell(r.visits),
+              bCell(r.countryRank),
+              bCell(r.dr),
+              bCell(r.backlinks),
+              bCell(r.refDomains),
+              bCell(r.search),
+              bCell(r.bounce),
+              bCell(r.pagesPerVisit),
             ],
           })
       )
@@ -152,7 +154,6 @@ export function competitiveSection(c: GrowthReportContent): (Paragraph | Table)[
 export function contentAuditSection(c: GrowthReportContent): (Paragraph | Table)[] {
   const a = c.contentAudit;
   return [
-    pageBreak(),
     sectionH("Content & Blog Audit"),
     dataSourceP(a.dataSource),
     emptyPara(),
@@ -160,16 +161,18 @@ export function contentAuditSection(c: GrowthReportContent): (Paragraph | Table)
       [25, 8, 8, 8, 12, 10, 18],
       ["ARTICLE", "SCORE", "DESC", "H1", "SCHEMA", "WORDS", "STATUS"],
       a.articles.map(
-        (r, i) =>
+        (r) =>
           new TableRow({
             children: [
-              bCell(r.article, { bold: true, fill: altFill(i) }),
-              bCell(r.score, { fill: altFill(i) }),
-              bCell(r.metaDesc, { fill: altFill(i) }),
-              bCell(r.h1, { fill: altFill(i) }),
-              bCell(r.schema, { fill: altFill(i) }),
-              bCell(r.words, { fill: altFill(i) }),
-              bCell(r.status, { fill: altFill(i) }),
+              bCell(r.article),
+              bCell(r.score),
+              bCell(r.metaDesc, {
+                color: r.metaDesc === "\u2713" ? C.green : r.metaDesc === "\u2717" ? C.red : undefined,
+              }),
+              bCell(r.h1, { color: r.h1 === "\u2713" ? C.green : r.h1 === "\u2717" ? C.red : undefined }),
+              bCell(r.schema),
+              bCell(r.words),
+              bCell(r.status),
             ],
           })
       )

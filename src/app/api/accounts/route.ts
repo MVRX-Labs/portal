@@ -6,6 +6,7 @@ import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive"
 import { uniqueSlug } from "@/lib/account-utils";
 import { parseBody } from "@/lib/api-schemas/common";
 import { createAccountBodySchema } from "@/lib/api-schemas/accounts";
+import { computeAccountHealthScores } from "@/lib/account-health";
 
 export const maxDuration = 300;
 
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q");
   const includeHidden = searchParams.get("includeHidden") === "true";
+  const sort = searchParams.get("sort");
 
   const conditions = [];
   if (q) conditions.push(ilike(accounts.name, `%${q}%`));
@@ -56,7 +58,28 @@ export async function GET(request: NextRequest) {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(accounts.mrr), sql`${accounts.lastMeetingAt} asc nulls last`);
 
-  return NextResponse.json({ accounts: results });
+  // Compute health scores and merge into results
+  const accountIds = results.map((r) => r.id);
+  const healthScores = await computeAccountHealthScores(accountIds);
+
+  const enriched = results.map((r) => {
+    const health = healthScores[r.id];
+    return {
+      ...r,
+      healthScore: health?.score ?? 0,
+      healthLabel: health?.label ?? "Unknown",
+      healthBreakdown: health?.breakdown ?? { meeting: 0, content: 0, actions: 0, setup: 0 },
+    };
+  });
+
+  // Sort by health score if requested
+  if (sort === "health") {
+    enriched.sort((a, b) => a.healthScore - b.healthScore);
+  } else if (sort === "health-desc") {
+    enriched.sort((a, b) => b.healthScore - a.healthScore);
+  }
+
+  return NextResponse.json({ accounts: enriched });
 }
 
 export async function POST(request: NextRequest) {

@@ -27,12 +27,24 @@ export const accountSchema = z
 
 export type Account = z.infer<typeof accountSchema>;
 
+export const healthBreakdownSchema = z.object({
+  meeting: z.number(),
+  content: z.number(),
+  actions: z.number(),
+  setup: z.number(),
+});
+
+export type HealthBreakdown = z.infer<typeof healthBreakdownSchema>;
+
 export const accountListItemSchema = accountSchema.extend({
   ownerName: z.string().nullable().optional(),
   contactCount: z.number().optional(),
   pendingActionCount: z.number().optional(),
   autoCreated: z.boolean().optional(),
   hidden: z.boolean().optional(),
+  healthScore: z.number().optional(),
+  healthLabel: z.string().optional(),
+  healthBreakdown: healthBreakdownSchema.optional(),
 });
 
 export type AccountListItem = z.infer<typeof accountListItemSchema>;

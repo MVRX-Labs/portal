@@ -664,6 +664,33 @@ function ExpandedView({
   );
 }
 
+function healthPillClass(score: number): string {
+  if (score >= 75) return "bg-emerald-500/20 text-emerald-400";
+  if (score >= 50) return "bg-yellow-500/20 text-yellow-400";
+  if (score >= 25) return "bg-orange-500/20 text-orange-400";
+  return "bg-red-500/20 text-red-400";
+}
+
+function HealthPill({ account }: { account: AccountListItem }) {
+  const score = account.healthScore ?? 0;
+  const label = account.healthLabel ?? "Unknown";
+  const b = account.healthBreakdown;
+  const tip = b
+    ? `${label} (${score}/100)\nMeetings: ${b.meeting}\nContent: ${b.content}\nActions: ${b.actions}\nSetup: ${b.setup}`
+    : `${label} (${score}/100)`;
+
+  return (
+    <span
+      className={`text-[11px] px-2 py-0.5 rounded-full font-semibold leading-none cursor-default ${healthPillClass(score)}`}
+      title={tip}
+    >
+      {score}
+    </span>
+  );
+}
+
+type SortMode = "default" | "health" | "health-desc";
+
 function AccountsContent() {
   const [accounts, setAccounts] = useState<AccountListItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -671,11 +698,16 @@ function AccountsContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [sortBy, setSortBy] = useState<SortMode>("default");
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = showHidden ? "?includeHidden=true" : "";
+      const qp = new URLSearchParams();
+      if (showHidden) qp.set("includeHidden", "true");
+      if (sortBy !== "default") qp.set("sort", sortBy);
+      const qs = qp.toString();
+      const params = qs ? `?${qs}` : "";
       const [acctData, userData] = await Promise.all([
         apiFetch(`/api/accounts${params}`, getAccountsResponseSchema),
         apiFetch("/api/admin/users", getUsersResponseSchema),
@@ -687,7 +719,7 @@ function AccountsContent() {
     } finally {
       setLoading(false);
     }
-  }, [showHidden]);
+  }, [showHidden, sortBy]);
 
   useEffect(() => {
     fetchAccounts();
@@ -772,6 +804,20 @@ function AccountsContent() {
               <th className="px-3 py-2 font-medium">Account</th>
               <th className="px-3 py-2 font-medium">Notes</th>
               <th className="px-3 py-2 font-medium">Owner</th>
+              <th className="px-3 py-2 font-medium">
+                <button
+                  onClick={() =>
+                    setSortBy((prev) =>
+                      prev === "default" ? "health" : prev === "health" ? "health-desc" : "default"
+                    )
+                  }
+                  className="hover:text-(--foreground) transition-colors flex items-center gap-1"
+                >
+                  Health
+                  {sortBy === "health" && <span>↑</span>}
+                  {sortBy === "health-desc" && <span>↓</span>}
+                </button>
+              </th>
               <th className="px-3 py-2 font-medium text-right">MRR</th>
               <th className="px-3 py-2 font-medium">Last Meeting</th>
               <th className="px-3 py-2 font-medium">Next Meeting</th>
@@ -781,13 +827,13 @@ function AccountsContent() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
+                <td colSpan={editMode ? 8 : 7} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : accounts.length === 0 ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
+                <td colSpan={editMode ? 8 : 7} className="py-8 text-center text-(--muted)">
                   No accounts found
                 </td>
               </tr>
@@ -841,6 +887,9 @@ function AccountsContent() {
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       {account.ownerName || <span className="text-(--muted)">Unassigned</span>}
                     </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap">
+                      <HealthPill account={account} />
+                    </td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
                       {account.mrr > 0 ? (
                         formatMrr(account.mrr, account.mrrCurrency)
@@ -874,7 +923,7 @@ function AccountsContent() {
                   </tr>
                   {expandedId === account.id && (
                     <tr>
-                      <td colSpan={editMode ? 7 : 6} className="border-b border-(--border) bg-(--card)">
+                      <td colSpan={editMode ? 8 : 7} className="border-b border-(--border) bg-(--card)">
                         <ExpandedView account={account} users={users} editMode={editMode} onSave={handleSave} />
                       </td>
                     </tr>

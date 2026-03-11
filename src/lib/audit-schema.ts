@@ -5,7 +5,6 @@ export interface LinkedInAuditContent {
   preparedDate: string;
   executiveSummary: string[];
   overallScore: number;
-  verdict: string;
   scorecard: ScorecardEntry[];
   sections: AuditSection[];
 }
@@ -13,7 +12,7 @@ export interface LinkedInAuditContent {
 export interface ScorecardEntry {
   category: string;
   score: number;
-  assessment: string;
+  commentary: string;
 }
 
 export interface AuditSection {

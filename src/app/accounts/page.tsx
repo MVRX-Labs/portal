@@ -16,6 +16,7 @@ import {
 } from "@/lib/api-schemas/actions";
 import { updateContactBodySchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
 import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
+import { NotesField } from "@/components/notes-field";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -48,6 +49,14 @@ function relativeDate(iso: string | null): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+function dueDateStyle(iso: string): string {
+  const due = new Date(iso);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return due < now ? "text-(--destructive)" : "text-(--muted)";
+}
+
 function ExpandedView({
   account,
   users,
@@ -64,10 +73,17 @@ function ExpandedView({
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingActions, setLoadingActions] = useState(true);
   const [newActionTitle, setNewActionTitle] = useState("");
+  const [newActionDueDate, setNewActionDueDate] = useState("");
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
-  const [summary, setSummary] = useState(account.summary || "");
+  const [name, setName] = useState(account.name || "");
+  const [industry, setIndustry] = useState(account.industry || "");
+  const [website, setWebsite] = useState(account.website || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(account.linkedinUrl || "");
+  const [engagementSlackChannel, setEngagementSlackChannel] = useState(account.engagementSlackChannel || "");
+  const [notes, setNotes] = useState(account.notes || "");
+  const [contentVoiceGuidance, setContentVoiceGuidance] = useState(account.contentVoiceGuidance || "");
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
   const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
@@ -82,13 +98,32 @@ function ExpandedView({
 
   // Reset editable fields when account changes
   useEffect(() => {
-    setSummary(account.summary || "");
+    setName(account.name || "");
+    setIndustry(account.industry || "");
+    setWebsite(account.website || "");
+    setLinkedinUrl(account.linkedinUrl || "");
+    setEngagementSlackChannel(account.engagementSlackChannel || "");
+    setNotes(account.notes || "");
+    setContentVoiceGuidance(account.contentVoiceGuidance || "");
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
     setMrrCurrency(account.mrrCurrency || "$");
     setEngagementScrapeEnabled(account.engagementScrapeEnabled);
     setDirty(false);
-  }, [account.id, account.summary, account.ownerId, account.mrr, account.mrrCurrency, account.engagementScrapeEnabled]);
+  }, [
+    account.id,
+    account.name,
+    account.industry,
+    account.website,
+    account.linkedinUrl,
+    account.engagementSlackChannel,
+    account.notes,
+    account.contentVoiceGuidance,
+    account.ownerId,
+    account.mrr,
+    account.mrrCurrency,
+    account.engagementScrapeEnabled,
+  ]);
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -125,9 +160,10 @@ function ExpandedView({
     try {
       await apiMutate(`/api/accounts/${account.id}/actions`, createActionResponseSchema, {
         method: "POST",
-        body: { title: newActionTitle.trim() },
+        body: { title: newActionTitle.trim(), dueDate: newActionDueDate || null },
       });
       setNewActionTitle("");
+      setNewActionDueDate("");
       await fetchActions();
     } catch {
       // ignore
@@ -166,7 +202,13 @@ function ExpandedView({
       await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
         method: "PUT",
         body: {
-          summary: summary || null,
+          name: name || account.name,
+          industry: industry || null,
+          website: website || null,
+          linkedinUrl: linkedinUrl || null,
+          engagementSlackChannel: engagementSlackChannel || null,
+          notes: notes || null,
+          contentVoiceGuidance: contentVoiceGuidance || null,
           ownerId: ownerId || null,
           mrr: mrrCents,
           mrrCurrency,
@@ -176,7 +218,13 @@ function ExpandedView({
       const ownerUser = users.find((u) => u.id === ownerId);
       onSave({
         ...account,
-        summary: summary || null,
+        name: name || account.name,
+        industry: industry || null,
+        website: website || null,
+        linkedinUrl: linkedinUrl || null,
+        engagementSlackChannel: engagementSlackChannel || null,
+        notes: notes || null,
+        contentVoiceGuidance: contentVoiceGuidance || null,
         ownerId: ownerId || null,
         ownerName: ownerUser?.name || null,
         mrr: mrrCents,
@@ -198,6 +246,8 @@ function ExpandedView({
       accountEmail: contact.accountEmail,
       personalEmail: contact.personalEmail,
       linkedinUrl: contact.linkedinUrl,
+      contentVoiceGuidance: contact.contentVoiceGuidance,
+      notes: contact.notes,
       engagementScrapeEnabled: contact.engagementScrapeEnabled,
     });
   };
@@ -213,6 +263,8 @@ function ExpandedView({
           accountEmail: contactEdits.accountEmail || null,
           personalEmail: contactEdits.personalEmail || null,
           linkedinUrl: contactEdits.linkedinUrl || null,
+          contentVoiceGuidance: contactEdits.contentVoiceGuidance || null,
+          notes: contactEdits.notes || null,
           engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
         },
       });
@@ -335,6 +387,24 @@ function ExpandedView({
                         </div>
                       </div>
                       <div className="flex items-center justify-between pt-1">
+                        <div className="flex-1 pr-3">
+                          <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
+                          <textarea
+                            value={contactEdits.contentVoiceGuidance || ""}
+                            onChange={(e) =>
+                              setContactEdits((prev) => ({ ...prev, contentVoiceGuidance: e.target.value }))
+                            }
+                            placeholder="e.g. US spelling. No abbreviations. Avoid vague claims."
+                            rows={3}
+                            className="w-full text-sm"
+                          />
+                        </div>
+                      </div>
+                      <NotesField
+                        value={contactEdits.notes || ""}
+                        onChange={(v) => setContactEdits((prev) => ({ ...prev, notes: v }))}
+                      />
+                      <div className="flex items-center justify-between pt-1">
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -376,7 +446,9 @@ function ExpandedView({
                   >
                     <span className="text-sm flex-1 truncate">{action.title}</span>
                     {action.dueDate && (
-                      <span className="text-xs text-(--muted) whitespace-nowrap">Due {formatDate(action.dueDate)}</span>
+                      <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
+                        Due {relativeDate(action.dueDate)}
+                      </span>
                     )}
                     <span className="badge badge-pending">{action.status}</span>
                     <button
@@ -394,14 +466,22 @@ function ExpandedView({
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-[1fr_7rem_auto] gap-2">
                 <input
                   type="text"
                   value={newActionTitle}
                   onChange={(e) => setNewActionTitle(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
                   placeholder="Add an action..."
-                  className="flex-1"
+                  className="min-w-0"
+                />
+                <input
+                  type="date"
+                  value={newActionDueDate}
+                  onChange={(e) => setNewActionDueDate(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
+                  className="text-sm min-w-0 max-w-full"
+                  title="Due date (optional)"
                 />
                 <button
                   onClick={handleAddAction}
@@ -419,18 +499,68 @@ function ExpandedView({
       {/* Editable fields — only shown in edit mode */}
       {editMode && (
         <div className="border-t border-(--border) pt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <label className="block text-xs text-(--muted) mb-1">Summary</label>
-              <textarea
-                value={summary}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Name</label>
+              <input
+                type="text"
+                value={name}
                 onChange={(e) => {
-                  setSummary(e.target.value);
+                  setName(e.target.value);
                   setDirty(true);
                 }}
-                placeholder="Describe the state of this account..."
-                rows={2}
-                className="w-full"
+                placeholder="Account name"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Industry</label>
+              <input
+                type="text"
+                value={industry}
+                onChange={(e) => {
+                  setIndustry(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="e.g. SaaS, Healthcare"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Website</label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => {
+                  setWebsite(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="https://example.com"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">LinkedIn URL</label>
+              <input
+                type="url"
+                value={linkedinUrl}
+                onChange={(e) => {
+                  setLinkedinUrl(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="https://linkedin.com/company/..."
+                className="w-full text-sm"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <NotesField
+                value={notes}
+                onChange={(v) => {
+                  setNotes(v);
+                  setDirty(true);
+                }}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -479,6 +609,34 @@ function ExpandedView({
                   />
                 </div>
               </div>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
+              <textarea
+                value={contentVoiceGuidance}
+                onChange={(e) => {
+                  setContentVoiceGuidance(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="Default instructions for generated LinkedIn posts for this account."
+                rows={3}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Engagement Slack Channel</label>
+              <input
+                type="text"
+                value={engagementSlackChannel}
+                onChange={(e) => {
+                  setEngagementSlackChannel(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="#channel-name"
+                className="w-full text-sm"
+              />
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
@@ -612,7 +770,7 @@ function AccountsContent() {
           <thead>
             <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="px-3 py-2 font-medium">Account</th>
-              <th className="px-3 py-2 font-medium">Summary</th>
+              <th className="px-3 py-2 font-medium">Notes</th>
               <th className="px-3 py-2 font-medium">Owner</th>
               <th className="px-3 py-2 font-medium text-right">MRR</th>
               <th className="px-3 py-2 font-medium">Last Meeting</th>
@@ -678,7 +836,7 @@ function AccountsContent() {
                       </div>
                     </td>
                     <td className="px-3 py-1.5 max-w-xs">
-                      <span className="text-(--muted) truncate block">{account.summary || "\u2014"}</span>
+                      <span className="text-(--muted) truncate block">{account.notes || "\u2014"}</span>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       {account.ownerName || <span className="text-(--muted)">Unassigned</span>}

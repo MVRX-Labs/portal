@@ -14,6 +14,7 @@ import {
   LevelFormat,
   VerticalAlign,
   TableLayoutType,
+  ExternalHyperlink,
 } from "docx";
 import type { GTMStrategyContent } from "./gtm-schema";
 
@@ -29,7 +30,7 @@ const C = {
   orange: "F39C12",
   red: "E74C3C",
   tableBorder: "DDDDDD",
-  lightGray: "F5F5F5",
+  tableRowAlt: "F3F5F8",
 } as const;
 
 const S = {
@@ -151,7 +152,7 @@ function colWidth(pct: number): { size: number; type: typeof WidthType.DXA } {
 
 function headerCell(text: string, widthPct?: number): TableCell {
   return new TableCell({
-    shading: { fill: C.brandBlue, type: ShadingType.CLEAR, color: "auto" },
+    shading: { fill: C.darkNavy, type: ShadingType.CLEAR, color: "auto" },
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(widthPct ? { width: colWidth(widthPct) } : {}),
@@ -164,8 +165,12 @@ function headerCell(text: string, widthPct?: number): TableCell {
   });
 }
 
-function bodyCell(text: string, opts?: { bold?: boolean; color?: string; widthPct?: number }): TableCell {
+function bodyCell(
+  text: string,
+  opts?: { bold?: boolean; color?: string; widthPct?: number; fill?: string }
+): TableCell {
   return new TableCell({
+    ...(opts?.fill ? { shading: { fill: opts.fill, type: ShadingType.CLEAR, color: "auto" } } : {}),
     borders: CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
     ...(opts?.widthPct ? { width: colWidth(opts.widthPct) } : {}),
@@ -187,7 +192,12 @@ function dataTable(headers: string[], rows: string[][], colWidths?: number[]): T
     layout: TableLayoutType.FIXED,
     rows: [
       new TableRow({ children: headers.map((h, i) => headerCell(h, widths[i])) }),
-      ...rows.map((row) => new TableRow({ children: row.map((cell, i) => bodyCell(cell, { widthPct: widths[i] })) })),
+      ...rows.map((row, rowIdx) => {
+        const fill = rowIdx % 2 === 0 ? C.tableRowAlt : C.white;
+        return new TableRow({
+          children: row.map((cell, i) => bodyCell(cell, { widthPct: widths[i], fill })),
+        });
+      }),
     ],
   });
 }
@@ -310,13 +320,14 @@ function presenceAuditSection(pa: GTMStrategyContent["presenceAudit"]): (Paragra
         new TableRow({
           children: [headerCell("Area", 25), headerCell("Score", 15), headerCell("Assessment", 60)],
         }),
-        ...scoreRows.map((row) => {
+        ...scoreRows.map((row, rowIdx) => {
           const score = parseInt(row[1]);
+          const fill = rowIdx % 2 === 0 ? C.tableRowAlt : C.white;
           return new TableRow({
             children: [
-              bodyCell(row[0], { bold: true, widthPct: 25 }),
-              bodyCell(row[1], { color: scoreColor(score), widthPct: 15 }),
-              bodyCell(row[2], { widthPct: 60 }),
+              bodyCell(row[0], { bold: true, widthPct: 25, fill }),
+              bodyCell(row[1], { color: scoreColor(score), widthPct: 15, fill }),
+              bodyCell(row[2], { widthPct: 60, fill }),
             ],
           });
         }),
@@ -391,16 +402,16 @@ function channelOverviewSection(cs: GTMStrategyContent["channelStrategyOverview"
         new TableRow({
           children: [headerCell("Channel", 30), headerCell("Fit Score", 15), headerCell("Rationale", 55)],
         }),
-        ...cs.recommendedChannels.map(
-          (ch) =>
-            new TableRow({
-              children: [
-                bodyCell(ch.name, { bold: true, widthPct: 30 }),
-                bodyCell(`${ch.fitScore}/10`, { color: scoreColor(ch.fitScore), widthPct: 15 }),
-                bodyCell(ch.rationale, { widthPct: 55 }),
-              ],
-            })
-        ),
+        ...cs.recommendedChannels.map((ch, rowIdx) => {
+          const fill = rowIdx % 2 === 0 ? C.tableRowAlt : C.white;
+          return new TableRow({
+            children: [
+              bodyCell(ch.name, { bold: true, widthPct: 30, fill }),
+              bodyCell(`${ch.fitScore}/10`, { color: scoreColor(ch.fitScore), widthPct: 15, fill }),
+              bodyCell(ch.rationale, { widthPct: 55, fill }),
+            ],
+          });
+        }),
       ],
     })
   );
@@ -538,10 +549,10 @@ function signOff(): Paragraph[] {
     }),
     new Paragraph({
       children: [
-        tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", {
-          bold: true,
-          size: S.body,
-          color: C.brandBlue,
+        tr("Book a call: ", { size: S.body }),
+        new ExternalHyperlink({
+          link: "https://cal.com/romil-depala-sabsp0/30min",
+          children: [tr("cal.com/romil-depala-sabsp0/30min", { bold: true, size: S.body, color: C.brandBlue })],
         }),
       ],
     }),

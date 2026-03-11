@@ -9,6 +9,8 @@ export const contactSchema = z
     accountEmail: z.string().nullable(),
     personalEmail: z.string().nullable(),
     linkedinUrl: z.string().nullable(),
+    contentVoiceGuidance: z.string().nullable(),
+    notes: z.string().nullable(),
     lastMeetingAt: dateStringNullable.optional(),
     nextMeetingAt: dateStringNullable.optional(),
     autoCreated: z.boolean().optional(),
@@ -34,6 +36,8 @@ export const createContactBodySchema = z.object({
   accountEmail: z.string().optional(),
   personalEmail: z.string().optional(),
   linkedinUrl: z.string().optional(),
+  contentVoiceGuidance: z.string().optional(),
+  notes: z.string().optional(),
   engagementScrapeEnabled: z.boolean().optional(),
 });
 
@@ -51,6 +55,8 @@ export const updateContactBodySchema = z.object({
   accountEmail: z.string().nullable().optional(),
   personalEmail: z.string().nullable().optional(),
   linkedinUrl: z.string().nullable().optional(),
+  contentVoiceGuidance: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   engagementScrapeEnabled: z.boolean().optional(),
 });
 

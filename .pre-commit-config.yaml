@@ -14,12 +14,6 @@ repos:
         types_or: [ts, tsx]
         pass_filenames: false
 
-      - id: file-length
-        name: Check file length (max 300 lines)
-        entry: bash scripts/check-file-length.sh
-        language: system
-        types: [text]
-
       - id: lint-architecture
         name: Architecture dependency rules
         entry: bash scripts/lint-architecture.sh

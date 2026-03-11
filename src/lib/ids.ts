@@ -34,6 +34,8 @@ const PREFIXES = {
   kevt: "kevt",
   kunit: "kunit",
   kstate: "kstate",
+  sectype: "sectype",
+  secret: "secret",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -61,6 +63,8 @@ export type KnowledgeSyncId = `ksync_${string}`;
 export type KnowledgeEventId = `kevt_${string}`;
 export type KnowledgeUnitId = `kunit_${string}`;
 export type KnowledgeStateId = `kstate_${string}`;
+export type SecretTypeId = `sectype_${string}`;
+export type SecretId = `secret_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -84,7 +88,9 @@ export type ObjectId =
   | KnowledgeSyncId
   | KnowledgeEventId
   | KnowledgeUnitId
-  | KnowledgeStateId;
+  | KnowledgeStateId
+  | SecretTypeId
+  | SecretId;
 
 type PrefixToId = {
   user: UserId;
@@ -110,6 +116,8 @@ type PrefixToId = {
   kevt: KnowledgeEventId;
   kunit: KnowledgeUnitId;
   kstate: KnowledgeStateId;
+  sectype: SecretTypeId;
+  secret: SecretId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -152,6 +160,8 @@ export function prefixForTable(table: string): Prefix {
     knowledge_events: "kevt",
     knowledge_units: "kunit",
     knowledge_state: "kstate",
+    secret_types: "sectype",
+    secrets: "secret",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

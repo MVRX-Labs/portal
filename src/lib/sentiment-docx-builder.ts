@@ -14,6 +14,7 @@ import {
   LevelFormat,
   VerticalAlign,
   TableLayoutType,
+  ExternalHyperlink,
 } from "docx";
 
 const FONT = "Arial";
@@ -388,10 +389,10 @@ function signOff(): Paragraph[] {
     }),
     new Paragraph({
       children: [
-        tr("tidycal.com/mvrxlabs/introductory-meeting-mvrxlabs", {
-          bold: true,
-          size: S.body,
-          color: C.brandBlue,
+        tr("Book a call: ", { size: S.body }),
+        new ExternalHyperlink({
+          link: "https://cal.com/romil-depala-sabsp0/30min",
+          children: [tr("cal.com/romil-depala-sabsp0/30min", { bold: true, size: S.body, color: C.brandBlue })],
         }),
       ],
     }),

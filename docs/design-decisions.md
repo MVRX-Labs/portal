@@ -30,7 +30,7 @@ Key architectural decisions and their rationale. Check here before making change
 
 **Decision:** Calendar sync runs on a schedule (every 30 min) using Google's incremental `syncToken`, not push notifications.
 
-**Why:** Google Calendar push notifications require channel management (expiry, renewal, public endpoint). 30-min latency is acceptable for meeting prep. See `docs/plans/active/calendar-automation.md` for full architecture.
+**Why:** Google Calendar push notifications require channel management (expiry, renewal, public endpoint). 30-min latency is acceptable for meeting prep. See `docs/plans/completed/calendar-automation.md` for full architecture.
 
 ---
 
@@ -82,8 +82,16 @@ Key architectural decisions and their rationale. Check here before making change
 
 ---
 
+## LinkedIn Analytics: Managed Profiles vs Engagement Profiles
+
+**Decision:** Client LinkedIn profiles tracked for analytics (`managedProfiles`) are a separate concept from external profiles tracked for outbound engagement (`engagementProfiles`).
+
+**Why:** The workflows are orthogonal. Engagement profiles are targets we want to interact with; managed profiles are our clients' own profiles whose post performance we measure and report on. Keeping them in separate tables (`managed_profiles`, `managed_posts`, `managed_post_snapshots`, `analytics_reports`) prevents the engagement bot's state from bleeding into analytics and vice versa. The `weekly-analytics` task scrapes managed profiles every Monday and sends a performance summary to the account's `analyticsSlackChannel`.
+
+---
+
 ## Idea Generator: Autonomous PR Bot
 
-**Decision:** A scheduled Trigger.dev task (`idea-generator`) autonomously generates product ideas and opens PRs, running hourly during UK working hours.
+**Decision:** A scheduled Trigger.dev task (`idea-generator`) autonomously generates product ideas and opens PRs, running once daily (9 AM UK) on weekdays.
 
 **Why:** Keeps a steady stream of small improvements flowing without requiring manual effort. Uses a two-phase Claude approach: Phase 1 (ideation) reads the codebase and optionally web-searches; Phase 2 (implementation) writes the code. Randomised scope/strategy per run avoids repetition. Logs total cost per run.

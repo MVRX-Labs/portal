@@ -19,13 +19,15 @@ const navItems: NavItem[] = [
   { href: "/accounts", label: "Accounts", icon: "🏢" },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
+  { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
   { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequence", icon: "📨", dev: true },
-  { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true },
+  { href: "/tools/growth-report", label: "Growth Report", icon: "📊", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
-  { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true },
-  { href: "/leads", label: "Leads", icon: "👥", beta: true },
-  { href: "/linkedin-engagement", label: "Engagement Bot", icon: "🤖" },
-  { href: "/analytics", label: "Post Analytics", icon: "📈" },
+  { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
+  // { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true }, NOT NEEDED?
+  { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true, dev: true },
+  { href: "/linkedin-engagement", label: "LinkedIn Engagement Bot", icon: "🤖" },
+  { href: "/analytics", label: "LinkedIn Post Analytics", icon: "📈" },
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
 ];
@@ -108,6 +110,17 @@ export function Sidebar() {
             >
               <span className="text-base">⚙</span>
               User Management
+            </Link>
+            <Link
+              href={`/admin/secrets${qs}`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin/secrets")
+                  ? "bg-(--input) text-white"
+                  : "text-(--muted) hover:text-white hover:bg-(--input)"
+              }`}
+            >
+              <span className="text-base">🔑</span>
+              Secrets
             </Link>
           </>
         )}

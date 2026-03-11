@@ -22,7 +22,7 @@ src/
     dashboard/   # Main UI pages
     tools/       # Tool UI pages
     admin/       # Admin UI
-  trigger/       # Trigger.dev background tasks (15 tasks)
+  trigger/       # Trigger.dev background tasks (18 task IDs across 17 task files)
   components/    # React components
   lib/           # Shared utilities, DB schema, API clients
 scripts/         # Dev scripts (seed, migrations, pre-commit hooks)
@@ -69,6 +69,10 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `engagementPosts` — Scraped LinkedIn posts pending/actioned review
 - `engagementJobs` — Apify scrape job records for engagement profiles
 - `engagementRawResults` — Raw Apify output per job (dedup key: profileId + apifyItemId)
+- `managedProfiles` — Our clients' LinkedIn profiles tracked for analytics (distinct from `engagementProfiles` which tracks external targets)
+- `managedPosts` — LinkedIn posts scraped from managed profiles (dedup key: profileId + apifyPostId)
+- `managedPostSnapshots` — Periodic engagement metric snapshots (likes/comments/reposts) per managed post
+- `analyticsReports` — Generated weekly analytics reports, with PDF URL and Slack message TS
 
 ID scheme: CUID2 with prefixes (`user_`, `acct_`, `contact_`, `lead_`, `run_`, etc.) — see `src/lib/ids.ts`.
 
@@ -91,12 +95,15 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 - `outbound-engagement-scrape` — Scrapes recent LinkedIn posts for tracked profiles, sends to Slack for review
 - `engagement-slack-action` — Processes Slack button clicks (comment/like/repost/skip) on outbound engagement cards
 - `account-enrichment` — Company data enrichment via web search
+- `weekly-analytics` — Scrapes a single managed client LinkedIn profile, generates a weekly performance report, sends to Slack (triggered by `weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
+- `track-post` — Scrapes live LinkedIn post metrics (likes/comments/reposts) after a delay, saves snapshots, and reports performance in the originating Slack thread
 
 **Scheduled tasks:**
 
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
 - `calendar-meeting-notifier` — Meeting prep notifications
 - `linkedin-engagement-scheduler` — Periodic engagement scraping
+- `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every active managed profile
 - `idea-generator` — Hourly AI-driven idea bot: generates a product idea, implements it, opens a PR (Mon–Fri, 9am–5pm London)
 - `code-quality-scan` — Weekly doc gardening: Claude audits docs vs code, opens PR for drift
 

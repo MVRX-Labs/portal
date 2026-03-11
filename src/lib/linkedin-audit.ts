@@ -62,7 +62,7 @@ export async function scrapeLinkedInProfile(linkedinUrl: string, signal?: AbortS
       POSTS_ACTOR_ID,
       {
         urls: [linkedinUrl],
-        limitPerSource: 20,
+        limitPerSource: 100,
         deepScrape: true,
       },
       signal

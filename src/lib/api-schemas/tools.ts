@@ -81,6 +81,18 @@ export const suggestionBodySchema = z.object({
 
 export type SuggestionBody = z.infer<typeof suggestionBodySchema>;
 
+// POST /api/tools/seo-audit
+export const seoAuditBodySchema = z.object({
+  websiteUrl: z.string().min(1, "websiteUrl is required"),
+  crawlMode: z.enum(["single", "crawl-20", "crawl-50", "crawl-100"]),
+  categories: z.string().optional(),
+  includeCwv: z.union([z.boolean(), z.string()]).optional(),
+  accountId: z.string().nullable().optional(),
+  model: z.string().optional(),
+});
+
+export type SeoAuditBody = z.infer<typeof seoAuditBodySchema>;
+
 // POST /api/tools/outbound-sequence (uses createToolHandler)
 export const outboundSequenceBodySchema = z
   .object({
@@ -93,3 +105,11 @@ export const outboundSequenceBodySchema = z
   .passthrough();
 
 export type OutboundSequenceBody = z.infer<typeof outboundSequenceBodySchema>;
+
+// POST /api/tools/growth-report
+export const growthReportBodySchema = z.object({
+  accountId: z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first")),
+  model: z.string().optional(),
+});
+
+export type GrowthReportBody = z.infer<typeof growthReportBodySchema>;

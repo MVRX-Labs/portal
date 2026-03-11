@@ -127,6 +127,20 @@
       "when": 1772979432174,
       "tag": "0017_sloppy_nocturne",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1773050400000,
+      "tag": "0017_content_voice_guidance",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1773225600000,
+      "tag": "0018_notes_and_secrets",
+      "breakpoints": true
     }
   ]
 }

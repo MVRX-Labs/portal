@@ -130,7 +130,7 @@ export const linkedinHumanizerTask = task({
           allowedTools: [],
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          maxTurns: 3,
+          maxTurns: 5,
           persistSession: false,
         },
       })) {

@@ -175,7 +175,7 @@ export const TOOLS: ToolConfig[] = [
         name: "sourceMaterial",
         label: "Source Material",
         type: "textarea",
-        placeholder: "Meeting notes, topic brief, news article, or brain dump of ideas...",
+        placeholder: "Blog link, meeting notes, topic brief, news article, or brain dump of ideas. A link is optional.",
         required: true,
       },
       {
@@ -186,6 +186,53 @@ export const TOOLS: ToolConfig[] = [
           "Style guide, past LinkedIn posts, or a description of the tone they want. The more examples, the better the voice match.",
       },
     ],
+  },
+  {
+    id: "seo-audit",
+    name: "Website SEO Audit",
+    description:
+      "Audit a website for SEO, performance, security, accessibility, and technical issues across 251 rules using SEOmator.",
+    href: "/tools/seo-audit",
+    fields: [
+      {
+        name: "websiteUrl",
+        label: "Website URL",
+        type: "text",
+        placeholder: "https://example.com",
+        required: true,
+      },
+      {
+        name: "crawlMode",
+        label: "Crawl Mode",
+        type: "select",
+        required: true,
+        options: [
+          { label: "Single Page", value: "single" },
+          { label: "Multi-page Crawl (up to 20 pages)", value: "crawl-20" },
+          { label: "Deep Crawl (up to 50 pages)", value: "crawl-50" },
+          { label: "Full Crawl (up to 100 pages)", value: "crawl-100" },
+        ],
+      },
+      {
+        name: "categories",
+        label: "Focus Categories (Optional)",
+        type: "text",
+        placeholder: "core,performance,security,links,images — leave empty for all",
+      },
+      {
+        name: "includeCwv",
+        label: "Include Core Web Vitals & JS rendering analysis (slower)",
+        type: "checkbox",
+      },
+    ],
+  },
+  {
+    id: "growth-report",
+    name: "Complete Growth Report",
+    description:
+      "Generate a full SEO & growth strategy report with traffic analysis, competitive benchmarking, LinkedIn audit, AI visibility, and pricing — modelled on our golden client reports.",
+    href: "/tools/growth-report",
+    fields: [],
   },
   {
     id: "outbound-sequence",
@@ -224,6 +271,39 @@ export const TOOLS: ToolConfig[] = [
           { label: "LinkedIn", value: "linkedin" },
           { label: "Both", value: "both" },
         ],
+      },
+    ],
+  },
+  {
+    id: "ingest-skill",
+    name: "Ingest Skill",
+    description:
+      "Import a third-party Claude Skill and auto-implement it as a native portal tool. Creates a PR for review.",
+    href: "/tools/ingest-skill",
+    fields: [
+      {
+        name: "skillUrl",
+        label: "Skill URL",
+        type: "text",
+        placeholder: "https://skills.sh/...",
+      },
+      {
+        name: "skillMd",
+        label: "Or paste SKILL.md content",
+        type: "textarea",
+        placeholder: "---\nname: my-skill\ndescription: ...\n---\n\nInstructions...",
+      },
+      {
+        name: "slug",
+        label: "Tool slug (optional)",
+        type: "text",
+        placeholder: "seo-audit",
+      },
+      {
+        name: "notes",
+        label: "Notes for implementation (optional)",
+        type: "textarea",
+        placeholder: "Any additional context or instructions for how to implement this skill...",
       },
     ],
   },

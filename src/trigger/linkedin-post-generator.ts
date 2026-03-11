@@ -64,7 +64,11 @@ You are writing for: ${posterName}, ${posterRole}
 
 ## CRITICAL IDENTITY RULE
 
-${posterName} is the author of (or a key contributor to) the source material. The blog post, article, or content you are given was written by them, comes from their company, or reflects their direct experience. Write the LinkedIn post in FIRST PERSON from ${posterName}'s perspective as someone who lived this, built this, or wrote this. Never refer to ${posterName} or their company in the third person. Never write as an outside observer summarising someone else's work. The reader should feel ${posterName} is sharing their own thinking, not reporting on a company announcement.
+${posterName} is the author of (or a key contributor to) the source material. ${
+    hasSourceUrls
+      ? "The blog post, article, or content you are given was written by them, comes from their company, or reflects their direct experience."
+      : `The source material may be raw notes, ideas, talking points, or an experience rather than a published article. Treat it as ${posterName}'s own thinking and direct experience.`
+  } Write the LinkedIn post in FIRST PERSON from ${posterName}'s perspective as someone who lived this, built this, or wrote this. Never refer to ${posterName} or their company in the third person. Never write as an outside observer summarising someone else's work. The reader should feel ${posterName} is sharing their own thinking, not reporting on a company announcement.
 
 - BANNED: "${posterName}'s team built..." or "The team at [Company] released..."
 - BANNED: "This article by ${posterName} explores..."
@@ -143,7 +147,11 @@ Make it its own sentence or cut it entirely.
 Use commas, full stops, parentheses, or colons instead. Zero em-dashes anywhere including hooks.
 
 **RULE 7: Zero company pitching. The post sells the IDEA, never the company.**
-The post must read as ${posterName} sharing a genuine insight, story, or lesson. The company and its product should be incidental background, not the point. The goal is to make the reader so curious about the idea that they click the link to the source material on their own. Through reading the blog post, they discover the company organically. Think of it as a trap they walk into willingly because the idea hooked them, not because they were pitched.
+The post must read as ${posterName} sharing a genuine insight, story, or lesson. The company and its product should be incidental background, not the point.${
+    hasSourceUrls
+      ? " The goal is to make the reader so curious about the idea that they click the link to the source material on their own. Through reading the blog post, they discover the company organically. Think of it as a trap they walk into willingly because the idea hooked them, not because they were pitched."
+      : " The post should stand on its own as a valuable piece of thinking. The reader should walk away having learned something or seen a problem differently, without needing to click through anywhere."
+  }
 - BANNED: Naming the company's product as the hero or solution
 - BANNED: "We built X and it does Y" framing (product-launch tone)
 - BANNED: Any sentence whose primary purpose is to make the company look good
@@ -191,9 +199,15 @@ Pick any of the 3 hooks to open with. Then write the body:
 - Narrative arc: setup, tension, resolution/insight
 - Reference specific details from the source material (names, numbers, timeframes, quotes)
 - Write from first person as ${posterName}. This is YOUR experience, YOUR insight, YOUR story. You lived it.
-- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
-- If the source material contains a URL/link, include it naturally as a "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
-- Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.
+${
+    hasSourceUrls
+      ? `- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
+- Include the source URL naturally as "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
+- Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.`
+      : `- The post should deliver the full insight within the post itself. The reader should walk away feeling they got something valuable without needing to click anywhere.
+- Do NOT fabricate or invent a link. There is no linked article for this post.
+- End with a CTA that invites conversation or reflection (not "What do you think?" which is overused). Ask a specific question tied to the post's insight, invite people to share a related experience, or end on a provocative open question. The CTA should feel like a peer starting a conversation, not a brand asking for engagement.`
+  }
 - 3-5 relevant hashtags at the end
 - Never start with "I'm" or "We're"
 - No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
@@ -210,7 +224,11 @@ Pick any of the 3 hooks to open with (can be the same or different from Body A).
 - Use 1-2 soft qualifiers ("I think", "in my experience", "I'm probably biased here, but") but only where they add genuine nuance, not as filler.
 - One aside or parenthetical maximum. It must earn its place by adding texture that makes the moment more vivid.
 - Let the ending be quieter. End on a specific detail, an open question, or a soft invitation. Not a polished takeaway.
-- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.
+${
+    hasSourceUrls
+      ? `- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.`
+      : `- There is no linked article for this post. Do NOT invent or fabricate a link. Let the post's insight stand on its own.`
+  }
 - The company name should appear at most once, and only if it's natural to the story. The reader should not feel marketed to at any point.
 - Fewer or no hashtags.
 - Soft CTA or none.
@@ -255,7 +273,12 @@ After writing each body, scan line by line and FIX any violations:
 8. Sentence length distribution: scan each paragraph. If three consecutive sentences are similar in length, break the pattern.
 9. Third-person scan: does any sentence refer to ${posterName} or their company as "they", "the team", or by name in the third person? Rewrite in first person ("I" / "we"). The poster IS the author. Target: ZERO third-person self-references.
 10. Sales pitch scan: does any sentence exist primarily to make the company or product look good? Would a reader think "this is an ad" if they read it? Rewrite to focus on the insight, story, or lesson instead. Strip any sentence that reads like marketing copy. Target: ZERO promotional sentences.
-11. Body B focus scan: read Body B and identify the single core insight. Does every sentence either (a) set up that insight through a specific moment, or (b) deliver that insight? If a sentence does neither, cut it. Check word count: if over 250 words, remove the least essential sentences from the middle until it is under 250.
+11. Body B focus scan: read Body B and identify the single core insight. Does every sentence either (a) set up that insight through a specific moment, or (b) deliver that insight? If a sentence does neither, cut it. Check word count: if over 250 words, remove the least essential sentences from the middle until it is under 250.${
+    !hasSourceUrls
+      ? `
+12. Fabricated link scan: the source material contains NO URLs. Check both bodies for any URLs, "link in comments", "read more here", or references to a linked article. Remove them all. The post must stand entirely on its own. Target: ZERO links or link references.`
+      : ""
+  }
 
 Do not present output that violates rules 1-7. These are hard failures.
 

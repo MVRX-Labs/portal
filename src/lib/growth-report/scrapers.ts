@@ -24,23 +24,43 @@ function token(): string {
   return t;
 }
 
-async function apify(actorId: string, input: unknown, label: string): Promise<unknown> {
+async function apify(actorId: string, input: unknown, label: string, retries = 2): Promise<unknown> {
   const encodedId = actorId.includes("/") ? actorId.replace("/", "~") : actorId;
   const url = `${APIFY_BASE}/acts/${encodedId}/run-sync-get-dataset-items?token=${token()}`;
   logger.info(`Scraper start: ${label}`, { actorId });
   const start = Date.now();
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${label} failed (${res.status}): ${body.slice(0, 300)}`);
+
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = attempt * 5000;
+        logger.info(`Scraper retry ${attempt}/${retries}: ${label} (waiting ${delay}ms)`, { actorId });
+        await new Promise((r) => setTimeout(r, delay));
+      }
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`${label} failed (${res.status}): ${body.slice(0, 300)}`);
+      }
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      logger.info(`Scraper done: ${label} (${elapsed}s)`, { actorId });
+      return res.json();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const isNetworkError = lastError.message.includes("fetch failed") || lastError.message.includes("ECONNREFUSED");
+      if (!isNetworkError || attempt >= retries) {
+        logger.error(`Scraper failed: ${label}`, { attempt, error: lastError.message, actorId });
+        throw lastError;
+      }
+      logger.warn(`Scraper network error: ${label}`, { attempt, error: lastError.message, actorId });
+    }
   }
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  logger.info(`Scraper done: ${label} (${elapsed}s)`, { actorId });
-  return res.json();
+  throw lastError!;
 }
 
 // --- Individual scrapers ---

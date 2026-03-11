@@ -10,7 +10,7 @@ function effortColor(e: string): string {
 export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [sectionH("LinkedIn Content Strategy")];
 
-  for (const person of c.linkedinStrategy.people) {
+  for (const person of c.linkedinStrategy!.people) {
     out.push(subH(`${person.name}: ${person.frequency}`));
     for (const t of person.themes) {
       out.push(bullet(`${t.theme} (${t.pct}): ${t.description}`));
@@ -18,13 +18,13 @@ export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Ta
     out.push(emptyPara());
   }
 
-  if (c.linkedinStrategy.companyRebalance?.length) {
+  if (c.linkedinStrategy!.companyRebalance?.length) {
     out.push(subH("Company Page: Rebalanced Mix"));
     out.push(
       makeTable(
         [25, 20, 20, 20],
         ["THEME", "CURRENT", "TARGET", "CHANGE"],
-        c.linkedinStrategy.companyRebalance.map(
+        c.linkedinStrategy!.companyRebalance!.map(
           (r) =>
             new TableRow({
               children: [bCell(r.theme), bCell(r.current), bCell(r.target), bCell(r.change)],
@@ -39,12 +39,12 @@ export function linkedinStrategySection(c: GrowthReportContent): (Paragraph | Ta
 
 export function masterStrategySection(c: GrowthReportContent): (Paragraph | Table)[] {
   return [
-    sectionH(`Master Strategy: ${c.masterStrategy.initiatives.length} Stack-Ranked Initiatives`),
+    sectionH(`Master Strategy: ${c.masterStrategy!.initiatives.length} Stack-Ranked Initiatives`),
     emptyPara(),
     makeTable(
       [4, 18, 8, 7, 9, 8, 8, 14, 18],
       ["#", "INITIATIVE", "IMPACT", "EFFORT", "TIMELINE", "OWNER", "CAT", "METRIC", "NOTE"],
-      c.masterStrategy.initiatives.map(
+      c.masterStrategy!.initiatives.map(
         (init) =>
           new TableRow({
             children: [
@@ -65,7 +65,7 @@ export function masterStrategySection(c: GrowthReportContent): (Paragraph | Tabl
 }
 
 export function measurementSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const m = c.measurementFramework;
+  const m = c.measurementFramework!;
   const row1 = m.targets.slice(0, 3);
   const row2 = m.targets.slice(3, 6);
   return [

@@ -83,25 +83,23 @@ export async function buildGrowthReportDocx(content: GrowthReportContent): Promi
   body.push(sectionH("Executive Summary"), ...executiveSummary(content));
 
   // Data analysis sections — each sectionH has pageBreakBefore built in
-  body.push(...trafficSection(content));
-  body.push(...domainAuthoritySection(content));
-  body.push(...siteAuditSection(content));
-  body.push(...competitiveSection(content));
-  body.push(...contentAuditSection(content));
+  // Sections are optional; skip if removed by the review step
+  if (content.trafficAnalysis) body.push(...trafficSection(content));
+  if (content.domainAuthority) body.push(...domainAuthoritySection(content));
+  if (content.siteAudit) body.push(...siteAuditSection(content));
+  if (content.competitiveBenchmarking) body.push(...competitiveSection(content));
+  if (content.contentAudit) body.push(...contentAuditSection(content));
 
   // Social & platform sections
-  body.push(...linkedinAuditSection(content));
-  body.push(...socialSeoSection(content));
-  body.push(...aiVisibilitySection(content));
-  body.push(...entitySeoSection(content));
+  if (content.linkedinAudit) body.push(...linkedinAuditSection(content));
+  if (content.socialSeo) body.push(...socialSeoSection(content));
+  if (content.aiVisibility) body.push(...aiVisibilitySection(content));
+  if (content.entitySeo) body.push(...entitySeoSection(content));
 
   // Strategy sections
-  body.push(...linkedinStrategySection(content));
-  body.push(...masterStrategySection(content));
-  body.push(...measurementSection(content));
-
-  // Optional sections
-  body.push(...redditSection(content));
+  if (content.linkedinStrategy) body.push(...linkedinStrategySection(content));
+  if (content.masterStrategy) body.push(...masterStrategySection(content));
+  if (content.measurementFramework) body.push(...measurementSection(content));
 
   // Commercial sections
   body.push(...caseStudiesSection(content));

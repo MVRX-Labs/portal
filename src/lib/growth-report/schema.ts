@@ -26,21 +26,21 @@ export interface GrowthReportContent {
 
   executiveSummary: { overview: string; keyConclusion: string };
 
-  trafficAnalysis: {
+  trafficAnalysis?: {
     dataSource: string;
     metrics: Array<{ metric: string; value: string }>;
     trafficSources: { search: string; direct: string; referral: string; social: string };
     findings: string[];
   };
 
-  domainAuthority: {
+  domainAuthority?: {
     dataSource: string;
     metrics: Array<{ metric: string; value: string }>;
     findings: string[];
     linkOpportunities: string[];
   };
 
-  siteAudit: {
+  siteAudit?: {
     dataSource: string;
     summaryStats: { pagesAudited: number; avgScore: number; errors404: number };
     categoryScores: Record<string, number>;
@@ -58,7 +58,7 @@ export interface GrowthReportContent {
     criticalIssues: string[];
   };
 
-  competitiveBenchmarking: {
+  competitiveBenchmarking?: {
     dataSources: string;
     competitors: Array<{
       site: string;
@@ -74,7 +74,7 @@ export interface GrowthReportContent {
     findings: string[];
   };
 
-  contentAudit: {
+  contentAudit?: {
     dataSource: string;
     articles: Array<{
       article: string;
@@ -88,7 +88,7 @@ export interface GrowthReportContent {
     findings: string[];
   };
 
-  linkedinAudit: {
+  linkedinAudit?: {
     dataSources: string;
     profiles: Array<{ label: string; name: string; followers: string }>;
     engagementStats: Array<{ label: string; value: string }>;
@@ -113,27 +113,27 @@ export interface GrowthReportContent {
     findings: string[];
   };
 
-  socialSeo: {
+  socialSeo?: {
     dataSources: string;
     coreProblem: string;
     platforms: Array<{ platform: string; followers: string; content: string; trafficImpact: string }>;
     findings: string[];
   };
 
-  aiVisibility: {
+  aiVisibility?: {
     dataSources: string;
     botStatus: Array<{ bot: string; status: string; impact: string; action: string }>;
     shareOfModel: Array<{ query: string; result: string; whoRanks: string }>;
     findings: string[];
   };
 
-  entitySeo: {
+  entitySeo?: {
     dataSources: string;
     platforms: Array<{ platform: string; status: string; data: string; action: string }>;
     findings: string[];
   };
 
-  linkedinStrategy: {
+  linkedinStrategy?: {
     people: Array<{
       name: string;
       role: string;
@@ -143,7 +143,7 @@ export interface GrowthReportContent {
     companyRebalance?: Array<{ theme: string; current: string; target: string; change: string }>;
   };
 
-  masterStrategy: {
+  masterStrategy?: {
     initiatives: Array<{
       num: number;
       initiative: string;
@@ -157,7 +157,7 @@ export interface GrowthReportContent {
     }>;
   };
 
-  measurementFramework: {
+  measurementFramework?: {
     targets: { label: string; value: string; status: MetricStatus }[];
     cadence: string[];
   };

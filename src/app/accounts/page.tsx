@@ -77,6 +77,11 @@ function ExpandedView({
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
+  const [name, setName] = useState(account.name || "");
+  const [industry, setIndustry] = useState(account.industry || "");
+  const [website, setWebsite] = useState(account.website || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(account.linkedinUrl || "");
+  const [engagementSlackChannel, setEngagementSlackChannel] = useState(account.engagementSlackChannel || "");
   const [notes, setNotes] = useState(account.notes || "");
   const [contentVoiceGuidance, setContentVoiceGuidance] = useState(account.contentVoiceGuidance || "");
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
@@ -93,6 +98,11 @@ function ExpandedView({
 
   // Reset editable fields when account changes
   useEffect(() => {
+    setName(account.name || "");
+    setIndustry(account.industry || "");
+    setWebsite(account.website || "");
+    setLinkedinUrl(account.linkedinUrl || "");
+    setEngagementSlackChannel(account.engagementSlackChannel || "");
     setNotes(account.notes || "");
     setContentVoiceGuidance(account.contentVoiceGuidance || "");
     setOwnerId(account.ownerId || "");
@@ -102,6 +112,11 @@ function ExpandedView({
     setDirty(false);
   }, [
     account.id,
+    account.name,
+    account.industry,
+    account.website,
+    account.linkedinUrl,
+    account.engagementSlackChannel,
     account.notes,
     account.contentVoiceGuidance,
     account.ownerId,
@@ -187,6 +202,11 @@ function ExpandedView({
       await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
         method: "PUT",
         body: {
+          name: name || account.name,
+          industry: industry || null,
+          website: website || null,
+          linkedinUrl: linkedinUrl || null,
+          engagementSlackChannel: engagementSlackChannel || null,
           notes: notes || null,
           contentVoiceGuidance: contentVoiceGuidance || null,
           ownerId: ownerId || null,
@@ -198,6 +218,11 @@ function ExpandedView({
       const ownerUser = users.find((u) => u.id === ownerId);
       onSave({
         ...account,
+        name: name || account.name,
+        industry: industry || null,
+        website: website || null,
+        linkedinUrl: linkedinUrl || null,
+        engagementSlackChannel: engagementSlackChannel || null,
         notes: notes || null,
         contentVoiceGuidance: contentVoiceGuidance || null,
         ownerId: ownerId || null,
@@ -474,6 +499,60 @@ function ExpandedView({
       {/* Editable fields — only shown in edit mode */}
       {editMode && (
         <div className="border-t border-(--border) pt-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="Account name"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Industry</label>
+              <input
+                type="text"
+                value={industry}
+                onChange={(e) => {
+                  setIndustry(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="e.g. SaaS, Healthcare"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Website</label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => {
+                  setWebsite(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="https://example.com"
+                className="w-full text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">LinkedIn URL</label>
+              <input
+                type="url"
+                value={linkedinUrl}
+                onChange={(e) => {
+                  setLinkedinUrl(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="https://linkedin.com/company/..."
+                className="w-full text-sm"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <NotesField
@@ -532,18 +611,33 @@ function ExpandedView({
               </div>
             </div>
           </div>
-          <div className="mt-4">
-            <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
-            <textarea
-              value={contentVoiceGuidance}
-              onChange={(e) => {
-                setContentVoiceGuidance(e.target.value);
-                setDirty(true);
-              }}
-              placeholder="Default instructions for generated LinkedIn posts for this account."
-              rows={3}
-              className="w-full"
-            />
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
+              <textarea
+                value={contentVoiceGuidance}
+                onChange={(e) => {
+                  setContentVoiceGuidance(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="Default instructions for generated LinkedIn posts for this account."
+                rows={3}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Engagement Slack Channel</label>
+              <input
+                type="text"
+                value={engagementSlackChannel}
+                onChange={(e) => {
+                  setEngagementSlackChannel(e.target.value);
+                  setDirty(true);
+                }}
+                placeholder="#channel-name"
+                className="w-full text-sm"
+              />
+            </div>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
             <input

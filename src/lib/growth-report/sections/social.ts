@@ -3,7 +3,7 @@ import type { GrowthReportContent } from "../schema";
 import { sectionH, subH, dataSourceP, bullet, bodyP, emptyPara, makeTable, bCell, statRow } from "../styles";
 
 export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const li = c.linkedinAudit;
+  const li = c.linkedinAudit!;
   const out: (Paragraph | Table)[] = [
     sectionH("LinkedIn Audit"),
     dataSourceP(li.dataSources),
@@ -66,7 +66,7 @@ export function linkedinAuditSection(c: GrowthReportContent): (Paragraph | Table
 }
 
 export function socialSeoSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const s = c.socialSeo;
+  const s = c.socialSeo!;
   return [
     sectionH("Social SEO: Data-Backed Findings"),
     dataSourceP(s.dataSources),
@@ -89,7 +89,7 @@ export function socialSeoSection(c: GrowthReportContent): (Paragraph | Table)[] 
 }
 
 export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const a = c.aiVisibility;
+  const a = c.aiVisibility!;
   return [
     sectionH("AI Visibility & Technical AI Seeding"),
     dataSourceP(a.dataSources),
@@ -122,7 +122,7 @@ export function aiVisibilitySection(c: GrowthReportContent): (Paragraph | Table)
 }
 
 export function entitySeoSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const e = c.entitySeo;
+  const e = c.entitySeo!;
   return [
     sectionH("Local Entity SEO"),
     dataSourceP(e.dataSources),

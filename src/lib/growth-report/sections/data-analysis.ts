@@ -15,7 +15,7 @@ import {
 } from "../styles";
 
 export function trafficSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const t = c.trafficAnalysis;
+  const t = c.trafficAnalysis!;
   return [
     sectionH("Traffic & Audience Analysis"),
     dataSourceP(t.dataSource),
@@ -52,7 +52,7 @@ export function trafficSection(c: GrowthReportContent): (Paragraph | Table)[] {
 }
 
 export function domainAuthoritySection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const d = c.domainAuthority;
+  const d = c.domainAuthority!;
   return [
     sectionH("Domain Authority & Backlink Profile"),
     dataSourceP(d.dataSource),
@@ -76,7 +76,7 @@ export function domainAuthoritySection(c: GrowthReportContent): (Paragraph | Tab
 }
 
 export function siteAuditSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const s = c.siteAudit;
+  const s = c.siteAudit!;
   const catEntries = Object.entries(s.categoryScores);
   const row1 = catEntries.slice(0, 3);
   const row2 = catEntries.slice(3, 6);
@@ -121,7 +121,7 @@ export function siteAuditSection(c: GrowthReportContent): (Paragraph | Table)[] 
 }
 
 export function competitiveSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const b = c.competitiveBenchmarking;
+  const b = c.competitiveBenchmarking!;
   return [
     sectionH("Competitive Benchmarking"),
     dataSourceP(b.dataSources),
@@ -152,7 +152,7 @@ export function competitiveSection(c: GrowthReportContent): (Paragraph | Table)[
 }
 
 export function contentAuditSection(c: GrowthReportContent): (Paragraph | Table)[] {
-  const a = c.contentAudit;
+  const a = c.contentAudit!;
   return [
     sectionH("Content & Blog Audit"),
     dataSourceP(a.dataSource),

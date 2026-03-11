@@ -13,6 +13,7 @@ import { sendSlackNotification } from "@/lib/slack";
 import { runDiscovery } from "@/lib/growth-report/discovery";
 import { collectAllData } from "@/lib/growth-report/scrapers";
 import { buildAnalysisPrompt } from "@/lib/growth-report/analysis-prompt";
+import { buildReviewPrompt } from "@/lib/growth-report/review-prompt";
 import { buildGrowthReportDocx } from "@/lib/growth-report/builder";
 import { MVRX_CASE_STUDIES, STANDARD_PRICING } from "@/lib/growth-report/constants";
 import type { GrowthReportContent } from "@/lib/growth-report/schema";
@@ -23,7 +24,7 @@ interface GrowthReportPayload {
   model?: string;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 function progress(step: string, num: number) {
   const pct = Math.round((num / TOTAL_STEPS) * 100);
@@ -76,6 +77,13 @@ export const growthReportTask = task({
         discovery,
       });
 
+      if (scraped.failures.length > 0) {
+        logger.warn("Scrapers with failures", {
+          count: scraped.failures.length,
+          failures: scraped.failures,
+        });
+      }
+
       // Write all data to session dir for Claude
       const files: [string, unknown][] = [
         ["discovery.json", discovery],
@@ -112,7 +120,7 @@ export const growthReportTask = task({
 
       const analysisResult = await runClaudeAgent(prompt, sessionDir, {
         allowedTools: ["Read", "Glob"],
-        maxTurns: 15,
+        maxTurns: 30,
         model: resolvedModel,
       });
 
@@ -122,15 +130,58 @@ export const growthReportTask = task({
       });
 
       const rawJson = extractJSON(analysisResult.output);
-      const reportContent = JSON.parse(rawJson) as GrowthReportContent;
+      let reportContent = JSON.parse(rawJson) as GrowthReportContent;
 
       // Inject hardcoded sections
       reportContent.caseStudies = MVRX_CASE_STUDIES;
       reportContent.statementOfWork = reportContent.statementOfWork || buildDefaultSow();
       reportContent.pricing = reportContent.pricing || buildDefaultPricing();
 
-      // --- Step 5: Build & upload ---
-      progress("Building document & uploading", 5);
+      // --- Step 5: Initial build & review ---
+      progress("Building initial document & running quality review", 5);
+
+      // Build the initial docx so we know the document is structurally valid
+      await buildGrowthReportDocx(reportContent);
+
+      // Write the report JSON for the review agent to read
+      await writeFile(join(sessionDir, "report.json"), JSON.stringify(reportContent, null, 2));
+
+      const reviewPrompt = buildReviewPrompt(account.name);
+      const reviewModel = resolveModel(payload.model, MODEL_MAP.sonnet ?? MODEL_MAP.opus);
+
+      const reviewResult = await runClaudeAgent(reviewPrompt, sessionDir, {
+        allowedTools: ["Read", "Glob"],
+        maxTurns: 8,
+        model: reviewModel,
+      });
+
+      logger.info("Review complete", {
+        costUsd: reviewResult.costUsd.toFixed(4),
+        turns: reviewResult.turns,
+      });
+
+      try {
+        const reviewedJson = extractJSON(reviewResult.output);
+        const reviewed = JSON.parse(reviewedJson) as GrowthReportContent;
+        // Sanity check: make sure the reviewed version has core fields
+        if (reviewed.companyName && reviewed.executiveSummary && reviewed.keyMetrics) {
+          reportContent = reviewed;
+          // Re-inject hardcoded sections in case the review agent dropped them
+          reportContent.caseStudies = MVRX_CASE_STUDIES;
+          reportContent.statementOfWork = reportContent.statementOfWork || buildDefaultSow();
+          reportContent.pricing = reportContent.pricing || buildDefaultPricing();
+          logger.info("Review applied — report cleaned up");
+        } else {
+          logger.warn("Review output missing core fields, using original analysis");
+        }
+      } catch (reviewErr) {
+        logger.warn("Review parsing failed, using original analysis", {
+          error: reviewErr instanceof Error ? reviewErr.message : String(reviewErr),
+        });
+      }
+
+      // --- Step 6: Final build & upload ---
+      progress("Building final document & uploading", 6);
 
       const docxBuffer = await buildGrowthReportDocx(reportContent);
       const hostname = new URL(account.website.startsWith("http") ? account.website : `https://${account.website}`)

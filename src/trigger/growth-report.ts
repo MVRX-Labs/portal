@@ -151,7 +151,7 @@ export const growthReportTask = task({
 
       const reviewResult = await runClaudeAgent(reviewPrompt, sessionDir, {
         allowedTools: ["Read", "Glob"],
-        maxTurns: 8,
+        maxTurns: 20,
         model: reviewModel,
       });
 

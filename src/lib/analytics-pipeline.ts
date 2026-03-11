@@ -1,6 +1,6 @@
 import { getManagedProfile } from "./managed-profiles";
 import { ingestPosts } from "./post-ingestion";
-import { generateWeeklyReport, saveWeeklyReport } from "./analytics-report";
+import { generateWeeklyReport, getWeekStart, saveWeeklyReport } from "./analytics-report";
 import type { WeeklyReportData } from "./analytics-report";
 import { buildAnalyticsSlackMessage } from "./analytics-slack";
 import { sendAnalyticsSlackMessage } from "./slack";
@@ -40,8 +40,10 @@ export async function runWeeklyReportForProfile(
     expectedLinkedinUrl: profile.linkedinUrl,
   });
 
-  // 3. Generate report (diffs against previous report automatically)
-  const report = await generateWeeklyReport(profileId);
+  // 3. Generate report for the previous week (the one that just ended)
+  const previousWeekStart = getWeekStart();
+  previousWeekStart.setUTCDate(previousWeekStart.getUTCDate() - 7);
+  const report = await generateWeeklyReport(profileId, previousWeekStart);
 
   // 4. Save
   await saveWeeklyReport(accountId, profileId, report);

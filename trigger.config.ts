@@ -18,10 +18,10 @@ export default defineConfig({
   },
   dirs: ["./src/trigger"],
   build: {
-    external: ["@anthropic-ai/claude-agent-sdk", "postgres"],
+    external: ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk", "postgres"],
     extensions: [
       additionalPackages({
-        packages: ["@seomator/seo-audit"],
+        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk"],
       }),
     ],
   },

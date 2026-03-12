@@ -542,6 +542,21 @@ export const knowledgeState = pgTable(
   })
 );
 
+export const knowledgeDigestMessages = pgTable("knowledge_digest_messages", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => `kdig_${crypto.randomUUID().replace(/-/g, "")}`),
+  unitId: text("unit_id")
+    .notNull()
+    .references(() => knowledgeUnits.id),
+  recipientSlackId: text("recipient_slack_id").notNull(),
+  channelId: text("channel_id").notNull(), // Slack DM channel ID
+  threadTs: text("thread_ts").notNull(), // parent message ts
+  messageTs: text("message_ts").notNull(), // this item's message ts
+  markedDone: boolean("marked_done").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // --- Secrets tables ---
 
 export const secretTypes = pgTable("secret_types", {

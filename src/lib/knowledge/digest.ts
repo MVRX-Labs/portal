@@ -1,21 +1,22 @@
 /**
  * Knowledge Hub — Daily digest generator.
  *
- * Generates a structured summary of knowledge units grouped by account,
- * and sends it as a Slack DM to specified recipients.
+ * Sends a threaded digest: parent message = summary stats, each item = its own
+ * threaded reply so reactions can be tracked back to individual knowledge units.
  *
  * Flow:
  *   1. Load all open units, group by account
- *   2. Identify likely-done items (cross-ref with recent events)
- *   3. Flag stale items (>3 weeks, no activity)
- *   4. Format as Slack blocks
- *   5. DM to Tarun + Nitanshu
+ *   2. Flag stale items (>3 weeks, no activity)
+ *   3. Send parent summary DM to each recipient
+ *   4. Post account header as threaded reply
+ *   5. Post EACH open item as an individual threaded reply (rate-limited 1/1.2s)
+ *   6. Post recently-done items as consolidated message at end of each account
+ *   7. Persist {unitId → messageTs, channelId, threadTs} in knowledge_digest_messages
  */
 
 import { db } from "@/lib/db";
-import { knowledgeUnits, accounts } from "@/lib/schema";
+import { knowledgeUnits, accounts, knowledgeDigestMessages } from "@/lib/schema";
 import { eq, desc, or, and, gt } from "drizzle-orm";
-import { sendKnowledgeSlackDM } from "@/lib/slack";
 
 type Logger = { info: (msg: string) => void; error: (msg: string) => void };
 
@@ -25,6 +26,19 @@ const DIGEST_RECIPIENTS = [
   "U0AJ4E662G1", // Nitanshu
 ];
 
+const TYPE_EMOJI: Record<string, string> = {
+  action_item: "🔹",
+  decision: "⚖️",
+  request: "📩",
+  blocker: "🚫",
+  deliverable: "📦",
+  feedback: "💬",
+  context_update: "📝",
+  content_draft: "✍️",
+  product_bug: "🐛",
+  product_feature: "✨",
+};
+
 interface DigestSection {
   accountName: string;
   accountSlug: string;
@@ -33,8 +47,58 @@ interface DigestSection {
   stats: { total: number; open: number; done: number; stale: number };
 }
 
+// --- Slack helpers ---
+
+function getToken(): string {
+  const token = process.env.KNOWLEDGE_SLACKBOT_TOKEN;
+  if (!token) throw new Error("KNOWLEDGE_SLACKBOT_TOKEN not configured");
+  return token;
+}
+
+async function slackPost(method: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(`https://slack.com/api/${method}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!data.ok) throw new Error(`Slack ${method} failed: ${data.error}`);
+  return data;
+}
+
+async function openDM(userId: string): Promise<string> {
+  const data = await slackPost("conversations.open", { users: userId });
+  return (data.channel as { id: string }).id;
+}
+
+async function postMessage(channel: string, text: string, blocks?: Record<string, unknown>[]): Promise<string> {
+  const body: Record<string, unknown> = { channel, text };
+  if (blocks) body.blocks = blocks;
+  const data = await slackPost("chat.postMessage", body);
+  return data.ts as string;
+}
+
+async function postThreadReply(
+  channel: string,
+  threadTs: string,
+  text: string,
+  blocks?: Record<string, unknown>[],
+): Promise<string> {
+  const body: Record<string, unknown> = { channel, text, thread_ts: threadTs };
+  if (blocks) body.blocks = blocks;
+  const data = await slackPost("chat.postMessage", body);
+  return data.ts as string;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Main ---
+
 /**
- * Generate and send the daily digest.
+ * Generate and send the daily digest as threaded messages.
+ * Parent = summary, each item = individual threaded reply with reaction tracking.
  */
 export async function generateAndSendDigest(logger: Logger): Promise<{ sections: number; messagesSent: number }> {
   const sections = await buildDigestSections(logger);
@@ -44,24 +108,163 @@ export async function generateAndSendDigest(logger: Logger): Promise<{ sections:
     return { sections: 0, messagesSent: 0 };
   }
 
-  const blocks = formatDigestBlocks(sections);
-  let sent = 0;
+  let totalSent = 0;
 
   for (const userId of DIGEST_RECIPIENTS) {
     try {
-      await sendKnowledgeSlackDM(userId, blocks);
-      sent++;
-      logger.info(`Digest sent to ${userId}`);
+      const sent = await sendThreadedDigest(userId, sections, logger);
+      totalSent += sent;
+      logger.info(`Digest sent to ${userId}: ${sent} messages`);
     } catch (err) {
       logger.error(`Failed to send digest to ${userId}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  return { sections: sections.length, messagesSent: sent };
+  return { sections: sections.length, messagesSent: totalSent };
 }
 
+async function sendThreadedDigest(
+  userId: string,
+  sections: DigestSection[],
+  logger: Logger,
+): Promise<number> {
+  const channelId = await openDM(userId);
+  let messageCount = 0;
+
+  // Accumulate mappings — persist all at once after sending
+  const digestMappings: Array<{
+    unitId: string;
+    recipientSlackId: string;
+    channelId: string;
+    threadTs: string;
+    messageTs: string;
+  }> = [];
+
+  // 1. Parent message — summary stats
+  const totalOpen = sections.reduce((s, sec) => s + sec.stats.open, 0);
+  const totalDone = sections.reduce((s, sec) => s + sec.stats.done, 0);
+  const totalStale = sections.reduce((s, sec) => s + sec.stats.stale, 0);
+  const date = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+
+  const accountSummaries = sections
+    .map((s) => `• *${s.accountName}*: ${s.stats.open} open${s.stats.stale > 0 ? ` (⚠️ ${s.stats.stale} stale)` : ""}`)
+    .join("\n");
+
+  const parentBlocks: Record<string, unknown>[] = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: "📋 Knowledge Hub — Daily Digest" },
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `${date} · ${totalOpen} open · ${totalDone} done recently${totalStale > 0 ? ` · ⚠️ ${totalStale} stale` : ""}`,
+        },
+      ],
+    },
+    { type: "divider" },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: accountSummaries },
+    },
+    {
+      type: "context",
+      elements: [{ type: "mrkdwn", text: "Each item is posted below. React ✅ on an item to mark it done." }],
+    },
+  ];
+
+  const parentTs = await postMessage(
+    channelId,
+    `📋 Daily Digest — ${totalOpen} open items across ${sections.length} accounts`,
+    parentBlocks,
+  );
+  messageCount++;
+  await sleep(1200);
+
+  // 2. For each account: post header, then each item individually
+  for (const section of sections) {
+    // Account header message
+    const headerText =
+      `*── ${section.accountName} ── ${section.stats.open} open` +
+      `${section.stats.stale > 0 ? ` · ⚠️ ${section.stats.stale} stale` : ""} ──*`;
+
+    await postThreadReply(channelId, parentTs, headerText, [
+      { type: "section", text: { type: "mrkdwn", text: headerText } },
+    ]);
+    messageCount++;
+    logger.info(`Posted account header for ${section.accountName}`);
+    await sleep(1200);
+
+    // Each open item as its own thread reply
+    for (const item of section.openItems) {
+      const emoji = TYPE_EMOJI[item.type] || "🔹";
+      const assigneeTag = item.assignee ? `\n→ *${item.assignee}*` : "";
+      const typeTag = item.type !== "action_item" ? `\n_[${item.type.replace(/_/g, " ")}]_` : "";
+      const staleWarning = item.stale ? "\n⚠️ _Stale — no activity in 3+ weeks_" : "";
+      const contextLine = `\nReact ✅ to mark done · ID: \`${item.id}\``;
+      const content = item.content.slice(0, 500) + (item.content.length > 500 ? "…" : "");
+      const itemText = `${emoji} ${content}${assigneeTag}${typeTag}${staleWarning}${contextLine}`;
+
+      const messageTs = await postThreadReply(channelId, parentTs, itemText, [
+        { type: "section", text: { type: "mrkdwn", text: itemText } },
+      ]);
+      messageCount++;
+
+      digestMappings.push({
+        unitId: item.id,
+        recipientSlackId: userId,
+        channelId,
+        threadTs: parentTs,
+        messageTs,
+      });
+
+      await sleep(1200);
+    }
+
+    // Recently-done items for this account — consolidated message
+    if (section.recentlyDone.length > 0) {
+      const doneLines = section.recentlyDone
+        .map((item) => {
+          const assigneeTag = item.assignee ? ` → ${item.assignee}` : "";
+          return `✅ ~${item.content.slice(0, 100)}${item.content.length > 100 ? "…" : ""}~${assigneeTag}`;
+        })
+        .join("\n");
+      const doneText = `*Recently completed in ${section.accountName}:*\n${doneLines}`;
+
+      await postThreadReply(channelId, parentTs, doneText, [
+        { type: "section", text: { type: "mrkdwn", text: doneText } },
+      ]);
+      messageCount++;
+      await sleep(1200);
+    }
+  }
+
+  // 3. Persist digest message mappings to DB
+  if (digestMappings.length > 0) {
+    try {
+      await db.insert(knowledgeDigestMessages).values(
+        digestMappings.map((m) => ({
+          unitId: m.unitId,
+          recipientSlackId: m.recipientSlackId,
+          channelId: m.channelId,
+          threadTs: m.threadTs,
+          messageTs: m.messageTs,
+        })),
+      );
+      logger.info(`Stored ${digestMappings.length} digest message mappings for ${userId}`);
+    } catch (err) {
+      logger.error(`Failed to store digest mappings: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return messageCount;
+}
+
+// --- Data loading ---
+
 async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
-  // Load only open units + recently done (last 48h) — avoids full table scan
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
   const allUnits = await db
     .select({
@@ -83,11 +286,9 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
     )
     .orderBy(desc(knowledgeUnits.createdAt));
 
-  // Get account names
   const accountRows = await db.select({ id: accounts.id, name: accounts.name, slug: accounts.slug }).from(accounts);
   const accountMap = new Map(accountRows.map((a) => [a.id, a]));
 
-  // Group by account
   const byAccount = new Map<string | null, typeof allUnits>();
   for (const u of allUnits) {
     const key = u.accountId;
@@ -96,24 +297,21 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
   }
 
   const sections: DigestSection[] = [];
+  const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   for (const [accountId, units] of byAccount) {
     const account = accountId ? accountMap.get(accountId) : null;
     const open = units.filter((u) => u.status === "open");
     const done = units.filter((u) => u.status === "done");
-    const threeWeeksAgo = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
+
     const stale = open.filter((u) => {
       const meta = u.metadata as Record<string, unknown> | null;
-      // Stale if: metadata.stale was set at extraction (dueDate-based),
-      // OR the unit was created >3 weeks ago and is still open
       if (meta?.stale) return true;
       const created = u.createdAt ? new Date(u.createdAt) : null;
       return created && created < threeWeeksAgo;
     });
 
-    // Recently done = done items updated (marked done) in the last 24h.
-    // We check metadata.completedAt if set (by PATCH endpoint), otherwise fall back to createdAt.
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recentlyDone = done.filter((u) => {
       const meta = u.metadata as Record<string, unknown> | null;
       const completedAt = meta?.completedAt as string | undefined;
@@ -141,79 +339,6 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
     });
   }
 
-  // Sort by open items count (most active first)
   sections.sort((a, b) => b.stats.open - a.stats.open);
   return sections;
 }
-
-function formatDigestBlocks(sections: DigestSection[]): Record<string, unknown>[] {
-  const blocks: Record<string, unknown>[] = [
-    {
-      type: "header",
-      text: { type: "plain_text", text: "📋 Knowledge Hub — Daily Digest" },
-    },
-    {
-      type: "context",
-      elements: [{ type: "mrkdwn", text: `Generated ${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}` }],
-    },
-    { type: "divider" },
-  ];
-
-  for (const section of sections) {
-    // Account header
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `*${section.accountName}* — ${section.stats.open} open, ${section.stats.done} done${section.stats.stale > 0 ? `, ⚠️ ${section.stats.stale} stale` : ""}`,
-      },
-    });
-
-    // Open items (grouped by assignee)
-    const byAssignee = new Map<string, typeof section.openItems>();
-    for (const item of section.openItems) {
-      const key = item.assignee || "(unassigned)";
-      if (!byAssignee.has(key)) byAssignee.set(key, []);
-      byAssignee.get(key)!.push(item);
-    }
-
-    for (const [assignee, items] of byAssignee) {
-      const itemLines = items.slice(0, 5).map((i) => {
-        const prefix = i.stale ? "⚠️" : "⬜";
-        const typeTag = i.type === "action_item" ? "" : ` _[${i.type}]_`;
-        return `${prefix} ${i.content.slice(0, 120)}${i.content.length > 120 ? "…" : ""}${typeTag}`;
-      });
-      if (items.length > 5) itemLines.push(`_...and ${items.length - 5} more_`);
-
-      blocks.push({
-        type: "section",
-        text: { type: "mrkdwn", text: `*${assignee}:*\n${itemLines.join("\n")}` },
-      });
-    }
-
-    // Recently done
-    if (section.recentlyDone.length > 0) {
-      const doneLines = section.recentlyDone.map((i) =>
-        `✅ ${i.content.slice(0, 100)}${i.content.length > 100 ? "…" : ""}`,
-      );
-      blocks.push({
-        type: "section",
-        text: { type: "mrkdwn", text: `*Recently completed:*\n${doneLines.join("\n")}` },
-      });
-    }
-
-    blocks.push({ type: "divider" });
-  }
-
-  // Footer with instructions
-  blocks.push({
-    type: "context",
-    elements: [{
-      type: "mrkdwn",
-      text: "Reply with item corrections: e.g. _\"close: Charlie to send office video\"_ or _\"stale: credentials request\"_",
-    }],
-  });
-
-  return blocks;
-}
-

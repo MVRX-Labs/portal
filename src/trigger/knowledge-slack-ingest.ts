@@ -13,6 +13,8 @@
 import { schedules, task, logger } from "@trigger.dev/sdk/v3";
 import { ingestAllChannels, ingestChannel } from "@/lib/knowledge/ingest";
 import { sendSlackNotification } from "@/lib/slack";
+import { knowledgeResolveMedia } from "./knowledge-resolve";
+import { knowledgeNormaliseAll } from "./knowledge-normalise";
 
 /**
  * Scheduled ingestion — all active channels.
@@ -49,6 +51,19 @@ export const knowledgeSlackIngestScheduled = schedules.task({
       logger.info(
         `Ingestion complete: ${totalNew} new events across ${results.length} channels, ${totalErrors} errors`,
       );
+
+      // Chain resolve → normalise only when there is new content to process
+      if (totalNew > 0) {
+        logger.info(`${totalNew} new events — triggering media resolution`);
+        await knowledgeResolveMedia.triggerAndWait({});
+
+        logger.info("Media resolution complete — triggering normalisation");
+        await knowledgeNormaliseAll.triggerAndWait({});
+
+        logger.info("Normalisation complete");
+      } else {
+        logger.info("No new events — skipping resolve + normalise");
+      }
 
       return {
         channels: results.map((r) => ({

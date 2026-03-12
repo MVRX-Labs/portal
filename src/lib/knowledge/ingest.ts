@@ -79,6 +79,9 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
         continue;
       }
       result.newMessages++;
+      // Only advance cursor on top-level messages — thread replies have later
+      // timestamps but don't appear in conversations.history, so using them
+      // as the cursor would cause us to miss future top-level messages.
       if (!latestTs || msg.ts > latestTs) latestTs = msg.ts;
 
       // Fetch thread replies
@@ -88,7 +91,7 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
           const rp = await processMessage(reply, channel, visibility, logger, msg.ts);
           if (rp !== "skipped") {
             result.newThreadReplies++;
-            if (!latestTs || reply.ts > latestTs) latestTs = reply.ts;
+            // Don't update latestTs here — see comment above
           }
         }
         await sleep(200);

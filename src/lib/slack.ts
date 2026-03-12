@@ -253,6 +253,32 @@ export async function sendAnalyticsSlackMessage(
   }
 }
 
+export async function sendKnowledgeSlackDM(userId: string, blocks: Record<string, unknown>[]): Promise<void> {
+  const token = process.env.KNOWLEDGE_SLACKBOT_TOKEN;
+  if (!token) throw new Error("KNOWLEDGE_SLACKBOT_TOKEN not configured");
+
+  // Open DM conversation
+  const openRes = await fetch("https://slack.com/api/conversations.open", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ users: userId }),
+  });
+  const openData = (await openRes.json()) as { ok: boolean; channel?: { id: string }; error?: string };
+  if (!openData.ok) throw new Error(`Failed to open DM: ${openData.error}`);
+
+  const msgRes = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channel: openData.channel!.id,
+      text: "📋 Knowledge Hub — Daily Digest",
+      blocks,
+    }),
+  });
+  const msgData = (await msgRes.json()) as { ok: boolean; error?: string };
+  if (!msgData.ok) throw new Error(`Failed to send message: ${msgData.error}`);
+}
+
 export async function sendSlackFile(
   slackUserId: string,
   filename: string,

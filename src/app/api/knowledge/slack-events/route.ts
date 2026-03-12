@@ -314,7 +314,8 @@ async function handleReactionRemoved(channelId: string, messageTs: string): Prom
     product_feature: "✨",
   };
   const emoji = typeEmoji[unit.unitType] || "🔹";
-  const content = unit.content.slice(0, 500) + (unit.content.length > 500 ? "…" : "");
+  const rawContent = unit.content.slice(0, 500) + (unit.content.length > 500 ? "…" : "");
+  const content = escapeSlackMrkdwn(rawContent);
   const contextLine = `\nReact ✅ to mark done · ID: \`${digestMsg.unitId}\``;
   const restoredText = `${emoji} ${content}${contextLine}`;
 

@@ -75,7 +75,8 @@ export async function loadSlackUsers(): Promise<SlackUser[]> {
 
   if (paginationError) {
     // Return partial results WITHOUT caching so the next call retries the full list
-    console.error("[user-registry] users.list pagination failed — returning partial results without caching");
+    // Non-fatal: degrade gracefully with partial data
+    console.warn("[user-registry] users.list pagination failed — returning partial results without caching");
     return users;
   }
 
@@ -139,7 +140,8 @@ async function loadCrossWorkspaceUsers(token: string, users: SlackUser[]): Promi
           knownIds.add(uid);
         }
       } catch (err) {
-        console.error(`[user-registry] Failed to resolve cross-workspace user ${uid}:`, err);
+        // Non-fatal: one bad user shouldn't break the loop
+        console.warn(`[user-registry] Failed to resolve cross-workspace user ${uid}:`, err);
         // Continue — one bad user shouldn't break the loop
       }
       // Rate limit: 200ms after EACH users.info call

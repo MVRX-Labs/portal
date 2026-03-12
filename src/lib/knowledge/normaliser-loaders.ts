@@ -7,7 +7,7 @@
 
 import { db } from "@/lib/db";
 import { knowledgeUnits, contacts, accounts } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import type { AccountContext, OpenItem, ExtractedSummary } from "./prompts";
 
 export async function loadAccountContext(accountId: string): Promise<AccountContext> {
@@ -44,10 +44,13 @@ export async function loadOpenItems(accountId: string): Promise<OpenItem[]> {
 }
 
 export async function loadExistingSummaries(channelId: string): Promise<ExtractedSummary[]> {
+  // Cap at 200 most recent to prevent prompt size blowup over time
   const existing = await db
     .select({ type: knowledgeUnits.unitType, content: knowledgeUnits.content, assignee: knowledgeUnits.assignee, status: knowledgeUnits.status })
     .from(knowledgeUnits)
-    .where(eq(knowledgeUnits.channelId, channelId));
+    .where(eq(knowledgeUnits.channelId, channelId))
+    .orderBy(desc(knowledgeUnits.createdAt))
+    .limit(200);
   return existing.map((u) => ({ type: u.type, content: u.content, assignee: u.assignee, status: u.status }));
 }
 

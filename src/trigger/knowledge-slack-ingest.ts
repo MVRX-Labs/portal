@@ -97,6 +97,7 @@ export const knowledgeSlackIngestScheduled = schedules.task({
  */
 export const knowledgeSlackIngestChannel = task({
   id: "knowledge-slack-ingest-channel",
+  maxDuration: 1800,
   run: async (payload: { channelDbId: string }, { ctx }) => {
     logger.info(`On-demand ingestion for channel ${payload.channelDbId}`);
 

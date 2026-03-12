@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS knowledge_digest_messages (
   channel_id          TEXT NOT NULL,
   thread_ts           TEXT NOT NULL,
   message_ts          TEXT NOT NULL,
-  marked_done         BOOLEAN DEFAULT FALSE,
+  marked_done         BOOLEAN NOT NULL DEFAULT FALSE,
   created_at          TIMESTAMP DEFAULT NOW() NOT NULL
 )
 `;

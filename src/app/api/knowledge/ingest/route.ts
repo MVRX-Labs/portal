@@ -11,49 +11,54 @@ import { parseBodyOptional } from "@/lib/api-schemas/common";
 import { triggerIngestBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
+  try {
+    const isAdmin = req.headers.get("x-user-admin") === "true";
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
 
-  const { data } = await parseBodyOptional(req, triggerIngestBodySchema);
-  const { channelDbId } = data;
+    const { data } = await parseBodyOptional(req, triggerIngestBodySchema);
+    const { channelDbId } = data;
 
-  if (channelDbId) {
-    // Trigger single channel ingestion via Trigger.dev
-    const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
-      "knowledge-slack-ingest-channel",
-      { channelDbId },
-    );
+    if (channelDbId) {
+      // Trigger single channel ingestion via Trigger.dev
+      const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
+        "knowledge-slack-ingest-channel",
+        { channelDbId },
+      );
+
+      return NextResponse.json({
+        message: `Ingestion triggered for channel ${channelDbId}`,
+        runId: handle.id,
+      });
+    }
+
+    // For all-channels: trigger each individually
+    // (scheduled task handles this via cron; manual trigger fans out)
+    const { db } = await import("@/lib/db");
+    const { knowledgeChannels } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const channels = await db
+      .select({ id: knowledgeChannels.id, name: knowledgeChannels.slackChannelName })
+      .from(knowledgeChannels)
+      .where(eq(knowledgeChannels.active, true));
+
+    const handles = [];
+    for (const ch of channels) {
+      const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
+        "knowledge-slack-ingest-channel",
+        { channelDbId: ch.id },
+      );
+      handles.push({ channel: ch.name, runId: handle.id });
+    }
 
     return NextResponse.json({
-      message: `Ingestion triggered for channel ${channelDbId}`,
-      runId: handle.id,
+      message: `Ingestion triggered for ${handles.length} channels`,
+      runs: handles,
     });
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Ingestion trigger failed: ${errMsg}` }, { status: 500 });
   }
-
-  // For all-channels: trigger each individually
-  // (scheduled task handles this via cron; manual trigger fans out)
-  const { db } = await import("@/lib/db");
-  const { knowledgeChannels } = await import("@/lib/schema");
-  const { eq } = await import("drizzle-orm");
-
-  const channels = await db
-    .select({ id: knowledgeChannels.id, name: knowledgeChannels.slackChannelName })
-    .from(knowledgeChannels)
-    .where(eq(knowledgeChannels.active, true));
-
-  const handles = [];
-  for (const ch of channels) {
-    const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
-      "knowledge-slack-ingest-channel",
-      { channelDbId: ch.id },
-    );
-    handles.push({ channel: ch.name, runId: handle.id });
-  }
-
-  return NextResponse.json({
-    message: `Ingestion triggered for ${handles.length} channels`,
-    runs: handles,
-  });
 }

@@ -273,7 +273,7 @@ async function sendThreadedDigest(
           threadTs: m.threadTs,
           messageTs: m.messageTs,
         })),
-      );
+      ).onConflictDoNothing();
       logger.info(`Stored ${digestMappings.length} digest message mappings for ${userId}`);
     } catch (err) {
       logger.error(`Failed to store digest mappings: ${err instanceof Error ? err.message : String(err)}`);

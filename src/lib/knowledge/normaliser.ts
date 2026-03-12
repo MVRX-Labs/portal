@@ -138,12 +138,14 @@ export async function normaliseChannel(channelDbId: string, logger: Logger): Pro
 
         // Re-format just this account's messages with fresh indices
         const { text: accountText, indexToEventId: accountIndexMap } = formatMessagesForPrompt(accountEvents);
-        // Use a fresh copy of existingForDedup per account group to prevent
-        // cross-account dedup contamination within the same batch
+        // Use fresh copies per account group to prevent cross-account dedup contamination.
+        // Both extractedSoFar and existingForDedup are mutated inside runExtractionWithRetry,
+        // so each account group needs its own copy.
         const accountExistingForDedup = [...existingForDedup];
+        const accountExtractedSoFar = [...extractedSoFar];
         const batchResult = await runExtractionWithRetry(
           accountText, accountCtx, openItems, channel.channelCategory,
-          accountId, channelDbId, visibility, extractedSoFar, accountExistingForDedup, accountIndexMap, logger,
+          accountId, channelDbId, visibility, accountExtractedSoFar, accountExistingForDedup, accountIndexMap, logger,
         );
         result.unitsExtracted += batchResult.units;
         result.unitsDeduplicated += batchResult.deduped;
@@ -219,7 +221,8 @@ async function runExtractionWithRetry(
         await db.insert(knowledgeUnits).values(kept).onConflictDoNothing();
         for (const u of kept) {
           extractedSoFar.push({ type: u.unitType, content: u.content, assignee: u.assignee, status: u.status });
-          existingForDedup.push({ content: u.content, assignee: u.assignee });
+          // Don't push to existingForDedup here — it should remain the DB snapshot.
+          // Dedup across retries works via extractedSoFar, which is included in the combined array.
         }
       }
 

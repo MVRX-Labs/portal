@@ -83,10 +83,24 @@ async function updateSlackMessage(
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const rawBody = await req.text();
 
-  // Slack signature verification
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // URL verification challenge — must respond before signature check
+  // Slack sends this once during setup; it IS signed, but we handle it first
+  // to avoid any timing/config issues during initial setup.
+  if (payload.type === "url_verification") {
+    return NextResponse.json({ challenge: payload.challenge });
+  }
+
+  // Slack signature verification (all non-challenge requests)
   const signingSecret = process.env.KNOWLEDGE_SLACK_SIGNING_SECRET;
 
-  // Fix 1: Fail closed — if secret is not configured, reject all requests
+  // Fail closed — if secret is not configured, reject all requests
   if (!signingSecret) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
@@ -94,7 +108,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const timestamp = req.headers.get("x-slack-request-timestamp") ?? "";
   const signature = req.headers.get("x-slack-signature") ?? "";
 
-  // Fix 2: Reject stale/invalid requests (>5 minutes old) — guard against NaN bypass
+  // Reject stale/invalid requests (>5 minutes old) — guard against NaN bypass
   const now = Math.floor(Date.now() / 1000);
   const ts = parseInt(timestamp, 10);
   if (isNaN(ts) || Math.abs(now - ts) > 300) {
@@ -103,18 +117,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (!verifySlackSignature(signingSecret, rawBody, timestamp, signature)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
-  }
-
-  let payload: Record<string, unknown>;
-  try {
-    payload = JSON.parse(rawBody) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  // URL verification challenge
-  if (payload.type === "url_verification") {
-    return NextResponse.json({ challenge: payload.challenge });
   }
 
   // Event callback

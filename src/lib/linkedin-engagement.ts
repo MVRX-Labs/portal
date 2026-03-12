@@ -150,10 +150,11 @@ function parsePostDate(raw: unknown): Date | null {
   return null;
 }
 
-function isRecentPost(parsedDate: Date | null, hoursAgo: number): boolean {
+/** Check whether a post falls within a time window: between hoursBackMin and hoursBackMax hours ago. */
+function isInTimeWindow(parsedDate: Date | null, hoursBackMax: number, hoursBackMin = 0): boolean {
   if (!parsedDate) return false;
-  const cutoff = new Date(Date.now() - hoursAgo * 3_600_000);
-  return parsedDate >= cutoff;
+  const ageMs = Date.now() - parsedDate.getTime();
+  return ageMs >= hoursBackMin * 3_600_000 && ageMs <= hoursBackMax * 3_600_000;
 }
 
 function extractDateField(post: Record<string, unknown>): { key: string; raw: unknown } | null {
@@ -192,7 +193,8 @@ export interface ScrapedPost {
 export async function scrapeRecentPosts(
   linkedinUrl: string,
   signal?: AbortSignal,
-  hoursBack = 25
+  hoursBack = 25,
+  hoursBackMin = 0
 ): Promise<ScrapedPost[]> {
   const results = await runApifyActor(
     POSTS_ACTOR_ID,
@@ -219,7 +221,7 @@ export async function scrapeRecentPosts(
   const posts: ScrapedPost[] = [];
   let skippedNoUrl = 0;
   let skippedNoDate = 0;
-  let skippedTooOld = 0;
+  let skippedOutsideWindow = 0;
   let skippedRepost = 0;
 
   for (const item of results) {
@@ -246,8 +248,8 @@ export async function scrapeRecentPosts(
       continue;
     }
 
-    if (!isRecentPost(parsedDate, hoursBack)) {
-      skippedTooOld++;
+    if (!isInTimeWindow(parsedDate, hoursBack, hoursBackMin)) {
+      skippedOutsideWindow++;
       continue;
     }
 
@@ -260,9 +262,10 @@ export async function scrapeRecentPosts(
     });
   }
 
+  const windowDesc = hoursBackMin > 0 ? `${hoursBackMin}–${hoursBack} hours old` : `last ${hoursBack} hours`;
   log(
-    `Found ${posts.length} original posts from the last ${hoursBack} hours (out of ${results.length} total). ` +
-      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedTooOld} older than ${hoursBack} hours`
+    `Found ${posts.length} original posts in window ${windowDesc} (out of ${results.length} total). ` +
+      `Skipped: ${skippedRepost} reposts, ${skippedNoUrl} no URL, ${skippedNoDate} no/unparseable date, ${skippedOutsideWindow} outside window`
   );
   return posts;
 }

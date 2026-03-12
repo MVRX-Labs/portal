@@ -17,6 +17,8 @@ import {
 import { updateContactBodySchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
 import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
 import { NotesField } from "@/components/notes-field";
+import { CreateAccountModal } from "@/components/create-account-modal";
+import { CreateContactModal } from "@/components/create-contact-modal";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -95,6 +97,7 @@ function ExpandedView({
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactEdits, setContactEdits] = useState<Partial<Contact>>({});
   const [savingContact, setSavingContact] = useState(false);
+  const [showCreateContact, setShowCreateContact] = useState(false);
 
   // Reset editable fields when account changes
   useEffect(() => {
@@ -284,9 +287,17 @@ function ExpandedView({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Left: Contacts */}
         <div>
-          <h3 className="text-sm font-semibold mb-3 text-(--muted) uppercase tracking-wide">
-            Contacts ({loadingContacts ? "..." : contacts.length})
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide">
+              Contacts ({loadingContacts ? "..." : contacts.length})
+            </h3>
+            <button
+              onClick={() => setShowCreateContact(true)}
+              className="text-xs text-(--muted) hover:text-(--foreground) hover:underline"
+            >
+              + Add Contact
+            </button>
+          </div>
           {loadingContacts ? (
             <p className="text-sm text-(--muted)">Loading...</p>
           ) : contacts.length === 0 ? (
@@ -496,6 +507,17 @@ function ExpandedView({
         </div>
       </div>
 
+      {showCreateContact && (
+        <CreateContactModal
+          accountId={account.id}
+          onCreated={() => {
+            setShowCreateContact(false);
+            fetchContacts();
+          }}
+          onClose={() => setShowCreateContact(false)}
+        />
+      )}
+
       {/* Editable fields — only shown in edit mode */}
       {editMode && (
         <div className="border-t border-(--border) pt-4">
@@ -671,6 +693,7 @@ function AccountsContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -743,6 +766,9 @@ function AccountsContent() {
               Show hidden ({hiddenCount})
             </label>
           )}
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary text-sm">
+            + Create Account
+          </button>
           <button
             onClick={() => setEditMode(!editMode)}
             className={editMode ? "btn-primary text-sm" : "btn-secondary text-sm"}
@@ -885,6 +911,16 @@ function AccountsContent() {
           </tbody>
         </table>
       </div>
+
+      {showCreateModal && (
+        <CreateAccountModal
+          onCreated={(account) => {
+            setAccounts((prev) => [account, ...prev]);
+            setShowCreateModal(false);
+          }}
+          onClose={() => setShowCreateModal(false)}
+        />
+      )}
     </div>
   );
 }

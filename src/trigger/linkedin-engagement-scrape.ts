@@ -24,6 +24,9 @@ interface ScrapePayload {
   sourceType: "company" | "personal";
   runId?: string;
   hoursBack?: number;
+  hoursBackMin?: number;
+  /** Label for Slack notifications: "early" (~6h), "late" (~72h), or omitted for manual/full scrapes. */
+  scrapeWindow?: "early" | "late";
 }
 
 export const linkedinEngagementScrapeTask = task({
@@ -35,7 +38,7 @@ export const linkedinEngagementScrapeTask = task({
     minTimeoutInMs: 2000,
   },
   run: async (payload: ScrapePayload, { signal }) => {
-    const { accountId, contactId, linkedinUrl, sourceType, runId, hoursBack } = payload;
+    const { accountId, contactId, linkedinUrl, sourceType, runId, hoursBack, hoursBackMin, scrapeWindow } = payload;
 
     try {
       logger.info("Starting engagement scrape", {
@@ -53,7 +56,7 @@ export const linkedinEngagementScrapeTask = task({
         percentage: 0,
       });
 
-      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal, hoursBack ?? 25);
+      const recentPosts = await scrapeRecentPosts(linkedinUrl, signal, hoursBack ?? 25, hoursBackMin ?? 0);
       logger.info(`Found ${recentPosts.length} recent posts`);
 
       if (recentPosts.length === 0) {
@@ -399,11 +402,17 @@ export const linkedinEngagementScrapeTask = task({
           );
           const slackData = await slackRes.json();
           if (slackData.ok) {
+            const windowLabel =
+              scrapeWindow === "early"
+                ? " (early analysis — ~6h after post)"
+                : scrapeWindow === "late"
+                  ? " (72h analysis)"
+                  : "";
             await sendSlackFile(
               slackData.user.id,
               filename,
               csvContent,
-              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*`
+              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*${windowLabel}`
             );
             logger.info(`Sent new leads CSV to Tarun for ${accountName}`);
           } else {

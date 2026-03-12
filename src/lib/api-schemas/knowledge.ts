@@ -50,3 +50,14 @@ export const triggerIngestBodySchema = z.object({
 });
 
 export type TriggerIngestBody = z.infer<typeof triggerIngestBodySchema>;
+
+// --- Digest schemas ---
+
+export const updateUnitsBodySchema = z.object({
+  updates: z.array(z.object({
+    unitId: z.string(),
+    status: z.enum(["open", "done", "dismissed"]),
+  })).min(1),
+});
+
+export type UpdateUnitsBody = z.infer<typeof updateUnitsBodySchema>;

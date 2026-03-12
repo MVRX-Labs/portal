@@ -22,7 +22,7 @@ export type KnowledgeUnitType =
   | "product_bug"
   | "product_feature";
 
-export type KnowledgeUnitStatus = "open" | "done" | "superseded";
+export type KnowledgeUnitStatus = "open" | "done";
 
 export type StateDocType = "brief" | "open_items" | "activity_log";
 

@@ -48,10 +48,10 @@ interface ResolveResult {
  * Resolve all unresolved Drive links across knowledge events.
  */
 export async function resolveDriveLinks(
-  channelId?: string,
-  logger?: { info: (msg: string) => void; error: (msg: string) => void },
+  channelId: string | undefined,
+  logger: { info: (msg: string) => void; error: (msg: string) => void },
 ): Promise<ResolveResult> {
-  const log = logger ?? { info: console.log, error: console.error };
+  const log = logger;
 
   // Find events with drive links but no resolved content
   const conditions = [
@@ -102,8 +102,11 @@ export async function resolveDriveLinks(
       }
     }
 
-    if (resolvedParts.length > 0) {
-      // Truncate to avoid storing huge documents (keep first 10K chars per event)
+    // Only store resolvedContent if at least one link resolved with real content.
+    // Error placeholders (e.g. "[Failed to fetch: ...]") should not count —
+    // leaving resolvedContent null allows the next run to retry.
+    const successParts = resolvedParts.filter((p) => !p.startsWith("["));
+    if (successParts.length > 0) {
       const combined = resolvedParts.join("\n\n---\n\n").slice(0, 10_000);
 
       await db
@@ -112,7 +115,10 @@ export async function resolveDriveLinks(
         .where(eq(knowledgeEvents.id, event.id));
 
       result.resolved++;
-      log.info(`Resolved ${links.length} Drive link(s) for event ${event.id} (${event.authorName})`);
+      log.info(`Resolved ${successParts.length}/${links.length} Drive link(s) for event ${event.id} (${event.authorName})`);
+    } else if (resolvedParts.length > 0) {
+      log.error(`All ${links.length} Drive link(s) failed for event ${event.id} — will retry next run`);
+      result.errors.push(`${event.id}: all ${links.length} links failed`);
     }
   }
 

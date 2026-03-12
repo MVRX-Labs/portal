@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS knowledge_digest_messages (
   thread_ts           TEXT NOT NULL,
   message_ts          TEXT NOT NULL,
   marked_done         BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at          TIMESTAMP DEFAULT NOW() NOT NULL
+  created_at          TIMESTAMP DEFAULT NOW() NOT NULL,
+  CONSTRAINT knowledge_digest_messages_unit_id_recipient_slack_id_unique UNIQUE (unit_id, recipient_slack_id)
 )
 `;
 

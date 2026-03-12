@@ -4,11 +4,13 @@ import { accounts, contacts, toolRuns, engagementProfiles } from "@/lib/schema";
 import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { linkedinEngagementScrapeTask } from "./linkedin-engagement-scrape";
 import { outboundEngagementScrapeTask } from "./outbound-engagement-scrape";
+import { sendSlackNotification } from "@/lib/slack";
 
 export const linkedinEngagementScheduler = schedules.task({
   id: "linkedin-engagement-scheduler",
   cron: "0 */2 * * *", // Every 2 hours — triggers early (~6h) and late (~72h) analysis windows
-  run: async () => {
+  run: async (_payload, { ctx }) => {
+    try {
     logger.info("Starting LinkedIn engagement scheduler");
 
     // --- Inbound engagement ---
@@ -167,5 +169,15 @@ export const linkedinEngagementScheduler = schedules.task({
       inboundTasks: items.length,
       outboundProfiles: outboundCount,
     };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await sendSlackNotification({
+        tool: "linkedin-engagement-scheduler",
+        userName: "system",
+        error: errMsg,
+        runId: ctx.run.id,
+      });
+      throw err;
+    }
   },
 });

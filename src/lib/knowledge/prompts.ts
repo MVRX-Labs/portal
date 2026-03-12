@@ -303,7 +303,7 @@ function formatSingleMessage(
   const ts = evt.messageAt.toISOString().slice(0, 16);
   const author = evt.authorName ?? "Unknown";
   const side = evt.authorSide ? ` (${evt.authorSide})` : "";
-  let content = evt.rawContent ?? "";
+  let content = evt.rawContent;
 
   if (evt.resolvedContent) {
     if (evt.contentType === "voice_note") {

@@ -310,7 +310,8 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
         and(eq(knowledgeUnits.status, "done"), gt(knowledgeUnits.createdAt, sevenDaysAgo)),
       ),
     )
-    .orderBy(desc(knowledgeUnits.createdAt));
+    .orderBy(desc(knowledgeUnits.createdAt))
+    .limit(500);
 
   const accountRows = await db.select({ id: accounts.id, name: accounts.name, slug: accounts.slug }).from(accounts);
   const accountMap = new Map(accountRows.map((a) => [a.id, a]));

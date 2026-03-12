@@ -33,29 +33,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // For all-channels: trigger each individually
-    // (scheduled task handles this via cron; manual trigger fans out)
-    const { db } = await import("@/lib/db");
-    const { knowledgeChannels } = await import("@/lib/schema");
-    const { eq } = await import("drizzle-orm");
-
-    const channels = await db
-      .select({ id: knowledgeChannels.id, name: knowledgeChannels.slackChannelName })
-      .from(knowledgeChannels)
-      .where(eq(knowledgeChannels.active, true));
-
-    const handles = [];
-    for (const ch of channels) {
-      const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
-        "knowledge-slack-ingest-channel",
-        { channelDbId: ch.id },
-      );
-      handles.push({ channel: ch.name, runId: handle.id });
-    }
+    // For all-channels: trigger the scheduled task directly.
+    // This runs ingest → resolve → normalise once (not per-channel),
+    // avoiding redundant LLM costs from parallel normalise-all runs.
+    const handle = await tasks.trigger("knowledge-slack-ingest-scheduled", {});
 
     return NextResponse.json({
-      message: `Ingestion triggered for ${handles.length} channels`,
-      runs: handles,
+      message: "Full ingestion pipeline triggered (all channels → resolve → normalise)",
+      runId: handle.id,
     });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);

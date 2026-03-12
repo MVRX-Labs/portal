@@ -422,7 +422,7 @@ export const linkedinEngagementScrapeTask = task({
           logger.error("Failed to send new leads Slack notification", {
             error: slackErr instanceof Error ? slackErr.message : String(slackErr),
           });
-          throw slackErr;
+          // Non-fatal: scrape succeeded, don't fail the task over a Slack notification error
         }
       }
 

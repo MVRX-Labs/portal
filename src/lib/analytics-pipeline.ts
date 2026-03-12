@@ -55,7 +55,8 @@ export async function runWeeklyReportForProfile(
     const [acct] = await db
       .select({ analyticsSlackChannel: accounts.analyticsSlackChannel })
       .from(accounts)
-      .where(eq(accounts.id, accountId));
+      .where(eq(accounts.id, accountId))
+      .limit(1);
     channelId = acct?.analyticsSlackChannel ?? null;
   }
   if (channelId) {

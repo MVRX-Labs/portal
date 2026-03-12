@@ -69,11 +69,18 @@ export interface WeeklyReportData {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Returns the Monday of the ISO week containing `date`, at 00:00:00 UTC.
+ *
+ * NOTE: uses UTC consistently throughout (getUTCDay / setUTCDate / setUTCHours)
+ * to avoid London DST boundary edge cases where a local-time Monday (e.g. 00:30 BST)
+ * is still Sunday in UTC and would resolve to the previous week.
+ */
 export function getWeekStart(date: Date = new Date()): Date {
   const d = new Date(date);
   d.setUTCHours(0, 0, 0, 0);
-  const day = d.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
+  const day = d.getUTCDay(); // 0=Sun … 6=Sat
+  const diff = day === 0 ? -6 : 1 - day; // adjust to Monday
   d.setUTCDate(d.getUTCDate() + diff);
   return d;
 }

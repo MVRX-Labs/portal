@@ -93,3 +93,16 @@ export function extractLinks(text: string, attachments?: SlackMessage["attachmen
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/**
+ * Escape user-generated content for safe embedding inside Slack mrkdwn formatting.
+ * Prevents the user's text from accidentally breaking surrounding bold/italic/strikethrough etc.
+ */
+export function escapeSlackMrkdwn(text: string): string {
+  return text
+    .replace(/~/g, "\\~")
+    .replace(/\*/g, "\\*")
+    .replace(/_/g, "\\_")
+    .replace(/`/g, "\\`")
+    .replace(/>/g, "&gt;");
+}

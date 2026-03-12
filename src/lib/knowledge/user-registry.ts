@@ -31,6 +31,7 @@ export async function loadSlackUsers(): Promise<SlackUser[]> {
 
   const users: SlackUser[] = [];
   let cursor = "";
+  let paginationError = false;
 
   do {
     const url = `https://slack.com/api/users.list?limit=200${cursor ? `&cursor=${cursor}` : ""}`;
@@ -48,7 +49,11 @@ export async function loadSlackUsers(): Promise<SlackUser[]> {
       response_metadata?: { next_cursor?: string };
     };
 
-    if (!data.ok) break;
+    if (!data.ok) {
+      // Pagination failed mid-way — don't cache partial results
+      paginationError = true;
+      break;
+    }
 
     for (const m of data.members) {
       if (m.deleted) continue;
@@ -68,10 +73,17 @@ export async function loadSlackUsers(): Promise<SlackUser[]> {
     cursor = data.response_metadata?.next_cursor || "";
   } while (cursor);
 
+  if (paginationError) {
+    // Return partial results WITHOUT caching so the next call retries the full list
+    console.error("[user-registry] users.list pagination failed — returning partial results without caching");
+    return users;
+  }
+
   // For shared channels, cross-workspace users aren't in users.list.
   // Load them from channel memberships.
   await loadCrossWorkspaceUsers(token, users);
 
+  // Only cache after full pagination + cross-workspace load succeeds
   userCache = users;
   return users;
 }
@@ -107,28 +119,32 @@ async function loadCrossWorkspaceUsers(token: string, users: SlackUser[]): Promi
     for (const uid of allMembers) {
       if (knownIds.has(uid)) continue;
       // Resolve this cross-workspace user
-      const uRes = await fetch(`https://slack.com/api/users.info?user=${uid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const uData = (await uRes.json()) as { ok: boolean; user?: { id: string; real_name?: string; is_bot?: boolean; team_id: string; profile?: { real_name?: string; display_name?: string; email?: string } } };
-      if (!uData.ok || !uData.user) continue;
-
-      const m = uData.user;
-      const realName = m.profile?.real_name || m.real_name || "";
-      users.push({
-        id: m.id,
-        realName,
-        displayName: m.profile?.display_name || "",
-        email: m.profile?.email || null,
-        teamId: m.team_id,
-        isBot: m.is_bot || false,
-        side: m.is_bot ? "system" : MVRX_TEAM_IDS.has(m.team_id) ? "mvrx" : "client",
-      });
-      knownIds.add(uid);
+      try {
+        const uRes = await fetch(`https://slack.com/api/users.info?user=${uid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const uData = (await uRes.json()) as { ok: boolean; user?: { id: string; real_name?: string; is_bot?: boolean; team_id: string; profile?: { real_name?: string; display_name?: string; email?: string } } };
+        if (uData.ok && uData.user) {
+          const m = uData.user;
+          const realName = m.profile?.real_name || m.real_name || "";
+          users.push({
+            id: m.id,
+            realName,
+            displayName: m.profile?.display_name || "",
+            email: m.profile?.email || null,
+            teamId: m.team_id,
+            isBot: m.is_bot || false,
+            side: m.is_bot ? "system" : MVRX_TEAM_IDS.has(m.team_id) ? "mvrx" : "client",
+          });
+          knownIds.add(uid);
+        }
+      } catch (err) {
+        console.error(`[user-registry] Failed to resolve cross-workspace user ${uid}:`, err);
+        // Continue — one bad user shouldn't break the loop
+      }
+      // Rate limit: 200ms after EACH users.info call
+      await new Promise((r) => setTimeout(r, 200));
     }
-
-    // Rate limit courtesy
-    await new Promise((r) => setTimeout(r, 200));
   }
 }
 

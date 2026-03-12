@@ -138,9 +138,12 @@ export async function normaliseChannel(channelDbId: string, logger: Logger): Pro
 
         // Re-format just this account's messages with fresh indices
         const { text: accountText, indexToEventId: accountIndexMap } = formatMessagesForPrompt(accountEvents);
+        // Use a fresh copy of existingForDedup per account group to prevent
+        // cross-account dedup contamination within the same batch
+        const accountExistingForDedup = [...existingForDedup];
         const batchResult = await runExtractionWithRetry(
           accountText, accountCtx, openItems, channel.channelCategory,
-          accountId, channelDbId, visibility, extractedSoFar, existingForDedup, accountIndexMap, logger,
+          accountId, channelDbId, visibility, extractedSoFar, accountExistingForDedup, accountIndexMap, logger,
         );
         result.unitsExtracted += batchResult.units;
         result.unitsDeduplicated += batchResult.deduped;

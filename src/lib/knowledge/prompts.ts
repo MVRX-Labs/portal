@@ -214,8 +214,8 @@ export function formatMessagesForPrompt(
     }
   }
 
-  for (const [threadTs, replies] of threads) {
-    parts.push(`[Thread ${threadTs}]`);
+  for (const [, replies] of threads) {
+    parts.push(`[Thread — parent message not in this batch]`);
     for (const reply of replies) {
       indexToEventId.set(msgIndex, reply.id);
       parts.push(`  ${formatSingleMessage(reply, msgIndex++)}`);

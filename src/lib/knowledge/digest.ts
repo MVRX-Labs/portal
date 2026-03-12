@@ -17,6 +17,7 @@
 import { db } from "@/lib/db";
 import { knowledgeUnits, accounts, knowledgeDigestMessages } from "@/lib/schema";
 import { eq, desc, or, and, gt } from "drizzle-orm";
+import { escapeSlackMrkdwn } from "./helpers";
 
 type Logger = { info: (msg: string) => void; error: (msg: string) => void };
 
@@ -128,6 +129,24 @@ async function sendThreadedDigest(
   sections: DigestSection[],
   logger: Logger,
 ): Promise<number> {
+  // Idempotency guard: skip if a digest was already sent in the last 12 hours
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+  const [recentDigest] = await db
+    .select({ id: knowledgeDigestMessages.id })
+    .from(knowledgeDigestMessages)
+    .where(
+      and(
+        eq(knowledgeDigestMessages.recipientSlackId, userId),
+        gt(knowledgeDigestMessages.createdAt, twelveHoursAgo),
+      ),
+    )
+    .limit(1);
+
+  if (recentDigest) {
+    logger.info(`Digest already sent to ${userId} in the last 12 hours — skipping`);
+    return 0;
+  }
+
   const channelId = await openDM(userId);
   let messageCount = 0;
 
@@ -204,7 +223,8 @@ async function sendThreadedDigest(
       const typeTag = item.type !== "action_item" ? `\n_[${item.type.replace(/_/g, " ")}]_` : "";
       const staleWarning = item.stale ? "\n⚠️ _Stale — no activity in 3+ weeks_" : "";
       const contextLine = `\nReact ✅ to mark done · ID: \`${item.id}\``;
-      const content = item.content.slice(0, 500) + (item.content.length > 500 ? "…" : "");
+      const rawContent = item.content.slice(0, 500) + (item.content.length > 500 ? "…" : "");
+      const content = escapeSlackMrkdwn(rawContent);
       const itemText = `${emoji} ${content}${assigneeTag}${typeTag}${staleWarning}${contextLine}`;
 
       const messageTs = await postThreadReply(channelId, parentTs, itemText, [
@@ -228,7 +248,8 @@ async function sendThreadedDigest(
       const doneLines = section.recentlyDone
         .map((item) => {
           const assigneeTag = item.assignee ? ` → ${item.assignee}` : "";
-          return `✅ ~${item.content.slice(0, 100)}${item.content.length > 100 ? "…" : ""}~${assigneeTag}`;
+          const doneContent = escapeSlackMrkdwn(item.content.slice(0, 100) + (item.content.length > 100 ? "…" : ""));
+          return `✅ ~${doneContent}~${assigneeTag}`;
         })
         .join("\n");
       const doneText = `*Recently completed in ${section.accountName}:*\n${doneLines}`;
@@ -321,11 +342,12 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
       const meta = u.metadata as Record<string, unknown> | null;
       const completedAt = meta?.completedAt as string | undefined;
       if (completedAt) {
-        // Unit was marked done via ✅ reaction — use the actual completion time
+        // Unit was explicitly marked done via ✅ reaction — use the actual completion time
         return new Date(completedAt) > oneDayAgo;
       }
-      // No completedAt → unit was extracted as already "done" (e.g. from historical data)
-      // Fall back to createdAt so it still appears in the digest if newly extracted
+      // No completedAt → unit was extracted by the LLM as already "done".
+      // Only show if it was genuinely created recently (last 24h) — i.e. a new extraction.
+      // Old units that were always "done" should NOT appear as "recently completed".
       const created = u.createdAt ? new Date(u.createdAt) : null;
       return created ? created > oneDayAgo : false;
     });

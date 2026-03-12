@@ -88,10 +88,17 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
       if (msg.reply_count && msg.reply_count > 0) {
         const replies = await fetchThreadReplies(channel.slackChannelId, msg.ts);
         for (const reply of replies) {
-          const rp = await processMessage(reply, channel, visibility, logger, msg.ts);
-          if (rp !== "skipped") {
-            result.newThreadReplies++;
-            // Don't update latestTs here — see comment above
+          try {
+            const rp = await processMessage(reply, channel, visibility, logger, msg.ts);
+            if (rp !== "skipped") {
+              result.newThreadReplies++;
+              // Don't update latestTs here — see comment above
+            }
+          } catch (replyErr) {
+            const replyErrMsg = replyErr instanceof Error ? replyErr.message : String(replyErr);
+            result.errors.push(`reply ${reply.ts} (thread ${msg.ts}): ${replyErrMsg}`);
+            logger.error(`Error processing thread reply ${reply.ts}: ${replyErrMsg}`);
+            // Continue processing remaining replies
           }
         }
         await sleep(200);

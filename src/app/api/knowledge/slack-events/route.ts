@@ -22,9 +22,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { knowledgeDigestMessages, knowledgeUnits } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendSlackNotification } from "@/lib/slack";
+import { escapeSlackMrkdwn } from "@/lib/knowledge/helpers";
 
 // ---------- Slack signature verification ----------
 
@@ -203,13 +204,7 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
     })
     .where(eq(knowledgeUnits.id, digestMsg.unitId));
 
-  // Update digest message record
-  await db
-    .update(knowledgeDigestMessages)
-    .set({ markedDone: true })
-    .where(eq(knowledgeDigestMessages.id, digestMsg.id));
-
-  // Edit the Slack message to show it's completed
+  // Build the completed message text
   const typeEmoji: Record<string, string> = {
     action_item: "🔹",
     decision: "⚖️",
@@ -223,12 +218,47 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
     product_feature: "✨",
   };
   const emoji = typeEmoji[unit.unitType] || "🔹";
-  const content = unit.content.slice(0, 500) + (unit.content.length > 500 ? "…" : "");
-  const completedText = `✅ ~${emoji} ${content}~\n_Marked done by <@${reactingUser}>_`;
+  const rawContent = unit.content.slice(0, 500) + (unit.content.length > 500 ? "…" : "");
+  const safeContent = escapeSlackMrkdwn(rawContent);
+  const completedText = `✅ ~${emoji} ${safeContent}~\n_Marked done by <@${reactingUser}>_`;
 
+  // Update the triggering digest message record
+  await db
+    .update(knowledgeDigestMessages)
+    .set({ markedDone: true })
+    .where(eq(knowledgeDigestMessages.id, digestMsg.id));
+
+  // Edit the triggering Slack message
   await updateSlackMessage(channelId, messageTs, completedText, [
     { type: "section", text: { type: "mrkdwn", text: completedText } },
   ]);
+
+  // Look up ALL other digest messages for the same unitId (other recipients' DMs)
+  const otherDigestMsgs = await db
+    .select()
+    .from(knowledgeDigestMessages)
+    .where(
+      and(
+        eq(knowledgeDigestMessages.unitId, digestMsg.unitId),
+        ne(knowledgeDigestMessages.id, digestMsg.id),
+      ),
+    );
+
+  for (const other of otherDigestMsgs) {
+    if (other.markedDone) continue; // Already updated
+    await db
+      .update(knowledgeDigestMessages)
+      .set({ markedDone: true })
+      .where(eq(knowledgeDigestMessages.id, other.id));
+    try {
+      await updateSlackMessage(other.channelId, other.messageTs, completedText, [
+        { type: "section", text: { type: "mrkdwn", text: completedText } },
+      ]);
+    } catch (err) {
+      console.error(`[slack-events] Failed to update digest message ${other.id} for other recipient:`, err);
+      // Don't fail the whole handler for a secondary update error
+    }
+  }
 }
 
 async function handleReactionRemoved(channelId: string, messageTs: string): Promise<void> {

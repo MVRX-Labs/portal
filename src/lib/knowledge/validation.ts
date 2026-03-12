@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { contacts, users, knowledgeUnits, accounts } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { KnowledgeUnitType, KnowledgeUnitStatus } from "./types";
 import { resolveUserName } from "./user-registry";
 
@@ -28,14 +28,14 @@ const extractedUnitSchema = z.object({
   dueDate: z.string().nullable().default(null),
   status: z.enum(["open", "done"]).default("open"),
   confidence: z.number().min(0).max(100),
-  sourceMessages: z.array(z.number().int().positive()).min(1),
+  sourceMessages: z.array(z.number().int().min(0)).min(1),
   reasoning: z.string(),
 });
 
 const completedItemSchema = z.object({
   matchDescription: z.string(),
   evidence: z.string(),
-  sourceMessages: z.array(z.number().int().positive()).optional().default([]),
+  sourceMessages: z.array(z.number().int().min(0)).optional().default([]),
 });
 
 export const extractionOutputSchema = z.object({
@@ -46,7 +46,7 @@ export const extractionOutputSchema = z.object({
 export type ExtractionOutput = z.infer<typeof extractionOutputSchema>;
 
 export const classificationGroupSchema = z.object({
-  messageIndices: z.array(z.number().int().positive()).min(1),
+  messageIndices: z.array(z.number().int().min(0)).min(1),
   accountSlug: z.string().nullable(),
   category: z.enum(["action_items", "decision", "update", "content_work", "discussion", "noise"]),
   worthExtracting: z.boolean(),
@@ -101,13 +101,16 @@ export async function validateAndResolve(
       ? db.select({ id: contacts.id, name: contacts.name }).from(contacts).where(eq(contacts.accountId, accountId))
       : Promise.resolve([]),
     db.select({ id: users.id, name: users.name }).from(users),
-    loadOpenItemsForMatching(accountId),
+    loadOpenItemsForMatching(accountId, channelId),
   ]);
 
   // Process extracted units
   for (const unit of output.units) {
     const sourceEventIds = unit.sourceMessages
-      .map((idx) => indexToEventId.get(idx))
+      .map((idx) => {
+        // Handle 0-based LLM responses: try as-is first, then +1 for 1-based maps
+        return indexToEventId.get(idx) ?? indexToEventId.get(idx + 1);
+      })
       .filter((id): id is string => !!id);
 
     if (sourceEventIds.length === 0) {
@@ -202,14 +205,24 @@ function findByName<T extends { name: string }>(list: T[], name: string): T | nu
 }
 
 /** Load open items for completion matching (includes metadata for evidence). */
-async function loadOpenItemsForMatching(accountId: string | null): Promise<Array<{ id: string; content: string; metadata: unknown }>> {
+async function loadOpenItemsForMatching(
+  accountId: string | null,
+  channelId: string,
+): Promise<Array<{ id: string; content: string; metadata: unknown }>> {
   const conditions = [eq(knowledgeUnits.status, "open")];
-  if (accountId) conditions.push(eq(knowledgeUnits.accountId, accountId));
+  if (accountId) {
+    conditions.push(eq(knowledgeUnits.accountId, accountId));
+  } else {
+    // General channels: restrict to same channelId to avoid full-table scan
+    conditions.push(isNull(knowledgeUnits.accountId));
+    conditions.push(eq(knowledgeUnits.channelId, channelId));
+  }
 
   return db
     .select({ id: knowledgeUnits.id, content: knowledgeUnits.content, metadata: knowledgeUnits.metadata })
     .from(knowledgeUnits)
-    .where(and(...conditions));
+    .where(and(...conditions))
+    .limit(500);
 }
 
 /** Match a completion description against preloaded open items. */

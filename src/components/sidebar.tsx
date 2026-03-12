@@ -112,6 +112,17 @@ export function Sidebar() {
               User Management
             </Link>
             <Link
+              href={`/admin/knowledge${qs}`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                pathname.startsWith("/admin/knowledge")
+                  ? "bg-(--input) text-white"
+                  : "text-(--muted) hover:text-white hover:bg-(--input)"
+              }`}
+            >
+              <span className="text-base">🧠</span>
+              Knowledge Hub
+            </Link>
+            <Link
               href={`/admin/secrets${qs}`}
               className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                 pathname.startsWith("/admin/secrets")

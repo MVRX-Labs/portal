@@ -225,6 +225,69 @@ export function formatMessagesForPrompt(
   return { text: parts.join("\n"), indexToEventId };
 }
 
+/**
+ * State synthesis prompt — generates/updates per-account state documents.
+ */
+export function buildStateSynthesisPrompt(
+  accountName: string,
+  contacts: AccountContext["contacts"],
+  openUnits: Array<{ type: string; content: string; assignee: string | null; createdAt: Date }>,
+  recentDoneUnits: Array<{ type: string; content: string; assignee: string | null; completedAt?: string }>,
+  currentBrief: string | null,
+  currentActivityLog: string | null,
+): string {
+  const contactList = contacts.length > 0
+    ? contacts.map((c) => `- ${c.name}${c.role ? ` (${c.role})` : ""} [${c.side}]`).join("\n")
+    : "No contacts registered";
+
+  const openSection = openUnits.length > 0
+    ? openUnits.map((u) => `- [${u.type}] ${u.content}${u.assignee ? ` (assigned: ${u.assignee})` : ""} — created ${u.createdAt.toISOString().slice(0, 10)}`).join("\n")
+    : "No open items";
+
+  const doneSection = recentDoneUnits.length > 0
+    ? recentDoneUnits.map((u) => `- [${u.type}] ${u.content}${u.assignee ? ` (${u.assignee})` : ""}${u.completedAt ? ` — completed ${u.completedAt}` : ""}`).join("\n")
+    : "No recently completed items";
+
+  const briefSection = currentBrief ? `\nCurrent brief (update, don't rewrite from scratch unless outdated):\n${currentBrief}` : "\nNo existing brief — create one from scratch.";
+  const activitySection = currentActivityLog ? `\nCurrent activity log (append new activity, trim entries older than 14 days):\n${currentActivityLog}` : "\nNo existing activity log — create one from scratch.";
+
+  return `You are synthesising state documents for a client account. These docs are used by the MVRX team to quickly understand the account status.
+
+Account: ${accountName}
+Contacts:
+${contactList}
+
+Open knowledge units:
+${openSection}
+
+Recently completed items (last 14 days):
+${doneSection}
+${briefSection}
+${activitySection}
+
+Generate three state documents:
+
+1. **brief**: Executive summary (~500 words). Cover: current status, active workstreams, key people, recent decisions, open blockers. Write in present tense, be specific.
+
+2. **openItems**: Structured markdown list of ALL open items, grouped by type. Format:
+   ## Action Items
+   - [ ] Item description (assigned: Name)
+   ## Blockers
+   - [ ] Blocker description
+   (etc for each type that has open items)
+
+3. **activityLog**: Rolling 2-week activity summary. Format as a reverse-chronological list:
+   - **YYYY-MM-DD**: What happened, by whom
+   Only include the last 14 days. Trim older entries.
+
+Output ONLY a JSON object:
+{
+  "brief": "Executive summary text...",
+  "openItems": "Structured markdown list...",
+  "activityLog": "Rolling 2-week log..."
+}`;
+}
+
 function formatSingleMessage(
   evt: {
     sourceRef: string;

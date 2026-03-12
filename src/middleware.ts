@@ -8,7 +8,7 @@ export default auth((request) => {
     return NextResponse.next();
   }
 
-  // Slack webhooks use their own signature verification — can skip session/API key auth
+  // Slack webhooks use their own signature verification — skip session/API key auth
   if (pathname === "/api/knowledge/slack-events") {
     return NextResponse.next();
   }

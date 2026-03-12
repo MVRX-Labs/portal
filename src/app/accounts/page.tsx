@@ -74,6 +74,7 @@ function ExpandedView({
   const [loadingActions, setLoadingActions] = useState(true);
   const [newActionTitle, setNewActionTitle] = useState("");
   const [newActionDueDate, setNewActionDueDate] = useState("");
+  const [newActionAssigneeId, setNewActionAssigneeId] = useState("");
   const [addingAction, setAddingAction] = useState(false);
 
   // Editable fields
@@ -160,10 +161,15 @@ function ExpandedView({
     try {
       await apiMutate(`/api/accounts/${account.id}/actions`, createActionResponseSchema, {
         method: "POST",
-        body: { title: newActionTitle.trim(), dueDate: newActionDueDate || null },
+        body: {
+          title: newActionTitle.trim(),
+          dueDate: newActionDueDate || null,
+          assigneeId: newActionAssigneeId || undefined,
+        },
       });
       setNewActionTitle("");
       setNewActionDueDate("");
+      setNewActionAssigneeId("");
       await fetchActions();
     } catch {
       // ignore
@@ -444,7 +450,12 @@ function ExpandedView({
                     key={action.id}
                     className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
                   >
-                    <span className="text-sm flex-1 truncate">{action.title}</span>
+                    <span className="text-sm flex-1 truncate">
+                      {action.title}
+                      {action.assigneeName && (
+                        <span className="text-xs text-(--muted) ml-1.5">→ {action.assigneeName}</span>
+                      )}
+                    </span>
                     {action.dueDate && (
                       <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
                         Due {relativeDate(action.dueDate)}
@@ -466,7 +477,7 @@ function ExpandedView({
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-[1fr_7rem_auto] gap-2">
+              <div className="grid grid-cols-[1fr_7rem_8rem_auto] gap-2">
                 <input
                   type="text"
                   value={newActionTitle}
@@ -483,6 +494,19 @@ function ExpandedView({
                   className="text-sm min-w-0 max-w-full"
                   title="Due date (optional)"
                 />
+                <select
+                  value={newActionAssigneeId}
+                  onChange={(e) => setNewActionAssigneeId(e.target.value)}
+                  className="text-sm min-w-0"
+                  title="Assignee (optional)"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={handleAddAction}
                   disabled={!newActionTitle.trim() || addingAction}

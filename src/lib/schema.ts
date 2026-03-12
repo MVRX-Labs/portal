@@ -542,20 +542,33 @@ export const knowledgeState = pgTable(
   })
 );
 
-export const knowledgeDigestMessages = pgTable("knowledge_digest_messages", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => `kdig_${crypto.randomUUID().replace(/-/g, "")}`),
-  unitId: text("unit_id")
-    .notNull()
-    .references(() => knowledgeUnits.id),
-  recipientSlackId: text("recipient_slack_id").notNull(),
-  channelId: text("channel_id").notNull(), // Slack DM channel ID
-  threadTs: text("thread_ts").notNull(), // parent message ts
-  messageTs: text("message_ts").notNull(), // this item's message ts
-  markedDone: boolean("marked_done").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const knowledgeDigestMessages = pgTable(
+  "knowledge_digest_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => `kdig_${crypto.randomUUID().replace(/-/g, "")}`),
+    unitId: text("unit_id")
+      .notNull()
+      .references(() => knowledgeUnits.id),
+    recipientSlackId: text("recipient_slack_id").notNull(),
+    channelId: text("channel_id").notNull(), // Slack DM channel ID
+    threadTs: text("thread_ts").notNull(), // parent message ts
+    messageTs: text("message_ts").notNull(), // this item's message ts
+    // Fix 8: markedDone should never be NULL — enforce NOT NULL
+    markedDone: boolean("marked_done").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    // Fix 5: Prevent duplicate digest entries per recipient per unit
+    uniqueUnitRecipient: unique().on(table.unitId, table.recipientSlackId),
+    // Fix 5: Fast webhook lookups by channel + message timestamp
+    channelMessageTsIdx: index("knowledge_digest_messages_channel_message_ts_idx").on(
+      table.channelId,
+      table.messageTs,
+    ),
+  }),
+);
 
 // --- Secrets tables ---
 

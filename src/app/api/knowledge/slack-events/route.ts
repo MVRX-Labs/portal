@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import { knowledgeDigestMessages, knowledgeUnits } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
+import { sendSlackNotification } from "@/lib/slack";
 
 // ---------- Slack signature verification ----------
 
@@ -83,21 +84,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Slack signature verification
   const signingSecret = process.env.KNOWLEDGE_SLACK_SIGNING_SECRET;
-  if (signingSecret) {
-    const timestamp = req.headers.get("x-slack-request-timestamp") ?? "";
-    const signature = req.headers.get("x-slack-signature") ?? "";
 
-    // Reject stale requests (>5 minutes old) to prevent replay attacks
-    const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - parseInt(timestamp, 10)) > 300) {
-      return NextResponse.json({ error: "Request too old" }, { status: 403 });
-    }
+  // Fix 1: Fail closed — if secret is not configured, reject all requests
+  if (!signingSecret) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
 
-    if (!verifySlackSignature(signingSecret, rawBody, timestamp, signature)) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
-    }
-  } else {
-    console.warn("[slack-events] KNOWLEDGE_SLACK_SIGNING_SECRET not set — skipping signature verification (dev mode)");
+  const timestamp = req.headers.get("x-slack-request-timestamp") ?? "";
+  const signature = req.headers.get("x-slack-signature") ?? "";
+
+  // Fix 2: Reject stale/invalid requests (>5 minutes old) — guard against NaN bypass
+  const now = Math.floor(Date.now() / 1000);
+  const ts = parseInt(timestamp, 10);
+  if (isNaN(ts) || Math.abs(now - ts) > 300) {
+    return NextResponse.json({ error: "Invalid timestamp" }, { status: 403 });
+  }
+
+  if (!verifySlackSignature(signingSecret, rawBody, timestamp, signature)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
   }
 
   let payload: Record<string, unknown>;
@@ -141,8 +145,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         await handleReactionRemoved(channelId, messageTs);
       }
     } catch (err) {
+      // Fix 6: Return 500 so Slack retries; also notify via Slack for visibility
+      const errMsg = err instanceof Error ? err.message : String(err);
       console.error("[slack-events] Error handling reaction:", err);
-      // Still return 200 — Slack will retry on non-200
+      await sendSlackNotification({
+        tool: "knowledge-slack-events",
+        userName: "system",
+        error: `Failed to handle ${eventType} on ${channelId}/${messageTs}: ${errMsg}`.slice(0, 500),
+        runId: "webhook",
+      });
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
   }
 

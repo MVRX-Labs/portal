@@ -15,10 +15,17 @@
 
 import postgres from "postgres";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  process.env.STORAGE_DATABASE_URL ||
-  "postgresql://neondb_owner:npg_y2JUIzRVT1Zi@ep-mute-wave-ab9agqm6-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require";
+// Fix 4: Never hardcode production credentials — require env var
+const DATABASE_URL = process.env.DATABASE_URL || process.env.PROD_STORAGE_DATABASE_URL;
+
+if (!DATABASE_URL) {
+  console.error(
+    "Error: No database URL configured.\n" +
+      "Set DATABASE_URL or PROD_STORAGE_DATABASE_URL as an environment variable before running this script.\n" +
+      "Example: PROD_STORAGE_DATABASE_URL=postgresql://... node scripts/knowledge-migration-audit.mjs",
+  );
+  process.exit(1);
+}
 
 const sql = postgres(DATABASE_URL, { ssl: "require", max: 1 });
 
@@ -185,6 +192,80 @@ async function main() {
       }
       if (allCols) {
         console.log("  ✅ All expected columns present in knowledge_digest_messages");
+      }
+
+      // Fix 8: Ensure marked_done is NOT NULL on existing table
+      console.log("\n=== knowledge_digest_messages constraints ===");
+      const markedDoneCol = colMap.get("knowledge_digest_messages.marked_done");
+      if (markedDoneCol && markedDoneCol.is_nullable === "YES") {
+        console.log("  MISMATCH knowledge_digest_messages.marked_done: is_nullable=YES, expected NO");
+        const stmt = "ALTER TABLE knowledge_digest_messages ALTER COLUMN marked_done SET NOT NULL";
+        // First backfill any NULLs so the constraint can be applied
+        const backfillStmt = "UPDATE knowledge_digest_messages SET marked_done = FALSE WHERE marked_done IS NULL";
+        try {
+          await sql.unsafe(backfillStmt);
+          await sql.unsafe(stmt);
+          console.log("  ✅ Applied: marked_done SET NOT NULL");
+          fixCount++;
+        } catch (err) {
+          console.error(`  ❌ Failed to set marked_done NOT NULL: ${err.message}`);
+          errorCount++;
+        }
+      } else {
+        console.log("  ✅ marked_done: NOT NULL already");
+      }
+
+      // Fix 5: Ensure unique constraint on (unit_id, recipient_slack_id)
+      const existingConstraints = await sql`
+        SELECT constraint_name
+        FROM information_schema.table_constraints
+        WHERE table_schema = 'public'
+          AND table_name = 'knowledge_digest_messages'
+          AND constraint_type = 'UNIQUE'
+      `;
+      const constraintNames = new Set(existingConstraints.map((r) => r.constraint_name));
+      const hasUniqueUnitRecipient = [...constraintNames].some(
+        (n) => n.includes("unit") && n.includes("recipient"),
+      );
+
+      if (!hasUniqueUnitRecipient) {
+        console.log("  MISSING unique constraint on (unit_id, recipient_slack_id)");
+        const stmt =
+          "ALTER TABLE knowledge_digest_messages ADD CONSTRAINT knowledge_digest_messages_unit_recipient_unique UNIQUE (unit_id, recipient_slack_id)";
+        try {
+          await sql.unsafe(stmt);
+          console.log("  ✅ Added unique constraint on (unit_id, recipient_slack_id)");
+          fixCount++;
+        } catch (err) {
+          console.error(`  ❌ Failed to add unique constraint: ${err.message}`);
+          errorCount++;
+        }
+      } else {
+        console.log("  ✅ Unique constraint on (unit_id, recipient_slack_id) already exists");
+      }
+
+      // Fix 5: Ensure index on (channel_id, message_ts)
+      const existingIndexes = await sql`
+        SELECT indexname
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'knowledge_digest_messages'
+      `;
+      const indexNames = new Set(existingIndexes.map((r) => r.indexname));
+      if (!indexNames.has("knowledge_digest_messages_channel_message_ts_idx")) {
+        console.log("  MISSING index on (channel_id, message_ts)");
+        const stmt =
+          "CREATE INDEX knowledge_digest_messages_channel_message_ts_idx ON knowledge_digest_messages (channel_id, message_ts)";
+        try {
+          await sql.unsafe(stmt);
+          console.log("  ✅ Created index on (channel_id, message_ts)");
+          fixCount++;
+        } catch (err) {
+          console.error(`  ❌ Failed to create index: ${err.message}`);
+          errorCount++;
+        }
+      } else {
+        console.log("  ✅ Index on (channel_id, message_ts) already exists");
       }
     }
 

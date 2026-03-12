@@ -22,7 +22,12 @@ export type KnowledgeUnitType =
   | "product_bug"
   | "product_feature";
 
-export type KnowledgeUnitStatus = "open" | "done";
+/**
+ * Fix 7: "dismissed" is a valid API-layer status accepted by the PATCH endpoint.
+ * It is stored in the DB as "done" with `metadata.dismissed = true`.
+ * Including it here ensures TS callers are aware of the full set of valid inputs.
+ */
+export type KnowledgeUnitStatus = "open" | "done" | "dismissed";
 
 export type StateDocType = "brief" | "open_items" | "activity_log";
 

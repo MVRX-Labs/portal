@@ -265,7 +265,11 @@ async function sendThreadedDigest(
 // --- Data loading ---
 
 async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
-  const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  // Fix 10: Widen the DB fetch window to 7 days so we capture units that were
+  // created long ago but completed recently (completedAt is stored in metadata).
+  // In-memory filtering then applies the 48h window using metadata.completedAt,
+  // falling back to createdAt only for units that were already "done" at extraction.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const allUnits = await db
     .select({
       id: knowledgeUnits.id,
@@ -281,7 +285,8 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
     .where(
       or(
         eq(knowledgeUnits.status, "open"),
-        and(eq(knowledgeUnits.status, "done"), gt(knowledgeUnits.createdAt, twoDaysAgo)),
+        // Fetch done units up to 7 days old; we narrow further in-memory below
+        and(eq(knowledgeUnits.status, "done"), gt(knowledgeUnits.createdAt, sevenDaysAgo)),
       ),
     )
     .orderBy(desc(knowledgeUnits.createdAt));
@@ -315,8 +320,14 @@ async function buildDigestSections(logger: Logger): Promise<DigestSection[]> {
     const recentlyDone = done.filter((u) => {
       const meta = u.metadata as Record<string, unknown> | null;
       const completedAt = meta?.completedAt as string | undefined;
-      const ts = completedAt ? new Date(completedAt) : u.createdAt ? new Date(u.createdAt) : null;
-      return ts && ts > oneDayAgo;
+      if (completedAt) {
+        // Unit was marked done via ✅ reaction — use the actual completion time
+        return new Date(completedAt) > oneDayAgo;
+      }
+      // No completedAt → unit was extracted as already "done" (e.g. from historical data)
+      // Fall back to createdAt so it still appears in the digest if newly extracted
+      const created = u.createdAt ? new Date(u.createdAt) : null;
+      return created ? created > oneDayAgo : false;
     });
 
     if (open.length === 0 && recentlyDone.length === 0) continue;

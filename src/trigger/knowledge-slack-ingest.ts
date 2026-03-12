@@ -22,6 +22,8 @@ import { knowledgeNormaliseAll } from "./knowledge-normalise";
  */
 export const knowledgeSlackIngestScheduled = schedules.task({
   id: "knowledge-slack-ingest-scheduled",
+  // Fix 3: maxDuration covers ingest + resolve-media (up to 600s) + normalise-all (up to 600s)
+  maxDuration: 1800,
   cron: {
     pattern: "*/30 8-22 * * 1-5",
     timezone: "Europe/London",
@@ -101,6 +103,7 @@ export const knowledgeSlackIngestChannel = task({
     try {
       const result = await ingestChannel(payload.channelDbId, logger);
 
+      const totalNew = result.newMessages + result.newThreadReplies;
       logger.info(
         `Channel #${result.channelName}: ${result.newMessages} messages, ${result.newThreadReplies} thread replies`,
       );
@@ -112,6 +115,19 @@ export const knowledgeSlackIngestChannel = task({
           error: `#${result.channelName}: ${result.errors.join(", ")}`.slice(0, 500),
           runId: ctx.run.id,
         });
+      }
+
+      // Fix 9: Chain resolve-media → normalise-all when new content was ingested
+      if (totalNew > 0) {
+        logger.info(`${totalNew} new events — triggering media resolution`);
+        await knowledgeResolveMedia.triggerAndWait({});
+
+        logger.info("Media resolution complete — triggering normalisation");
+        await knowledgeNormaliseAll.triggerAndWait({});
+
+        logger.info("Normalisation complete");
+      } else {
+        logger.info("No new events — skipping resolve + normalise");
       }
 
       return result;

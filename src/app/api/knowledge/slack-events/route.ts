@@ -25,7 +25,7 @@ import { knowledgeDigestMessages, knowledgeUnits } from "@/lib/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendSlackNotification } from "@/lib/slack";
-import { escapeSlackMrkdwn } from "@/lib/knowledge/helpers";
+import { escapeSlackMrkdwn, capSlackBlockText } from "@/lib/knowledge/helpers";
 
 // ---------- Slack signature verification ----------
 
@@ -228,10 +228,15 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
     .set({ markedDone: true })
     .where(eq(knowledgeDigestMessages.id, digestMsg.id));
 
-  // Edit the triggering Slack message
-  await updateSlackMessage(channelId, messageTs, completedText, [
-    { type: "section", text: { type: "mrkdwn", text: completedText } },
-  ]);
+  // Edit the triggering Slack message — non-fatal if Slack fails (DB state is source of truth)
+  try {
+    await updateSlackMessage(channelId, messageTs, completedText, [
+      { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(completedText) } },
+    ]);
+  } catch (err) {
+    console.error(`[slack-events] Failed to update Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`);
+    // Don't throw — DB is already updated, Slack visual is secondary
+  }
 
   // Look up ALL other digest messages for the same unitId (other recipients' DMs)
   const otherDigestMsgs = await db
@@ -252,7 +257,7 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
       .where(eq(knowledgeDigestMessages.id, other.id));
     try {
       await updateSlackMessage(other.channelId, other.messageTs, completedText, [
-        { type: "section", text: { type: "mrkdwn", text: completedText } },
+        { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(completedText) } },
       ]);
     } catch (err) {
       console.error(`[slack-events] Failed to update digest message ${other.id} for other recipient:`, err);
@@ -319,7 +324,37 @@ async function handleReactionRemoved(channelId: string, messageTs: string): Prom
   const contextLine = `\nReact ✅ to mark done · ID: \`${digestMsg.unitId}\``;
   const restoredText = `${emoji} ${content}${contextLine}`;
 
-  await updateSlackMessage(channelId, messageTs, restoredText, [
-    { type: "section", text: { type: "mrkdwn", text: restoredText } },
-  ]);
+  try {
+    await updateSlackMessage(channelId, messageTs, restoredText, [
+      { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(restoredText) } },
+    ]);
+  } catch (err) {
+    console.error(`[slack-events] Failed to restore Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Propagate reopen to all other recipients' DMs (mirror of handleReactionAdded)
+  const otherDigestMsgs = await db
+    .select()
+    .from(knowledgeDigestMessages)
+    .where(
+      and(
+        eq(knowledgeDigestMessages.unitId, digestMsg.unitId),
+        ne(knowledgeDigestMessages.id, digestMsg.id),
+      ),
+    );
+
+  for (const other of otherDigestMsgs) {
+    if (!other.markedDone) continue; // Already open
+    await db
+      .update(knowledgeDigestMessages)
+      .set({ markedDone: false })
+      .where(eq(knowledgeDigestMessages.id, other.id));
+    try {
+      await updateSlackMessage(other.channelId, other.messageTs, restoredText, [
+        { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(restoredText) } },
+      ]);
+    } catch (err) {
+      console.error(`[slack-events] Failed to restore digest message ${other.id} for other recipient:`, err);
+    }
+  }
 }

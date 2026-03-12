@@ -18,6 +18,14 @@ interface SlackUser {
 
 const MVRX_TEAM_IDS = new Set(["T07LGKRJ2AC", "T0A72PKB8R2"]);
 
+// Module-level logger — can be overridden via setUserRegistryLogger() for Trigger.dev structured logs
+let _logger: { info: (msg: string) => void; warn: (msg: string) => void; error: (msg: string) => void } = console;
+
+/** Set the logger for user registry operations (call from Trigger tasks). */
+export function setUserRegistryLogger(logger: { info: (msg: string) => void; warn?: (msg: string) => void; error: (msg: string) => void }): void {
+  _logger = { info: logger.info, warn: logger.warn ?? logger.info, error: logger.error };
+}
+
 let userCache: SlackUser[] | null = null;
 
 /**
@@ -76,7 +84,7 @@ export async function loadSlackUsers(): Promise<SlackUser[]> {
   if (paginationError) {
     // Return partial results WITHOUT caching so the next call retries the full list
     // Non-fatal: degrade gracefully with partial data
-    console.warn("[user-registry] users.list pagination failed — returning partial results without caching");
+    _logger.warn("[user-registry] users.list pagination failed — returning partial results without caching");
     return users;
   }
 
@@ -141,7 +149,7 @@ async function loadCrossWorkspaceUsers(token: string, users: SlackUser[]): Promi
         }
       } catch (err) {
         // Non-fatal: one bad user shouldn't break the loop
-        console.warn(`[user-registry] Failed to resolve cross-workspace user ${uid}:`, err);
+        _logger.warn(`[user-registry] Failed to resolve cross-workspace user ${uid}: ${err instanceof Error ? err.message : String(err)}`);
         // Continue — one bad user shouldn't break the loop
       }
       // Rate limit: 200ms after EACH users.info call

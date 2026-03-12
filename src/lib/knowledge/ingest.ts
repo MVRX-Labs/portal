@@ -7,7 +7,7 @@
 
 import { db } from "@/lib/db";
 import { knowledgeChannels, knowledgeEvents, knowledgeSyncState } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { fetchChannelHistory, fetchThreadReplies, resolveUser, clearUserCache } from "./slack-client";
 import { SKIP_SUBTYPES, classifyUserSide, detectContentType, extractLinks, buildMetadata, sleep } from "./helpers";
 import type { SlackMessage, Visibility } from "./types";
@@ -117,7 +117,7 @@ export async function ingestChannel(channelDbId: string, logger: Logger): Promis
       lastMessageTs: latestTs,
       lastSyncedAt: new Date(),
       lastSyncError: result.errors.length > 0 ? result.errors.join("; ") : null,
-      messagesIngested: (syncState.messagesIngested ?? 0) + result.newMessages + result.newThreadReplies,
+      messagesIngested: sql`${knowledgeSyncState.messagesIngested} + ${result.newMessages + result.newThreadReplies}`,
       updatedAt: new Date(),
     })
     .where(eq(knowledgeSyncState.id, syncState.id));

@@ -106,3 +106,9 @@ export function escapeSlackMrkdwn(text: string): string {
     .replace(/`/g, "\\`")
     .replace(/>/g, "&gt;");
 }
+
+/** Cap text to fit in a Slack Block Kit section (3000 char limit). */
+export function capSlackBlockText(text: string, maxLen = 2950): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen - 1) + "…";
+}

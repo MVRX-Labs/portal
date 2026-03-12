@@ -16,7 +16,7 @@ import { db } from "@/lib/db";
 import { knowledgeChannels } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { normaliseChannel } from "@/lib/knowledge/normaliser";
-import { clearUserRegistryCache } from "@/lib/knowledge/user-registry";
+import { clearUserRegistryCache, setUserRegistryLogger } from "@/lib/knowledge/user-registry";
 import { sendSlackNotification } from "@/lib/slack";
 
 /**
@@ -29,6 +29,7 @@ export const knowledgeNormaliseChannel = task({
   run: async (payload: { channelDbId: string }, { ctx }) => {
     logger.info(`Normalising channel ${payload.channelDbId}`);
     clearUserRegistryCache();
+    setUserRegistryLogger(logger);
 
     try {
       const result = await normaliseChannel(payload.channelDbId, logger);

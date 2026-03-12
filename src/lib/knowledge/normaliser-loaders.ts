@@ -36,10 +36,13 @@ export async function loadAllAccountsBatched(): Promise<AccountContext[]> {
 }
 
 export async function loadOpenItems(accountId: string): Promise<OpenItem[]> {
+  // Cap at 100 — these get embedded in the LLM prompt
   const items = await db
     .select({ id: knowledgeUnits.id, content: knowledgeUnits.content, assignee: knowledgeUnits.assignee, unitType: knowledgeUnits.unitType })
     .from(knowledgeUnits)
-    .where(and(eq(knowledgeUnits.accountId, accountId), eq(knowledgeUnits.status, "open")));
+    .where(and(eq(knowledgeUnits.accountId, accountId), eq(knowledgeUnits.status, "open")))
+    .orderBy(desc(knowledgeUnits.createdAt))
+    .limit(100);
   return items.map((i) => ({ id: i.id, content: i.content, assignee: i.assignee, type: i.unitType }));
 }
 
@@ -58,9 +61,10 @@ export async function loadExistingForDedup(
   channelId: string,
   accountId: string | null,
 ): Promise<Array<{ content: string; assignee: string | null }>> {
+  // Cap at 500 — used for Jaccard dedup, not prompt injection
   const conditions = [eq(knowledgeUnits.channelId, channelId)];
   if (accountId) conditions.push(eq(knowledgeUnits.accountId, accountId));
-  return db.select({ content: knowledgeUnits.content, assignee: knowledgeUnits.assignee }).from(knowledgeUnits).where(and(...conditions));
+  return db.select({ content: knowledgeUnits.content, assignee: knowledgeUnits.assignee }).from(knowledgeUnits).where(and(...conditions)).orderBy(desc(knowledgeUnits.createdAt)).limit(500);
 }
 
 export function chunkEvents<T>(events: T[], size: number): T[][] {

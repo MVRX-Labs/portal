@@ -17,7 +17,7 @@
 import { db } from "@/lib/db";
 import { knowledgeUnits, accounts, knowledgeDigestMessages } from "@/lib/schema";
 import { eq, desc, or, and, gt } from "drizzle-orm";
-import { escapeSlackMrkdwn } from "./helpers";
+import { escapeSlackMrkdwn, capSlackBlockText } from "./helpers";
 
 type Logger = { info: (msg: string) => void; error: (msg: string) => void };
 
@@ -228,7 +228,7 @@ async function sendThreadedDigest(
       const itemText = `${emoji} ${content}${assigneeTag}${typeTag}${staleWarning}${contextLine}`;
 
       const messageTs = await postThreadReply(channelId, parentTs, itemText, [
-        { type: "section", text: { type: "mrkdwn", text: itemText } },
+        { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(itemText) } },
       ]);
       messageCount++;
 
@@ -255,7 +255,7 @@ async function sendThreadedDigest(
       const doneText = `*Recently completed in ${section.accountName}:*\n${doneLines}`;
 
       await postThreadReply(channelId, parentTs, doneText, [
-        { type: "section", text: { type: "mrkdwn", text: doneText } },
+        { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(doneText) } },
       ]);
       messageCount++;
       await sleep(1200);

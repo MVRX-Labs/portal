@@ -143,7 +143,7 @@ export const growthReportTask = task({
       // Build the initial docx so we know the document is structurally valid
       await buildGrowthReportDocx(reportContent);
 
-      // Write the report JSON for the review agent to read
+      // Write report JSON for the review agent to read
       await writeFile(join(sessionDir, "report.json"), JSON.stringify(reportContent, null, 2));
 
       const reviewPrompt = buildReviewPrompt(account.name);

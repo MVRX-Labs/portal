@@ -25,9 +25,10 @@ export async function callLLM(prompt: string, logger: Logger): Promise<{ output:
     .join("");
 
   const cost =
-    (response.usage.input_tokens * INPUT_COST_PER_TOKEN) +
-    (response.usage.output_tokens * OUTPUT_COST_PER_TOKEN);
+    response.usage.input_tokens * INPUT_COST_PER_TOKEN + response.usage.output_tokens * OUTPUT_COST_PER_TOKEN;
 
-  logger.info(`LLM completed: ${response.usage.input_tokens} in / ${response.usage.output_tokens} out, $${cost.toFixed(4)}`);
+  logger.info(
+    `LLM completed: ${response.usage.input_tokens} in / ${response.usage.output_tokens} out, $${cost.toFixed(4)}`
+  );
   return { output: text, cost };
 }

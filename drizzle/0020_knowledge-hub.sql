@@ -1,4 +1,4 @@
-CREATE TABLE "knowledge_digest_messages" (
+CREATE TABLE IF NOT EXISTS "knowledge_digest_messages" (
 	"id" text PRIMARY KEY NOT NULL,
 	"unit_id" text NOT NULL,
 	"recipient_slack_id" text NOT NULL,

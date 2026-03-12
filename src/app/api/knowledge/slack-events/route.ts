@@ -148,7 +148,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } catch (err) {
       // Fix 6: Return 500 so Slack retries; also notify via Slack for visibility
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error("[slack-events] Error handling reaction:", err);
       await sendSlackNotification({
         tool: "knowledge-slack-events",
         userName: "system",
@@ -234,8 +233,13 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
       { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(completedText) } },
     ]);
   } catch (err) {
-    console.error(`[slack-events] Failed to update Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`);
     // Don't throw — DB is already updated, Slack visual is secondary
+    sendSlackNotification({
+      tool: "knowledge-slack-events",
+      userName: "system",
+      error: `Failed to update Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`,
+      runId: "webhook",
+    }).catch(() => {}); // fire-and-forget
   }
 
   // Look up ALL other digest messages for the same unitId (other recipients' DMs)
@@ -260,8 +264,13 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
         { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(completedText) } },
       ]);
     } catch (err) {
-      console.error(`[slack-events] Failed to update digest message ${other.id} for other recipient:`, err);
       // Don't fail the whole handler for a secondary update error
+      sendSlackNotification({
+        tool: "knowledge-slack-events",
+        userName: "system",
+        error: `Failed to update digest message ${other.id} for other recipient: ${err instanceof Error ? err.message : String(err)}`,
+        runId: "webhook",
+      }).catch(() => {});
     }
   }
 }
@@ -329,7 +338,12 @@ async function handleReactionRemoved(channelId: string, messageTs: string): Prom
       { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(restoredText) } },
     ]);
   } catch (err) {
-    console.error(`[slack-events] Failed to restore Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`);
+    sendSlackNotification({
+      tool: "knowledge-slack-events",
+      userName: "system",
+      error: `Failed to restore Slack message for ${digestMsg.unitId}: ${err instanceof Error ? err.message : String(err)}`,
+      runId: "webhook",
+    }).catch(() => {});
   }
 
   // Propagate reopen to all other recipients' DMs (mirror of handleReactionAdded)
@@ -354,7 +368,12 @@ async function handleReactionRemoved(channelId: string, messageTs: string): Prom
         { type: "section", text: { type: "mrkdwn", text: capSlackBlockText(restoredText) } },
       ]);
     } catch (err) {
-      console.error(`[slack-events] Failed to restore digest message ${other.id} for other recipient:`, err);
+      sendSlackNotification({
+        tool: "knowledge-slack-events",
+        userName: "system",
+        error: `Failed to restore digest message ${other.id} for other recipient: ${err instanceof Error ? err.message : String(err)}`,
+        runId: "webhook",
+      }).catch(() => {});
     }
   }
 }

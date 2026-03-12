@@ -61,18 +61,32 @@ export async function normaliseChannel(channelDbId: string, logger: Logger): Pro
     errors: [],
   };
 
-  const allEvents = await db
+  const allEventsRaw = await db
     .select()
     .from(knowledgeEvents)
     .where(and(eq(knowledgeEvents.channelId, channelDbId), isNull(knowledgeEvents.processedAt)))
     .orderBy(knowledgeEvents.messageAt);
 
+  // Skip voice notes that haven't been transcribed yet — they'll be picked up
+  // after resolve-media succeeds. This prevents marking them as processed
+  // without their transcription content.
+  const pendingVoiceNotes = allEventsRaw.filter(
+    (e) => e.contentType === "voice_note" && !e.resolvedContent,
+  );
+  const allEvents = allEventsRaw.filter(
+    (e) => !(e.contentType === "voice_note" && !e.resolvedContent),
+  );
+
+  if (pendingVoiceNotes.length > 0) {
+    logger.info(`#${channel.slackChannelName}: skipping ${pendingVoiceNotes.length} voice notes awaiting transcription`);
+  }
+
   if (allEvents.length === 0) {
-    logger.info(`#${channel.slackChannelName}: no unprocessed events`);
+    logger.info(`#${channel.slackChannelName}: no unprocessed events ready for normalisation`);
     return result;
   }
 
-  logger.info(`#${channel.slackChannelName}: ${allEvents.length} unprocessed events`);
+  logger.info(`#${channel.slackChannelName}: ${allEvents.length} unprocessed events (${pendingVoiceNotes.length} voice notes deferred)`);
 
   const isClientChannel = channel.channelCategory === "client_shared" || channel.channelCategory === "client_internal";
   const visibility = channel.channelCategory === "client_internal" ? "internal" : "shared";

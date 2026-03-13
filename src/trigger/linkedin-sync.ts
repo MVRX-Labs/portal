@@ -96,12 +96,18 @@ export const linkedinSyncScheduler = schedules.task({
 // Per-profile sync task
 // ---------------------------------------------------------------------------
 
+export const DISABLED = true;
+
 export const linkedinSyncProfileTask = task({
   id: "linkedin-sync-profile",
   queue: linkedinSyncQueue,
   maxDuration: 600,
   retry: { maxAttempts: 2 },
   run: async (payload: { profileId: string; accountId: string }, { ctx }) => {
+    if (DISABLED) {
+      logger.info("linkedin-sync-profile is disabled");
+      return { skipped: true };
+    }
     const { profileId, accountId } = payload;
 
     // Load profile

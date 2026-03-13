@@ -37,7 +37,7 @@ const MAX_POSTS_PER_SYNC = 50;
 const OUTBOUND_MAX_AGE_DAYS = 1;
 
 /** Only scrape comments on posts newer than this */
-const COMMENT_SCRAPE_MAX_AGE_DAYS = 30;
+const COMMENT_SCRAPE_MAX_AGE_DAYS = 7;
 
 /** Early engager window: 6–7 hours after posting */
 const EARLY_WINDOW_MIN_H = 6;
@@ -372,8 +372,7 @@ export const linkedinSyncProfileTask = task({
       }
 
       // Step 8: Unreplied comment alerts
-      // Set DISABLE_UNREPLIED_ALERTS=1 to suppress while migrating comment data
-      if (profile.analyticsEnabled && !process.env.DISABLE_UNREPLIED_ALERTS) {
+      if (profile.analyticsEnabled) {
         try {
           const alertsSent = await sendUnrepliedCommentAlerts(
             profileId,

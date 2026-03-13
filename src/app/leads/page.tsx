@@ -107,9 +107,7 @@ function LeadsContent() {
           daysBack,
         },
       });
-      const labels = (data.sources || []).map(
-        (s) => `${s.sourceType === "company" ? "Company" : "Personal"}: ${s.linkedinUrl}`
-      );
+      const labels = (data.profiles || []).map((p) => p.displayName || p.linkedinUrl);
       setScrapeStatus(`Scraping ${labels.join(", ")}. Results will appear here shortly.`);
     } catch (err) {
       setScrapeStatus(err instanceof Error ? err.message : "Failed to trigger scrape");

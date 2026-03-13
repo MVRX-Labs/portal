@@ -36,12 +36,13 @@ export type ScrapeLeadsBody = z.infer<typeof scrapeLeadsBodySchema>;
 
 export const scrapeLeadsResponseSchema = z.object({
   triggered: z.number(),
-  batchId: z.string(),
-  sources: z.array(
+  syncBatchId: z.string(),
+  upsertBatchId: z.string(),
+  profiles: z.array(
     z.object({
+      id: z.string(),
       linkedinUrl: z.string(),
-      sourceType: z.string(),
-      runId: z.string(),
+      displayName: z.string(),
     })
   ),
 });

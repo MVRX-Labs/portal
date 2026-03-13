@@ -6,7 +6,12 @@ import { createAnalyticsProfileBodySchema } from "@/lib/api-schemas/analytics";
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
   const profiles = await listLinkedinProfiles(accountId, { analyticsEnabled: true });
-  return NextResponse.json(profiles);
+  return NextResponse.json(
+    profiles.map((p) => ({
+      ...p,
+      lastScrapedAt: p.lastSyncedAt?.toISOString() ?? null,
+    }))
+  );
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -9,7 +9,6 @@ export const accountSchema = z
     industry: z.string().nullable(),
     website: z.string().nullable(),
     linkedinUrl: z.string().nullable(),
-    engagementScrapeEnabled: z.boolean(),
     googleDriveFolderId: z.string().nullable(),
     notes: z.string().nullable(),
     contentVoiceGuidance: z.string().nullable(),
@@ -57,7 +56,6 @@ export const createAccountBodySchema = z.object({
   industry: z.string().optional(),
   website: z.string().optional(),
   linkedinUrl: z.string().optional(),
-  engagementScrapeEnabled: z.boolean().optional(),
 });
 
 export type CreateAccountBody = z.infer<typeof createAccountBodySchema>;
@@ -74,7 +72,6 @@ export const updateAccountBodySchema = z.object({
   industry: z.string().nullable().optional(),
   website: z.string().nullable().optional(),
   linkedinUrl: z.string().nullable().optional(),
-  engagementScrapeEnabled: z.boolean().optional(),
   notes: z.string().nullable().optional(),
   contentVoiceGuidance: z.string().nullable().optional(),
   ownerId: z.string().nullable().optional(),

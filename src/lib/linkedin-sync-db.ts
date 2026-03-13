@@ -1,6 +1,5 @@
 /**
- * DB helpers for the unified linkedin_posts table.
- * Mirrors the engagement-bot-db.ts patterns for the new schema.
+ * DB helpers for the linkedin_posts table.
  */
 
 import { db } from "@/lib/db";

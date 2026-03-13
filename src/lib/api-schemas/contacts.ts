@@ -14,7 +14,6 @@ export const contactSchema = z
     lastMeetingAt: dateStringNullable.optional(),
     nextMeetingAt: dateStringNullable.optional(),
     autoCreated: z.boolean().optional(),
-    engagementScrapeEnabled: z.boolean(),
     createdAt: dateString,
     updatedAt: dateString,
   })
@@ -38,7 +37,6 @@ export const createContactBodySchema = z.object({
   linkedinUrl: z.string().optional(),
   contentVoiceGuidance: z.string().optional(),
   notes: z.string().optional(),
-  engagementScrapeEnabled: z.boolean().optional(),
 });
 
 export type CreateContactBody = z.infer<typeof createContactBodySchema>;
@@ -57,7 +55,6 @@ export const updateContactBodySchema = z.object({
   linkedinUrl: z.string().nullable().optional(),
   contentVoiceGuidance: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  engagementScrapeEnabled: z.boolean().optional(),
 });
 
 export type UpdateContactBody = z.infer<typeof updateContactBodySchema>;

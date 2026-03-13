@@ -1,8 +1,5 @@
-import { db } from "@/lib/db";
-import { managedPosts, managedPostSnapshots, managedProfiles } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 import { normalizePost } from "./engagement-bot";
-import { extractManagedLinkedinSlug } from "./managed-profiles";
+import { extractLinkedinSlug } from "./linkedin-profiles";
 
 interface ApifyPost {
   apifyPostId: string;
@@ -34,7 +31,7 @@ function extractAuthorSlug(raw: Record<string, unknown>): string | null {
 
   for (const candidate of candidates) {
     if (typeof candidate !== "string" || !candidate) continue;
-    const slug = extractManagedLinkedinSlug(candidate);
+    const slug = extractLinkedinSlug(candidate);
     if (slug) return slug;
   }
   return null;
@@ -54,10 +51,12 @@ function isManagedProfileOriginalPost(raw: Record<string, unknown>, expectedLink
 
 export function normalizeApifyPost(
   raw: Record<string, unknown>,
-  options?: { expectedLinkedinSlug?: string; expectedLinkedinUrl?: string },
+  options?: { expectedLinkedinSlug?: string; expectedLinkedinUrl?: string }
 ): ApifyPost | null {
   const expectedLinkedinSlug =
-    options?.expectedLinkedinSlug?.toLowerCase() || extractManagedLinkedinSlug(options?.expectedLinkedinUrl ?? "") || undefined;
+    options?.expectedLinkedinSlug?.toLowerCase() ||
+    extractLinkedinSlug(options?.expectedLinkedinUrl ?? "") ||
+    undefined;
   if (!isManagedProfileOriginalPost(raw, expectedLinkedinSlug)) return null;
 
   const normalized = normalizePost(raw);
@@ -72,87 +71,4 @@ export function normalizeApifyPost(
     repostsCount: parseCount(raw.numShares ?? raw.repostsCount ?? raw.reshareCount),
     postedAt: normalized.postedAt,
   };
-}
-
-export async function ingestPosts(
-  profileId: string,
-  accountId: string,
-  rawPosts: Record<string, unknown>[],
-  options?: { expectedLinkedinSlug?: string; expectedLinkedinUrl?: string },
-): Promise<{ total: number; newCount: number }> {
-  const normalizedPosts = rawPosts
-    .map((raw) => normalizeApifyPost(raw, options))
-    .filter((p): p is ApifyPost => p !== null);
-  const posts = Array.from(new Map(normalizedPosts.map((post) => [post.apifyPostId, post])).values());
-
-  const existingPosts = await db
-    .select({
-      id: managedPosts.id,
-      apifyPostId: managedPosts.apifyPostId,
-      content: managedPosts.content,
-      postUrl: managedPosts.postUrl,
-      postedAt: managedPosts.postedAt,
-    })
-    .from(managedPosts)
-    .where(eq(managedPosts.profileId, profileId));
-
-  const existingByApifyPostId = new Map(existingPosts.map((post) => [post.apifyPostId, post]));
-
-  return db.transaction(async (tx) => {
-    let newCount = 0;
-
-    for (const p of posts) {
-      const existing = existingByApifyPostId.get(p.apifyPostId);
-
-      let postId: string;
-
-      if (existing) {
-        await tx
-          .update(managedPosts)
-          .set({
-            likesCount: p.likesCount,
-            commentsCount: p.commentsCount,
-            repostsCount: p.repostsCount,
-            content: p.content || existing.content,
-            postUrl: p.postUrl || existing.postUrl,
-            postedAt: p.postedAt ?? existing.postedAt,
-          })
-          .where(eq(managedPosts.id, existing.id));
-        postId = existing.id;
-      } else {
-        const [inserted] = await tx
-          .insert(managedPosts)
-          .values({
-            profileId,
-            accountId,
-            apifyPostId: p.apifyPostId,
-            content: p.content,
-            postUrl: p.postUrl,
-            likesCount: p.likesCount,
-            commentsCount: p.commentsCount,
-            repostsCount: p.repostsCount,
-            postedAt: p.postedAt,
-          })
-          .returning({ id: managedPosts.id });
-        postId = inserted.id;
-        newCount++;
-      }
-
-      await tx.insert(managedPostSnapshots).values({
-        postId,
-        profileId,
-        accountId,
-        likesCount: p.likesCount,
-        commentsCount: p.commentsCount,
-        repostsCount: p.repostsCount,
-      });
-    }
-
-    await tx
-      .update(managedProfiles)
-      .set({ lastScrapedAt: new Date(), updatedAt: new Date() })
-      .where(eq(managedProfiles.id, profileId));
-
-    return { total: posts.length, newCount };
-  });
 }

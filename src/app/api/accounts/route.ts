@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
       industry: accounts.industry,
       website: accounts.website,
       linkedinUrl: accounts.linkedinUrl,
-      engagementScrapeEnabled: accounts.engagementScrapeEnabled,
       googleDriveFolderId: accounts.googleDriveFolderId,
       notes: accounts.notes,
       contentVoiceGuidance: accounts.contentVoiceGuidance,
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
       industry: data.industry || null,
       website: data.website || null,
       linkedinUrl: data.linkedinUrl || null,
-      engagementScrapeEnabled: data.engagementScrapeEnabled || false,
       googleDriveFolderId,
       contentVoiceGuidance: null,
     })

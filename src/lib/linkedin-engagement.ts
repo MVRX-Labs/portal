@@ -178,6 +178,19 @@ function extractDateField(post: Record<string, unknown>): { key: string; raw: un
   return null;
 }
 
+export interface ScrapedComment {
+  commentId: string;
+  text: string;
+  postedAt: Date | null;
+  commentUrl: string | null;
+  authorName: string;
+  authorProfileUrl: string | null;
+  authorSlug: string | null;
+  authorHeadline: string | null;
+  isReply: boolean;
+  parentCommentId: string | null;
+}
+
 export interface ScrapedPost {
   postUrl: string;
   postedDate: string;
@@ -292,13 +305,13 @@ export async function scrapePostReactions(
 
 /**
  * Scrape ALL comments for a post. Handles pagination (100 per page).
+ * Returns rich per-comment data including the stable LinkedIn comment ID and text.
  */
 export async function scrapePostComments(
   postUrl: string,
   signal?: AbortSignal,
-  runId?: string,
-  engagedAt?: Date
-): Promise<EngagedPerson[]> {
+  runId?: string
+): Promise<ScrapedComment[]> {
   const allResults = await runApifyActorPaginated(COMMENTS_ACTOR_ID, { postIds: [postUrl] }, signal, 5, runId);
 
   if (allResults.length > 0) {
@@ -306,7 +319,95 @@ export async function scrapePostComments(
     log(`Comments sample keys: ${Object.keys(sample).join(", ")}`);
   }
 
-  return normalizeEngagers(allResults, "comment", postUrl, engagedAt ?? new Date());
+  const comments: ScrapedComment[] = [];
+  let skippedNoId = 0;
+
+  for (const item of allResults) {
+    const raw = item as Record<string, unknown>;
+
+    // Skip summary/metadata objects appended by the actor
+    if (!raw.comment_id) {
+      skippedNoId++;
+      continue;
+    }
+
+    const commentId = String(raw.comment_id);
+    const author = (raw.author || {}) as Record<string, unknown>;
+    const postedAtObj = raw.posted_at as Record<string, unknown> | undefined;
+    const postedAt = postedAtObj?.timestamp ? parsePostDate(postedAtObj.timestamp) : null;
+
+    let authorProfileUrl = (author.profile_url as string) || null;
+    let authorSlug: string | null = null;
+    if (authorProfileUrl) {
+      // Strip query params
+      try {
+        const parsed = new URL(authorProfileUrl);
+        authorProfileUrl = `${parsed.origin}${parsed.pathname}`;
+      } catch {
+        const qIdx = authorProfileUrl.indexOf("?");
+        if (qIdx > 0) authorProfileUrl = authorProfileUrl.slice(0, qIdx);
+      }
+      authorSlug = extractLinkedinSlug(authorProfileUrl);
+    }
+
+    comments.push({
+      commentId,
+      text: (raw.text as string) || "",
+      postedAt,
+      commentUrl: (raw.comment_url as string) || null,
+      authorName: (author.name as string) || "Unknown",
+      authorProfileUrl,
+      authorSlug,
+      authorHeadline: (author.headline as string) || null,
+      isReply: false,
+      parentCommentId: null,
+    });
+
+    // Process nested replies
+    const replies = raw.replies as unknown[] | undefined;
+    if (replies && Array.isArray(replies)) {
+      for (const reply of replies) {
+        const r = reply as Record<string, unknown>;
+        if (!r.comment_id) continue;
+
+        const replyAuthor = (r.author || {}) as Record<string, unknown>;
+        const replyPostedAtObj = r.posted_at as Record<string, unknown> | undefined;
+        const replyPostedAt = replyPostedAtObj?.timestamp ? parsePostDate(replyPostedAtObj.timestamp) : null;
+
+        let replyAuthorUrl = (replyAuthor.profile_url as string) || null;
+        let replyAuthorSlug: string | null = null;
+        if (replyAuthorUrl) {
+          try {
+            const parsed = new URL(replyAuthorUrl);
+            replyAuthorUrl = `${parsed.origin}${parsed.pathname}`;
+          } catch {
+            const qIdx = replyAuthorUrl.indexOf("?");
+            if (qIdx > 0) replyAuthorUrl = replyAuthorUrl.slice(0, qIdx);
+          }
+          replyAuthorSlug = extractLinkedinSlug(replyAuthorUrl);
+        }
+
+        comments.push({
+          commentId: String(r.comment_id),
+          text: (r.text as string) || "",
+          postedAt: replyPostedAt,
+          commentUrl: (r.comment_url as string) || null,
+          authorName: (replyAuthor.name as string) || "Unknown",
+          authorProfileUrl: replyAuthorUrl,
+          authorSlug: replyAuthorSlug,
+          authorHeadline: (replyAuthor.headline as string) || null,
+          isReply: true,
+          parentCommentId: commentId,
+        });
+      }
+    }
+  }
+
+  log(
+    `Parsed ${comments.length} comments from ${allResults.length} results. ` +
+      `Skipped: ${skippedNoId} non-comment items`
+  );
+  return comments;
 }
 
 /**

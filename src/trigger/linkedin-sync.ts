@@ -1,11 +1,9 @@
 /**
- * linkedin-sync: Unified LinkedIn profile sync.
+ * linkedin-sync: LinkedIn profile sync.
  *
- * Replaces the separate scraping in linkedin-engagement-scheduler,
- * outbound-engagement-scrape, and weekly-analytics with a single job
- * that runs every 30 minutes for all active linkedin_profiles.
- *
- * See docs/plans/active/linkedin-sync-unification.md
+ * Scrapes all active linkedin_profiles every 30 minutes.
+ * Handles posts, snapshots, comments, engagers, outbound Slack cards,
+ * unreplied comment alerts, and triggers lead upserts.
  */
 
 import { schedules, task, logger, queue } from "@trigger.dev/sdk";
@@ -39,7 +37,7 @@ const MAX_POSTS_PER_SYNC = 50;
 const OUTBOUND_MAX_AGE_DAYS = 1;
 
 /** Only scrape comments on posts newer than this */
-const COMMENT_SCRAPE_MAX_AGE_DAYS = 7;
+const COMMENT_SCRAPE_MAX_AGE_DAYS = 30;
 
 /** Early engager window: 6–7 hours after posting */
 const EARLY_WINDOW_MIN_H = 6;
@@ -58,18 +56,10 @@ const linkedinSyncQueue = queue({
 // Scheduler
 // ---------------------------------------------------------------------------
 
-/** Set to true to pause the scheduler (no sync runs will be triggered) */
-const LINKEDIN_SYNC_SCHEDULER_PAUSED = true;
-
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
   cron: "*/30 * * * *",
   run: async (_payload, { ctx }) => {
-    if (LINKEDIN_SYNC_SCHEDULER_PAUSED) {
-      logger.info("linkedin-sync-scheduler is paused");
-      return { profileCount: 0, paused: true };
-    }
-
     try {
       const profiles = await db
         .select({ id: linkedinProfiles.id, accountId: linkedinProfiles.accountId })
@@ -382,7 +372,8 @@ export const linkedinSyncProfileTask = task({
       }
 
       // Step 8: Unreplied comment alerts
-      if (profile.analyticsEnabled) {
+      // Set DISABLE_UNREPLIED_ALERTS=1 to suppress while migrating comment data
+      if (profile.analyticsEnabled && !process.env.DISABLE_UNREPLIED_ALERTS) {
         try {
           const alertsSent = await sendUnrepliedCommentAlerts(
             profileId,
@@ -462,19 +453,14 @@ async function scrapeAndUpsertComments(
   postUrl: string,
   ownerSlug: string | undefined
 ) {
-  const engagers = await scrapePostComments(postUrl);
+  const comments = await scrapePostComments(postUrl);
 
-  if (engagers.length === 0) return;
+  if (comments.length === 0) return;
 
-  logger.info(`Upserting ${engagers.length} comments for post ${postId}`);
+  logger.info(`Upserting ${comments.length} comments for post ${postId}`);
 
-  for (const e of engagers) {
-    // Derive a stable comment ID — the comments actor doesn't return a unique ID,
-    // so we use a combo of author URL + truncated content as dedup key
-    const apifyCommentId = `${e.linkedinSlug || e.linkedinUrl}_${(e.postUrl || "").slice(-20)}`.slice(0, 200);
-
-    const authorSlug = e.linkedinSlug?.toLowerCase() ?? null;
-    const isOwner = ownerSlug ? authorSlug === ownerSlug.toLowerCase() : false;
+  for (const c of comments) {
+    const isOwner = ownerSlug ? c.authorSlug?.toLowerCase() === ownerSlug.toLowerCase() : false;
 
     await db
       .insert(linkedinPostComments)
@@ -482,16 +468,25 @@ async function scrapeAndUpsertComments(
         postId,
         profileId,
         accountId,
-        apifyCommentId,
-        authorName: [e.firstName, e.lastName].filter(Boolean).join(" "),
-        authorLinkedinUrl: e.linkedinUrl,
-        authorHeadline: e.headline,
-        commentText: "", // comment text not available from the EngagedPerson interface
-        commentedAt: e.engagedAt,
-        isReply: false,
+        commentUrn: c.commentId,
+        authorName: c.authorName,
+        authorLinkedinUrl: c.authorProfileUrl,
+        authorHeadline: c.authorHeadline,
+        commentText: c.text,
+        commentUrl: c.commentUrl,
+        commentedAt: c.postedAt,
+        isReply: c.isReply,
+        parentCommentId: c.parentCommentId,
         repliedToByOwner: false,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [linkedinPostComments.postId, linkedinPostComments.commentUrn],
+        set: {
+          commentText: c.text,
+          authorHeadline: c.authorHeadline,
+          commentUrl: c.commentUrl,
+        },
+      });
 
     // If this person IS the owner, mark any existing top-level comments
     // on this post as replied-to
@@ -577,6 +572,7 @@ async function sendUnrepliedCommentAlerts(
       authorName: linkedinPostComments.authorName,
       authorLinkedinUrl: linkedinPostComments.authorLinkedinUrl,
       commentText: linkedinPostComments.commentText,
+      commentUrl: linkedinPostComments.commentUrl,
       commentedAt: linkedinPostComments.commentedAt,
     })
     .from(linkedinPostComments)
@@ -647,7 +643,8 @@ async function sendUnrepliedCommentAlerts(
         const preview = c.commentText
           ? ` — "${c.commentText.slice(0, 60)}${c.commentText.length > 60 ? "..." : ""}"`
           : "";
-        return `  ${link}${preview}`;
+        const commentLink = c.commentUrl ? ` (<${c.commentUrl}|view>)` : "";
+        return `  ${link}${preview}${commentLink}`;
       })
       .join("\n");
 

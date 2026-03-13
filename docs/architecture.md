@@ -65,13 +65,12 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `toolRuns` — Record of all background job executions
 - `accountActions` — Action items per account
 - `calendarSyncState`, `calendarEvents`, `calendarEventAccounts`, `calendarEventContacts` — Calendar automation
-- `engagementProfiles` — LinkedIn profiles tracked for outbound engagement (per account)
-- `engagementPosts` — Scraped LinkedIn posts pending/actioned review
-- `engagementJobs` — Apify scrape job records for engagement profiles
-- `engagementRawResults` — Raw Apify output per job (dedup key: profileId + apifyItemId)
-- `managedProfiles` — Our clients' LinkedIn profiles tracked for analytics (distinct from `engagementProfiles` which tracks external targets)
-- `managedPosts` — LinkedIn posts scraped from managed profiles (dedup key: profileId + apifyPostId)
-- `managedPostSnapshots` — Periodic engagement metric snapshots (likes/comments/reposts) per managed post
+- `linkedinProfiles` — Unified registry of all tracked LinkedIn profiles (analytics, outbound engagement, inbound lead discovery)
+- `linkedinPosts` — LinkedIn posts scraped from tracked profiles (dedup key: profileId + apifyPostId)
+- `linkedinPostSnapshots` — Periodic engagement metric snapshots (likes/comments/reposts) per post
+- `linkedinPostComments` — Comments on recent posts, used for unreplied comment alerts
+- `linkedinPostEngagements` — Reactions and reposts on posts, used for lead discovery
+- `linkedinSyncRuns` — Sync job execution records per profile
 - `analyticsReports` — Generated weekly analytics reports, with PDF URL and Slack message TS
 
 ID scheme: CUID2 with prefixes (`user_`, `acct_`, `contact_`, `lead_`, `run_`, etc.) — see `src/lib/ids.ts`.
@@ -91,8 +90,8 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 
 **Automation tasks** (triggered via API or scheduled):
 
-- `linkedin-engagement-scrape` — Lead discovery from company/personal engagement
-- `outbound-engagement-scrape` — Scrapes recent LinkedIn posts for tracked profiles, sends to Slack for review
+- `linkedin-sync-profile` — Unified LinkedIn profile scraping (posts, comments, engagers, snapshots)
+- `linkedin-lead-upsert` — Discovers leads from post engagers and comments (no Apify calls)
 - `engagement-slack-action` — Processes Slack button clicks (comment/like/repost/skip) on outbound engagement cards
 - `account-enrichment` — Company data enrichment via web search
 - `weekly-analytics` — Scrapes a single managed client LinkedIn profile, generates a weekly performance report, sends to Slack (triggered by `weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
@@ -102,8 +101,8 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
 - `calendar-meeting-notifier` — Meeting prep notifications
-- `linkedin-engagement-scheduler` — Periodic engagement scraping
-- `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every active managed profile
+- `linkedin-sync-scheduler` — Every 30 min: fans out `linkedin-sync-profile` for all active LinkedIn profiles
+- `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every analytics-enabled LinkedIn profile
 - `idea-generator` — Hourly AI-driven idea bot: generates a product idea, implements it, opens a PR (Mon–Fri, 9am–5pm London)
 - `code-quality-scan` — Weekly doc gardening: Claude audits docs vs code, opens PR for drift
 

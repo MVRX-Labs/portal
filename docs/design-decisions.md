@@ -82,11 +82,11 @@ Key architectural decisions and their rationale. Check here before making change
 
 ---
 
-## LinkedIn Analytics: Managed Profiles vs Engagement Profiles
+## Unified LinkedIn Profile Registry
 
-**Decision:** Client LinkedIn profiles tracked for analytics (`managedProfiles`) are a separate concept from external profiles tracked for outbound engagement (`engagementProfiles`).
+**Decision:** All tracked LinkedIn profiles (analytics, outbound engagement, inbound lead discovery) live in a single `linkedin_profiles` table with feature flags (`analytics_enabled`, `outbound_enabled`, `inbound_enabled`).
 
-**Why:** The workflows are orthogonal. Engagement profiles are targets we want to interact with; managed profiles are our clients' own profiles whose post performance we measure and report on. Keeping them in separate tables (`managed_profiles`, `managed_posts`, `managed_post_snapshots`, `analytics_reports`) prevents the engagement bot's state from bleeding into analytics and vice versa. The `weekly-analytics` task scrapes managed profiles every Monday and sends a performance summary to the account's `analyticsSlackChannel`.
+**Why:** The three systems (analytics, outbound engagement, inbound lead discovery) all start the same way — scraping recent posts via Apify. Unifying them into one profile registry and one scraping job (`linkedin-sync-profile`, every 30 min) eliminates duplicate Apify calls, simplifies profile management, and makes it easy for a single profile to serve multiple purposes. Posts live in `linkedin_posts` with engagement workflow fields for outbound and scrape-window timestamps for lead discovery. See `docs/plans/completed/linkedin-sync-unification.md`.
 
 ---
 

@@ -17,7 +17,6 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
   const [accountEmail, setAccountEmail] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
-  const [engagementScrapeEnabled, setEngagementScrapeEnabled] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,7 +37,6 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
           accountEmail: accountEmail.trim() || undefined,
           personalEmail: personalEmail.trim() || undefined,
           linkedinUrl: linkedinUrl.trim() || undefined,
-          engagementScrapeEnabled,
         },
       });
       onCreated(data.contact);
@@ -99,16 +97,6 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
               placeholder="https://linkedin.com/in/username"
             />
           </div>
-
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={engagementScrapeEnabled}
-              onChange={(e) => setEngagementScrapeEnabled(e.target.checked)}
-              className="rounded"
-            />
-            Enable engagement scraping
-          </label>
 
           {error && <div className="text-sm text-(--destructive)">{error}</div>}
 

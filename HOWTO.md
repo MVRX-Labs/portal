@@ -196,11 +196,10 @@ You can also trigger background jobs directly via the Trigger.dev MCP or SDK, by
 | `linkedin-post-generator`       | `{ runId, posterName, posterRole, sourceMaterial, voiceContext?, linkedinUrl?, useLinkedinProfile?, model?, accountName? }` |
 | `linkedin-humanizer`            | `{ runId, postContent, tone, writingExamples?, model? }`                                                                    |
 | `sentiment-analysis-generation` | `{ runId, productName, companyName, sources, additionalUrls, keywords, model?, accountName? }`                              |
-| `linkedin-engagement-scrape`    | `{ accountId, contactId, linkedinUrl, sourceType: "company"\|"personal", runId? }`                                          |
 | `account-enrichment`            | `{ accountId, domain }`                                                                                                     |
 | `calendar-sync`                 | (no payload — scheduled task, but can be triggered manually)                                                                |
 | `calendar-meeting-notifier`     | (no payload — scheduled task)                                                                                               |
-| `linkedin-engagement-scheduler` | (no payload — scheduled task)                                                                                               |
+| `linkedin-sync-scheduler`       | (no payload — scheduled task, every 30 min)                                                                                 |
 
 ### Via Trigger.dev MCP
 

@@ -17,7 +17,6 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
   const [industry, setIndustry] = useState("");
   const [website, setWebsite] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
-  const [engagementScrapeEnabled, setEngagementScrapeEnabled] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,7 +36,6 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
           industry: industry.trim() || undefined,
           website: website.trim() || undefined,
           linkedinUrl: linkedinUrl.trim() || undefined,
-          engagementScrapeEnabled,
         },
       });
       onCreated({
@@ -105,16 +103,6 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
               placeholder="https://linkedin.com/company/..."
             />
           </div>
-
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={engagementScrapeEnabled}
-              onChange={(e) => setEngagementScrapeEnabled(e.target.checked)}
-              className="rounded"
-            />
-            Enable engagement scraping
-          </label>
 
           {error && <div className="text-sm text-(--destructive)">{error}</div>}
 

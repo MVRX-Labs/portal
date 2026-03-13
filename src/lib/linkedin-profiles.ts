@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { linkedinProfiles, accounts, contacts, managedProfiles, engagementProfiles } from "@/lib/schema";
+import { linkedinProfiles } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 
 function normalizeLinkedinUrl(linkedinUrl: string): string {
@@ -117,70 +117,4 @@ export async function listLinkedinProfiles(
 export async function getLinkedinProfile(profileId: string) {
   const [profile] = await db.select().from(linkedinProfiles).where(eq(linkedinProfiles.id, profileId));
   return profile ?? null;
-}
-
-/**
- * Migrate existing data from managedProfiles, engagementProfiles,
- * and accounts/contacts with engagementScrapeEnabled into the unified
- * linkedin_profiles table. Safe to run multiple times (upserts by accountId+linkedinUrl).
- */
-export async function migrateExistingProfiles(): Promise<{
-  fromManaged: number;
-  fromEngagement: number;
-  fromAccounts: number;
-  fromContacts: number;
-}> {
-  let fromManaged = 0;
-  let fromEngagement = 0;
-  let fromAccounts = 0;
-  let fromContacts = 0;
-
-  // 1. Migrate managedProfiles → analyticsEnabled
-  const managed = await db.select().from(managedProfiles);
-  for (const mp of managed) {
-    await addLinkedinProfile(mp.accountId, mp.linkedinUrl, {
-      displayName: mp.displayName,
-      linkedinSlug: mp.linkedinSlug ?? undefined,
-      analyticsEnabled: true,
-    });
-    fromManaged++;
-  }
-
-  // 2. Migrate engagementProfiles → outboundEnabled
-  const engagement = await db.select().from(engagementProfiles);
-  for (const ep of engagement) {
-    await addLinkedinProfile(ep.accountId, ep.linkedinUrl, {
-      displayName: ep.displayName,
-      outboundEnabled: true,
-      engagementPersona: ep.engagementPersona,
-    });
-    fromEngagement++;
-  }
-
-  // 3. Migrate accounts with engagementScrapeEnabled → inboundEnabled
-  const accts = await db.select().from(accounts).where(eq(accounts.engagementScrapeEnabled, true));
-  for (const acct of accts) {
-    if (!acct.linkedinUrl) continue;
-    await addLinkedinProfile(acct.id, acct.linkedinUrl, {
-      displayName: acct.name,
-      inboundEnabled: true,
-      sourceType: "company",
-    });
-    fromAccounts++;
-  }
-
-  // 4. Migrate contacts with engagementScrapeEnabled → inboundEnabled
-  const ctcts = await db.select().from(contacts).where(eq(contacts.engagementScrapeEnabled, true));
-  for (const c of ctcts) {
-    if (!c.linkedinUrl) continue;
-    await addLinkedinProfile(c.accountId, c.linkedinUrl, {
-      displayName: c.name,
-      inboundEnabled: true,
-      sourceType: "personal",
-      contactId: c.id,
-    });
-    fromContacts++;
-  }
-
-  return { fromManaged, fromEngagement, fromAccounts, fromContacts };
 }

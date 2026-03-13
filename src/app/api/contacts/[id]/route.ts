@@ -19,8 +19,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (data.linkedinUrl !== undefined) updates.linkedinUrl = data.linkedinUrl;
   if (data.contentVoiceGuidance !== undefined) updates.contentVoiceGuidance = data.contentVoiceGuidance;
   if (data.notes !== undefined) updates.notes = data.notes;
-  if (data.engagementScrapeEnabled !== undefined) updates.engagementScrapeEnabled = data.engagementScrapeEnabled;
-
   const [contact] = await db.update(contacts).set(updates).where(eq(contacts.id, id)).returning();
 
   if (!contact) {

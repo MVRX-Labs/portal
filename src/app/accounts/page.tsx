@@ -89,7 +89,6 @@ function ExpandedView({
   const [ownerId, setOwnerId] = useState(account.ownerId || "");
   const [mrr, setMrr] = useState(String(account.mrr / 100));
   const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
-  const [engagementScrapeEnabled, setEngagementScrapeEnabled] = useState(account.engagementScrapeEnabled);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -111,7 +110,6 @@ function ExpandedView({
     setOwnerId(account.ownerId || "");
     setMrr(String(account.mrr / 100));
     setMrrCurrency(account.mrrCurrency || "$");
-    setEngagementScrapeEnabled(account.engagementScrapeEnabled);
     setDirty(false);
   }, [
     account.id,
@@ -125,7 +123,6 @@ function ExpandedView({
     account.ownerId,
     account.mrr,
     account.mrrCurrency,
-    account.engagementScrapeEnabled,
   ]);
 
   const fetchContacts = useCallback(async () => {
@@ -215,7 +212,6 @@ function ExpandedView({
           ownerId: ownerId || null,
           mrr: mrrCents,
           mrrCurrency,
-          engagementScrapeEnabled,
         },
       });
       const ownerUser = users.find((u) => u.id === ownerId);
@@ -232,7 +228,6 @@ function ExpandedView({
         ownerName: ownerUser?.name || null,
         mrr: mrrCents,
         mrrCurrency,
-        engagementScrapeEnabled,
       });
       setDirty(false);
     } catch {
@@ -251,7 +246,6 @@ function ExpandedView({
       linkedinUrl: contact.linkedinUrl,
       contentVoiceGuidance: contact.contentVoiceGuidance,
       notes: contact.notes,
-      engagementScrapeEnabled: contact.engagementScrapeEnabled,
     });
   };
 
@@ -268,7 +262,6 @@ function ExpandedView({
           linkedinUrl: contactEdits.linkedinUrl || null,
           contentVoiceGuidance: contactEdits.contentVoiceGuidance || null,
           notes: contactEdits.notes || null,
-          engagementScrapeEnabled: contactEdits.engagementScrapeEnabled,
         },
       });
       setContacts((prev) => prev.map((c) => (c.id === editingContactId ? { ...c, ...contactEdits } : c)));
@@ -316,14 +309,6 @@ function ExpandedView({
                             title="Auto-created from calendar sync"
                           >
                             Auto
-                          </span>
-                        )}
-                        {contact.engagementScrapeEnabled && (
-                          <span
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
-                            title="Engagement scraping enabled"
-                          >
-                            Scrape
                           </span>
                         )}
                       </p>
@@ -415,18 +400,7 @@ function ExpandedView({
                         value={contactEdits.notes || ""}
                         onChange={(v) => setContactEdits((prev) => ({ ...prev, notes: v }))}
                       />
-                      <div className="flex items-center justify-between pt-1">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={contactEdits.engagementScrapeEnabled || false}
-                            onChange={(e) =>
-                              setContactEdits((prev) => ({ ...prev, engagementScrapeEnabled: e.target.checked }))
-                            }
-                            className="rounded"
-                          />
-                          Enable engagement scraping
-                        </label>
+                      <div className="flex items-center justify-end pt-1">
                         <button onClick={handleSaveContact} disabled={savingContact} className="btn-primary text-sm">
                           {savingContact ? "Saving..." : "Save Contact"}
                         </button>
@@ -661,18 +635,6 @@ function ExpandedView({
               />
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
-            <input
-              type="checkbox"
-              checked={engagementScrapeEnabled}
-              onChange={(e) => {
-                setEngagementScrapeEnabled(e.target.checked);
-                setDirty(true);
-              }}
-              className="rounded"
-            />
-            Enable engagement scraping for this account
-          </label>
           {dirty && (
             <div className="mt-3 flex justify-end">
               <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
@@ -835,14 +797,6 @@ function AccountsContent() {
                             title="Auto-created from calendar sync — review details"
                           >
                             Auto
-                          </span>
-                        )}
-                        {account.engagementScrapeEnabled && (
-                          <span
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
-                            title="Engagement scraping enabled"
-                          >
-                            Scrape
                           </span>
                         )}
                         {account.hidden && (

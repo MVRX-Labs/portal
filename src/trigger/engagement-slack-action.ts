@@ -1,6 +1,5 @@
 import { task, logger } from "@trigger.dev/sdk/v3";
 import { generateComment, updateSlackCard } from "@/lib/engagement-bot";
-import { getPost, updatePostStatus, getProfile } from "@/lib/engagement-bot-db";
 import { getLinkedinPost, getLinkedinPostProfile, updateLinkedinPostStatus } from "@/lib/linkedin-sync-db";
 import { sendSlackNotification } from "@/lib/slack";
 
@@ -8,40 +7,6 @@ interface SlackActionPayload {
   actionName: "comment" | "like" | "repost" | "skip";
   postId: string;
   channelId: string;
-}
-
-/**
- * Route to the correct DB based on post ID prefix.
- * "lpost_*" → new linkedin_posts table, "engpost_*" → old engagement_posts table.
- */
-function isNewPost(postId: string): boolean {
-  return postId.startsWith("lpost_");
-}
-
-async function resolvePost(postId: string) {
-  if (isNewPost(postId)) {
-    const post = await getLinkedinPost(postId);
-    if (!post) return null;
-    const profile = await getLinkedinPostProfile(post.profileId);
-    return {
-      post: {
-        ...post,
-        engagementStatus: post.engagementStatus || "pending",
-      },
-      profile: profile ? { displayName: profile.displayName, engagementPersona: profile.engagementPersona } : null,
-      updateStatus: (status: string, comment?: string) => updateLinkedinPostStatus(postId, status, comment),
-      getPost: () => getLinkedinPost(postId),
-    };
-  }
-  const post = await getPost(postId);
-  if (!post) return null;
-  const profile = await getProfile(post.profileId);
-  return {
-    post,
-    profile,
-    updateStatus: (status: string, comment?: string) => updatePostStatus(postId, status, comment),
-    getPost: () => getPost(postId),
-  };
 }
 
 export const engagementSlackActionTask = task({
@@ -52,16 +17,16 @@ export const engagementSlackActionTask = task({
     const { actionName, postId, channelId } = payload;
 
     try {
-      const resolved = await resolvePost(postId);
-      if (!resolved) {
+      const post = await getLinkedinPost(postId);
+      if (!post) {
         logger.warn(`Post ${postId} not found`);
         return;
       }
 
-      const { post, profile, updateStatus } = resolved;
+      const profile = await getLinkedinPostProfile(post.profileId);
 
       // Atomically claim the post: sent_to_slack → processing (prevents duplicate actions)
-      const claimed = await updateStatus("processing");
+      const claimed = await updateLinkedinPostStatus(postId, "processing");
       if (!claimed) {
         logger.info(`Post ${postId} not in actionable state (${post.engagementStatus}), skipping`);
         return;
@@ -69,13 +34,13 @@ export const engagementSlackActionTask = task({
 
       let comment: string | undefined;
       if (actionName === "comment") {
-        const persona = ((profile as Record<string, unknown>)?.engagementPersona as string) || "";
+        const persona = profile?.engagementPersona || "";
         try {
           comment = await generateComment(post.content, persona || undefined);
         } catch (err) {
           logger.error(`Comment generation failed for post ${postId}: ${String(err)}`);
-          await updateStatus("failed");
-          const failedPost = await resolved.getPost();
+          await updateLinkedinPostStatus(postId, "failed");
+          const failedPost = await getLinkedinPost(postId);
           if (failedPost?.slackMessageTs && channelId && profile) {
             await updateSlackCard(channelId, failedPost.slackMessageTs, failedPost as never, profile, "failed");
           }
@@ -84,9 +49,9 @@ export const engagementSlackActionTask = task({
       }
 
       const newStatus = actionName === "skip" ? "skip" : "awaiting_action";
-      await updateStatus(newStatus, comment);
+      await updateLinkedinPostStatus(postId, newStatus, comment);
 
-      const updatedPost = await resolved.getPost();
+      const updatedPost = await getLinkedinPost(postId);
       if (updatedPost?.slackMessageTs && channelId && profile) {
         await updateSlackCard(channelId, updatedPost.slackMessageTs, updatedPost as never, profile, actionName);
       }

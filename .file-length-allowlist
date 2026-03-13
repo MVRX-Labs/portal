@@ -14,7 +14,6 @@ src/components/tool\-form.tsx
 *_snapshot.json
 src/trigger/linkedin-post-generator.ts
 src/app/accounts/page.tsx
-src/trigger/linkedin-engagement-scrape.ts
 src/app/admin/calendar/page.tsx
 src/trigger/calendar-sync.ts
 src/app/linkedin-engagement/page.tsx

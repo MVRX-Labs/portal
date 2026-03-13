@@ -31,7 +31,7 @@ import { isNull } from "drizzle-orm";
 // ---------------------------------------------------------------------------
 
 /** Max posts to fetch per profile per sync */
-const MAX_POSTS_PER_SYNC = 50;
+const MAX_POSTS_PER_SYNC = 10; // Assuming profiles don't make more than 10 posts per week
 
 /** Only set engagement_status=pending on posts newer than this for outbound */
 const OUTBOUND_MAX_AGE_DAYS = 1;
@@ -58,7 +58,7 @@ const linkedinSyncQueue = queue({
 
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
-  cron: "*/30 * * * *",
+  cron: "5 * * * *",
   run: async (_payload, { ctx }) => {
     try {
       const profiles = await db

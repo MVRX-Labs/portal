@@ -6,6 +6,7 @@ import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinPostGeneratorTask } from "@/trigger/linkedin-post-generator";
 import { parseBody } from "@/lib/api-schemas/common";
 import { linkedinPostGeneratorBodySchema } from "@/lib/api-schemas/tools";
+import { getContactLinkedinUrl } from "@/lib/linkedin-profiles";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -33,7 +34,8 @@ export async function POST(request: NextRequest) {
     "Unknown role";
 
   const useLinkedinProfile = inputs.useLinkedinProfile === true || inputs.useLinkedinProfile === "true";
-  const linkedinUrl = useLinkedinProfile && contact.linkedinUrl ? contact.linkedinUrl : undefined;
+  const contactLinkedinUrl = useLinkedinProfile ? await getContactLinkedinUrl(contact.id) : null;
+  const linkedinUrl = contactLinkedinUrl ?? undefined;
   const resolvedAccountId = (typeof inputs.accountId === "string" && inputs.accountId) || contact.accountId;
 
   let accountName: string | undefined;

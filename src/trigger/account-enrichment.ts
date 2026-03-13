@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
+import { addLinkedinProfile } from "@/lib/linkedin-profiles";
 import { MODEL_MAP } from "@/lib/audit-utils";
 
 interface EnrichmentPayload {
@@ -142,9 +143,16 @@ export const accountEnrichmentTask = task({
 
       if (result.industry) updates.industry = result.industry;
       if (result.website) updates.website = result.website;
-      if (result.linkedinUrl) updates.linkedinUrl = result.linkedinUrl;
 
       await db.update(accounts).set(updates).where(eq(accounts.id, accountId));
+
+      // Create linkedin_profile if enrichment found a LinkedIn URL
+      if (result.linkedinUrl) {
+        await addLinkedinProfile(accountId, result.linkedinUrl, {
+          displayName: result.companyName,
+          sourceType: "company",
+        }).catch(() => {});
+      }
 
       logger.info(`Enriched account ${accountId}: "${account.name}" -> "${result.companyName}"`);
 

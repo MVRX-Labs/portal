@@ -118,3 +118,27 @@ export async function getLinkedinProfile(profileId: string) {
   const [profile] = await db.select().from(linkedinProfiles).where(eq(linkedinProfiles.id, profileId));
   return profile ?? null;
 }
+
+export async function getContactLinkedinUrl(contactId: string): Promise<string | null> {
+  const [profile] = await db
+    .select({ linkedinUrl: linkedinProfiles.linkedinUrl })
+    .from(linkedinProfiles)
+    .where(and(eq(linkedinProfiles.contactId, contactId), eq(linkedinProfiles.active, true)))
+    .limit(1);
+  return profile?.linkedinUrl ?? null;
+}
+
+export async function getAccountCompanyLinkedinUrl(accountId: string): Promise<string | null> {
+  const [profile] = await db
+    .select({ linkedinUrl: linkedinProfiles.linkedinUrl })
+    .from(linkedinProfiles)
+    .where(
+      and(
+        eq(linkedinProfiles.accountId, accountId),
+        eq(linkedinProfiles.sourceType, "company"),
+        eq(linkedinProfiles.active, true)
+      )
+    )
+    .limit(1);
+  return profile?.linkedinUrl ?? null;
+}

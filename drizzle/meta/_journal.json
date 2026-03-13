@@ -176,6 +176,13 @@
       "when": 1773401442700,
       "tag": "0024_wooden_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1773427744563,
+      "tag": "0025_tricky_polaris",
+      "breakpoints": true
     }
   ]
 }

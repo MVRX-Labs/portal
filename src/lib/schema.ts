@@ -21,7 +21,6 @@ export const accounts = pgTable("accounts", {
   industry: text("industry"),
   website: text("website"),
   emailDomain: text("email_domain"),
-  linkedinUrl: text("linkedin_url"),
   googleDriveFolderId: text("google_drive_folder_id"),
   notes: text("notes"),
   contentVoiceGuidance: text("content_voice_guidance"),
@@ -48,7 +47,6 @@ export const contacts = pgTable("contacts", {
     .references(() => accounts.id),
   accountEmail: text("account_email"),
   personalEmail: text("personal_email"),
-  linkedinUrl: text("linkedin_url"),
   contentVoiceGuidance: text("content_voice_guidance"),
   notes: text("notes"),
   nextMeetingAt: timestamp("next_meeting_at"),
@@ -268,7 +266,7 @@ export const linkedinProfiles = pgTable(
 
     // Feature flags (a profile can have multiple purposes)
     analyticsEnabled: boolean("analytics_enabled").notNull().default(false),
-    outboundEnabled: boolean("outbound_enabled").notNull().default(false),
+    outboundEnabled: boolean("outbound_enabled").notNull().default(false), // This is for alpha feed / for our customers to engage with
     inboundEnabled: boolean("inbound_enabled").notNull().default(false),
 
     // Outbound-specific

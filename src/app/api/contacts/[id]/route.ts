@@ -4,6 +4,7 @@ import { contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
 import { updateContactBodySchema } from "@/lib/api-schemas/contacts";
+import { addLinkedinProfile, getContactLinkedinUrl } from "@/lib/linkedin-profiles";
 
 export const maxDuration = 300;
 
@@ -16,7 +17,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (data.name !== undefined) updates.name = data.name;
   if (data.accountEmail !== undefined) updates.accountEmail = data.accountEmail;
   if (data.personalEmail !== undefined) updates.personalEmail = data.personalEmail;
-  if (data.linkedinUrl !== undefined) updates.linkedinUrl = data.linkedinUrl;
   if (data.contentVoiceGuidance !== undefined) updates.contentVoiceGuidance = data.contentVoiceGuidance;
   if (data.notes !== undefined) updates.notes = data.notes;
   const [contact] = await db.update(contacts).set(updates).where(eq(contacts.id, id)).returning();
@@ -25,5 +25,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ contact });
+  // Handle linkedinUrl → linkedin_profiles
+  if (data.linkedinUrl !== undefined && data.linkedinUrl) {
+    await addLinkedinProfile(contact.accountId, data.linkedinUrl, {
+      displayName: contact.name,
+      sourceType: "personal",
+      contactId: contact.id,
+    }).catch(() => {});
+  }
+
+  const linkedinUrl = await getContactLinkedinUrl(contact.id);
+  return NextResponse.json({ contact: { ...contact, linkedinUrl } });
 }

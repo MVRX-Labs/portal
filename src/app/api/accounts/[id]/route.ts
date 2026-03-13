@@ -6,6 +6,7 @@ import { isObjectId } from "@/lib/ids";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { parseBody } from "@/lib/api-schemas/common";
 import { updateAccountBodySchema } from "@/lib/api-schemas/accounts";
+import { addLinkedinProfile, getAccountCompanyLinkedinUrl } from "@/lib/linkedin-profiles";
 
 export const maxDuration = 300;
 
@@ -40,7 +41,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     account = await ensureDriveFolder(account);
 
-    return NextResponse.json({ account });
+    const linkedinUrl = await getAccountCompanyLinkedinUrl(account.id);
+    return NextResponse.json({ account: { ...account, linkedinUrl } });
   } catch (err) {
     console.error("GET /api/accounts/[id] failed:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -57,7 +59,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (data.name !== undefined) updates.name = data.name;
   if (data.industry !== undefined) updates.industry = data.industry;
   if (data.website !== undefined) updates.website = data.website;
-  if (data.linkedinUrl !== undefined) updates.linkedinUrl = data.linkedinUrl;
   if (data.notes !== undefined) updates.notes = data.notes;
   if (data.contentVoiceGuidance !== undefined) updates.contentVoiceGuidance = data.contentVoiceGuidance;
   if (data.ownerId !== undefined) updates.ownerId = data.ownerId || null;
@@ -72,5 +73,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ account });
+  // Handle linkedinUrl → linkedin_profiles
+  if (data.linkedinUrl !== undefined) {
+    if (data.linkedinUrl) {
+      await addLinkedinProfile(account.id, data.linkedinUrl, {
+        displayName: account.name,
+        sourceType: "company",
+      }).catch(() => {});
+    }
+  }
+
+  const linkedinUrl = await getAccountCompanyLinkedinUrl(account.id);
+  return NextResponse.json({ account: { ...account, linkedinUrl } });
 }

@@ -6,6 +6,7 @@ import { tasks, auth } from "@trigger.dev/sdk/v3";
 import type { linkedinAuditTask } from "@/trigger/linkedin-audit";
 import { parseBody } from "@/lib/api-schemas/common";
 import { linkedinAuditBodySchema } from "@/lib/api-schemas/tools";
+import { getContactLinkedinUrl } from "@/lib/linkedin-profiles";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
-  if (!contact.linkedinUrl) {
+  const linkedinUrl = await getContactLinkedinUrl(contact.id);
+  if (!linkedinUrl) {
     return NextResponse.json({ error: "Selected contact has no LinkedIn URL" }, { status: 400 });
   }
 
@@ -33,8 +35,6 @@ export async function POST(request: NextRequest) {
     const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
     if (account) companyName = account.name;
   }
-
-  const linkedinUrl = contact.linkedinUrl;
 
   const [run] = await db
     .insert(toolRuns)

@@ -19,6 +19,11 @@ import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
 import { NotesField } from "@/components/notes-field";
 import { CreateAccountModal } from "@/components/create-account-modal";
 import { CreateContactModal } from "@/components/create-contact-modal";
+import type { LinkedinProfile } from "@/lib/api-schemas/linkedin-profiles";
+import {
+  getLinkedinProfilesResponseSchema,
+  patchLinkedinProfileResponseSchema,
+} from "@/lib/api-schemas/linkedin-profiles";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -92,6 +97,10 @@ function ExpandedView({
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
+  // LinkedIn profiles
+  const [linkedinProfiles, setLinkedinProfiles] = useState<LinkedinProfile[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+
   // Contact editing
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactEdits, setContactEdits] = useState<Partial<Contact>>({});
@@ -149,10 +158,40 @@ function ExpandedView({
     }
   }, [account.id]);
 
+  const fetchProfiles = useCallback(async () => {
+    setLoadingProfiles(true);
+    try {
+      const data = await apiFetch(`/api/accounts/${account.id}/linkedin-profiles`, getLinkedinProfilesResponseSchema);
+      setLinkedinProfiles(data.profiles);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingProfiles(false);
+    }
+  }, [account.id]);
+
   useEffect(() => {
     fetchContacts();
     fetchActions();
-  }, [fetchContacts, fetchActions]);
+    fetchProfiles();
+  }, [fetchContacts, fetchActions, fetchProfiles]);
+
+  const handleToggleFlag = async (
+    profileId: string,
+    flag: "inboundEnabled" | "analyticsEnabled" | "outboundEnabled",
+    value: boolean
+  ) => {
+    setLinkedinProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, [flag]: value } : p)));
+    try {
+      await apiMutate(
+        `/api/accounts/${account.id}/linkedin-profiles/${profileId}`,
+        patchLinkedinProfileResponseSchema,
+        { method: "PATCH", body: { [flag]: value } }
+      );
+    } catch {
+      setLinkedinProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, [flag]: !value } : p)));
+    }
+  };
 
   const handleAddAction = async () => {
     if (!newActionTitle.trim() || addingAction) return;
@@ -490,6 +529,73 @@ function ExpandedView({
           }}
           onClose={() => setShowCreateContact(false)}
         />
+      )}
+
+      {/* LinkedIn Profiles */}
+      {linkedinProfiles.length > 0 && (
+        <div className="border-t border-(--border) pt-4 mb-4">
+          <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide mb-3">
+            LinkedIn Profiles ({loadingProfiles ? "..." : linkedinProfiles.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-(--border) text-left text-(--muted)">
+                  <th className="px-3 py-1.5 font-medium">Name</th>
+                  <th className="px-3 py-1.5 font-medium">LinkedIn URL</th>
+                  <th className="px-3 py-1.5 font-medium">Source</th>
+                  <th className="px-3 py-1.5 font-medium text-center">Inbound</th>
+                  <th className="px-3 py-1.5 font-medium text-center">Analytics</th>
+                  <th className="px-3 py-1.5 font-medium text-center">Outbound</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linkedinProfiles.map((p) => {
+                  const contactName = p.contactId ? contacts.find((c) => c.id === p.contactId)?.name : null;
+                  return (
+                    <tr key={p.id} className="border-b border-(--border) last:border-0">
+                      <td className="px-3 py-1.5">{p.displayName || contactName || "\u2014"}</td>
+                      <td className="px-3 py-1.5">
+                        <a
+                          href={p.linkedinUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-(--accent) hover:underline truncate block max-w-xs"
+                        >
+                          {p.linkedinUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\//, "")}
+                        </a>
+                      </td>
+                      <td className="px-3 py-1.5 text-(--muted)">
+                        {p.sourceType === "company" ? "Company" : "Personal"}
+                      </td>
+                      <td className="px-3 py-1.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={p.inboundEnabled}
+                          onChange={(e) => handleToggleFlag(p.id, "inboundEnabled", e.target.checked)}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={p.analyticsEnabled}
+                          onChange={(e) => handleToggleFlag(p.id, "analyticsEnabled", e.target.checked)}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={p.outboundEnabled}
+                          onChange={(e) => handleToggleFlag(p.id, "outboundEnabled", e.target.checked)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Editable fields — only shown in edit mode */}

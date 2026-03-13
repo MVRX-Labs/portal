@@ -5,7 +5,8 @@ import { tmpdir } from "os";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { toolRuns, accounts, contacts } from "@/lib/schema";
+import { toolRuns, accounts, contacts, linkedinProfiles } from "@/lib/schema";
+import { getAccountCompanyLinkedinUrl } from "@/lib/linkedin-profiles";
 import { runClaudeAgent } from "@/lib/claude-agent";
 import { extractJSON, resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { uploadFile, findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
@@ -51,7 +52,18 @@ export const growthReportTask = task({
       if (!account.website) throw new Error(`Account ${accountId} has no website`);
 
       const accountContacts = await db.select().from(contacts).where(eq(contacts.accountId, accountId));
-      const linkedinContacts = accountContacts.filter((c) => c.linkedinUrl);
+
+      // Look up LinkedIn URLs from linkedin_profiles
+      const contactProfiles = await db
+        .select({ contactId: linkedinProfiles.contactId, linkedinUrl: linkedinProfiles.linkedinUrl })
+        .from(linkedinProfiles)
+        .where(eq(linkedinProfiles.accountId, accountId));
+      const urlByContactId = new Map(
+        contactProfiles.filter((p) => p.contactId).map((p) => [p.contactId, p.linkedinUrl])
+      );
+      const linkedinContacts = accountContacts
+        .map((c) => ({ ...c, linkedinUrl: urlByContactId.get(c.id) ?? null }))
+        .filter((c) => c.linkedinUrl);
 
       logger.info("Account loaded", {
         name: account.name,
@@ -72,7 +84,7 @@ export const growthReportTask = task({
       const scraped = await collectAllData({
         websiteUrl: account.website,
         companyName: account.name,
-        companyLinkedinUrl: account.linkedinUrl,
+        companyLinkedinUrl: await getAccountCompanyLinkedinUrl(accountId),
         contacts: linkedinContacts.map((c) => ({ name: c.name, linkedinUrl: c.linkedinUrl! })),
         discovery,
       });

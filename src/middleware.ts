@@ -74,6 +74,7 @@ export const config = {
     "/history/:path*",
     "/admin/:path*",
     "/resources/:path*",
+    "/api/dashboard/:path*",
     "/api/tools/:path*",
     "/api/history/:path*",
     "/api/admin/:path*",

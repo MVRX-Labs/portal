@@ -22,15 +22,17 @@ export const createEngagementProfilesBodySchema = z.object({
 
 export type CreateEngagementProfilesBody = z.infer<typeof createEngagementProfilesBodySchema>;
 
-export const engagementProfileSchema = z.object({
-  id: z.string(),
-  accountId: z.string(),
-  linkedinUrl: z.string(),
-  displayName: z.string().nullable(),
-  engagementPersona: z.string().nullable(),
-  lastScrapedAt: dateStringNullable,
-  createdAt: dateString,
-});
+export const engagementProfileSchema = z
+  .object({
+    id: z.string(),
+    accountId: z.string(),
+    linkedinUrl: z.string(),
+    displayName: z.string(),
+    engagementPersona: z.string(),
+    lastSyncedAt: dateStringNullable,
+    createdAt: dateString,
+  })
+  .passthrough();
 
 export type EngagementProfile = z.infer<typeof engagementProfileSchema>;
 
@@ -55,10 +57,11 @@ export const engagementProfilesUploadResponseSchema = z.object({
 export type EngagementProfilesUploadResponse = z.infer<typeof engagementProfilesUploadResponseSchema>;
 
 // POST /api/accounts/[id]/engagement/scrape
-export const engagementScrapeResponseSchema = z.object({
-  triggered: z.number(),
-  runs: z.array(z.string()),
-});
+export const engagementScrapeResponseSchema = z
+  .object({
+    triggered: z.number(),
+  })
+  .passthrough();
 
 export type EngagementScrapeResponse = z.infer<typeof engagementScrapeResponseSchema>;
 
@@ -72,12 +75,12 @@ export const engagementPostSchema = z
   .object({
     id: z.string(),
     profileId: z.string(),
-    linkedinPostUrl: z.string().nullable(),
-    content: z.string().nullable(),
+    postUrl: z.string(),
+    content: z.string(),
     postedAt: dateStringNullable,
-    likes: z.number(),
-    comments: z.number(),
-    reposts: z.number(),
+    likesCount: z.number(),
+    commentsCount: z.number(),
+    repostsCount: z.number(),
     createdAt: dateString,
   })
   .passthrough();
@@ -89,14 +92,12 @@ export const engagementJobSchema = z
   .object({
     id: z.string(),
     accountId: z.string(),
-    profileId: z.string().nullable(),
+    profileId: z.string(),
     status: z.string(),
-    startedAt: dateStringNullable.optional(),
     completedAt: dateStringNullable,
-    error: z.string().nullable().optional(),
     errorMessage: z.string().nullable().optional(),
-    postsFound: z.number().optional(),
-    postsNew: z.number().optional(),
+    postsFound: z.number(),
+    postsNew: z.number(),
     triggerRunId: z.string().nullable().optional(),
     createdAt: dateString,
   })

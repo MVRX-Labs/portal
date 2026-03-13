@@ -20,7 +20,7 @@ interface Profile {
   linkedinUrl: string;
   displayName: string;
   engagementPersona: string;
-  lastScrapedAt: string | null;
+  lastSyncedAt: string | null;
 }
 
 interface Job {
@@ -372,7 +372,7 @@ function EngagementContent() {
                   </td>
                   <td className="px-3 py-1.5">{p.engagementPersona || "\u2014"}</td>
                   <td className="px-3 py-1.5 text-[var(--muted)] whitespace-nowrap">
-                    {p.lastScrapedAt ? formatDate(p.lastScrapedAt) : "\u2014"}
+                    {p.lastSyncedAt ? formatDate(p.lastSyncedAt) : "\u2014"}
                   </td>
                   <td className="px-3 py-1.5">
                     <button onClick={() => deleteProfile(p.id)} className="text-red-400 hover:text-red-300 text-xs">

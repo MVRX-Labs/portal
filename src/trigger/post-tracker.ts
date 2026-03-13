@@ -5,7 +5,7 @@
 
 import { task, logger } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
-import { managedPosts, managedPostSnapshots } from "@/lib/schema";
+import { linkedinPosts, linkedinPostSnapshots } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { scrapeProfilePosts, normalizePost } from "@/lib/engagement-bot";
 import { sendAnalyticsSlackMessage } from "@/lib/slack";
@@ -54,7 +54,10 @@ export const trackPostTask = task({
             results.push({
               postUrl: tracked.postUrl,
               content: "",
-              likes: 0, comments: 0, reposts: 0, total: 0,
+              likes: 0,
+              comments: 0,
+              reposts: 0,
+              total: 0,
               failed: true,
             });
             continue;
@@ -63,43 +66,39 @@ export const trackPostTask = task({
           const raw = rawPosts[0];
           const normalized = normalizePost(raw);
           const repostsCount =
-            (raw.numShares as number) ??
-            (raw.repostsCount as number) ??
-            (raw.reshareCount as number) ??
-            0;
+            (raw.numShares as number) ?? (raw.repostsCount as number) ?? (raw.reshareCount as number) ?? 0;
 
           const likes = normalized.likesCount;
           const comments = normalized.commentsCount;
-          const reposts = typeof repostsCount === "number"
-            ? Math.max(0, repostsCount) : 0;
+          const reposts = typeof repostsCount === "number" ? Math.max(0, repostsCount) : 0;
 
-          // Upsert + snapshot if we have a managed profile
+          // Upsert + snapshot if we have a profile
           if (tracked.profileId && normalized.apifyPostId) {
             const [existing] = await db
               .select()
-              .from(managedPosts)
+              .from(linkedinPosts)
               .where(
                 and(
-                  eq(managedPosts.profileId, tracked.profileId),
-                  eq(managedPosts.apifyPostId, normalized.apifyPostId),
-                ),
+                  eq(linkedinPosts.profileId, tracked.profileId),
+                  eq(linkedinPosts.apifyPostId, normalized.apifyPostId)
+                )
               );
 
             let postId: string;
             if (existing) {
               await db
-                .update(managedPosts)
+                .update(linkedinPosts)
                 .set({
                   likesCount: likes,
                   commentsCount: comments,
                   repostsCount: reposts,
                   postUrl: normalized.postUrl || existing.postUrl,
                 })
-                .where(eq(managedPosts.id, existing.id));
+                .where(eq(linkedinPosts.id, existing.id));
               postId = existing.id;
             } else {
               const [inserted] = await db
-                .insert(managedPosts)
+                .insert(linkedinPosts)
                 .values({
                   profileId: tracked.profileId,
                   accountId,
@@ -111,11 +110,11 @@ export const trackPostTask = task({
                   repostsCount: reposts,
                   postedAt: normalized.postedAt,
                 })
-                .returning({ id: managedPosts.id });
+                .returning({ id: linkedinPosts.id });
               postId = inserted.id;
             }
 
-            await db.insert(managedPostSnapshots).values({
+            await db.insert(linkedinPostSnapshots).values({
               postId,
               profileId: tracked.profileId,
               accountId,
@@ -128,7 +127,9 @@ export const trackPostTask = task({
           results.push({
             postUrl: tracked.postUrl,
             content: normalized.content,
-            likes, comments, reposts,
+            likes,
+            comments,
+            reposts,
             total: likes + comments + reposts,
             failed: false,
           });
@@ -140,7 +141,10 @@ export const trackPostTask = task({
           results.push({
             postUrl: tracked.postUrl,
             content: "",
-            likes: 0, comments: 0, reposts: 0, total: 0,
+            likes: 0,
+            comments: 0,
+            reposts: 0,
+            total: 0,
             failed: true,
           });
         }
@@ -154,18 +158,20 @@ export const trackPostTask = task({
       if (successful.length === 1) {
         // Single post — card format
         const r = successful[0];
-        const snippet = r.content.length > 100
-          ? r.content.slice(0, 100) + "..." : r.content || "(no text)";
+        const snippet = r.content.length > 100 ? r.content.slice(0, 100) + "..." : r.content || "(no text)";
         blocks.push(
           { type: "header", text: { type: "plain_text", text: `${label} Post Performance`, emoji: true } },
           { type: "section", text: { type: "mrkdwn", text: `> ${snippet}` } },
-          { type: "section", fields: [
-            { type: "mrkdwn", text: `*Likes*\n${r.likes.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Comments*\n${r.comments.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Reposts*\n${r.reposts.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Total*\n${r.total.toLocaleString()}` },
-          ]},
-          { type: "context", elements: [{ type: "mrkdwn", text: `<${r.postUrl}|View Post>` }] },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Likes*\n${r.likes.toLocaleString()}` },
+              { type: "mrkdwn", text: `*Comments*\n${r.comments.toLocaleString()}` },
+              { type: "mrkdwn", text: `*Reposts*\n${r.reposts.toLocaleString()}` },
+              { type: "mrkdwn", text: `*Total*\n${r.total.toLocaleString()}` },
+            ],
+          },
+          { type: "context", elements: [{ type: "mrkdwn", text: `<${r.postUrl}|View Post>` }] }
         );
       } else if (successful.length > 1) {
         // Multiple posts — table format
@@ -175,10 +181,11 @@ export const trackPostTask = task({
         });
 
         const rows = successful.map((r, i) => {
-          const snippet = r.content.length > 60
-            ? r.content.slice(0, 60) + "..." : r.content || "(no text)";
-          return `<${r.postUrl}|Post ${i + 1}>  —  ${snippet}\n` +
-            `:thumbsup: ${r.likes}  :speech_balloon: ${r.comments}  :repeat: ${r.reposts}  ·  *${r.total} total*`;
+          const snippet = r.content.length > 60 ? r.content.slice(0, 60) + "..." : r.content || "(no text)";
+          return (
+            `<${r.postUrl}|Post ${i + 1}>  —  ${snippet}\n` +
+            `:thumbsup: ${r.likes}  :speech_balloon: ${r.comments}  :repeat: ${r.reposts}  ·  *${r.total} total*`
+          );
         });
 
         blocks.push({
@@ -194,10 +201,12 @@ export const trackPostTask = task({
         blocks.push({ type: "divider" });
         blocks.push({
           type: "context",
-          elements: [{
-            type: "mrkdwn",
-            text: `*Combined:* ${totLikes} likes · ${totComments} comments · ${totReposts} reposts · *${totAll} total*`,
-          }],
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `*Combined:* ${totLikes} likes · ${totComments} comments · ${totReposts} reposts · *${totAll} total*`,
+            },
+          ],
         });
       }
 
@@ -210,16 +219,13 @@ export const trackPostTask = task({
       }
 
       if (blocks.length > 0) {
-        const fallback = successful.map((r) =>
-          `${r.likes} likes, ${r.comments} comments, ${r.reposts} reposts`,
-        ).join(" | ");
+        const fallback = successful
+          .map((r) => `${r.likes} likes, ${r.comments} comments, ${r.reposts} reposts`)
+          .join(" | ");
 
-        await sendAnalyticsSlackMessage(
-          channelId,
-          `${label} Performance: ${fallback}`,
-          blocks,
-          { thread_ts: threadTs },
-        );
+        await sendAnalyticsSlackMessage(channelId, `${label} Performance: ${fallback}`, blocks, {
+          thread_ts: threadTs,
+        });
       }
 
       logger.info("Post tracking complete", { label, tracked: results.length });

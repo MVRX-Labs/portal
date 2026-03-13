@@ -3,8 +3,8 @@ import { tasks } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { listProfiles } from "@/lib/engagement-bot-db";
-import type { outboundEngagementScrapeTask } from "@/trigger/outbound-engagement-scrape";
+import { listLinkedinProfiles } from "@/lib/linkedin-profiles";
+import type { linkedinSyncProfileTask } from "@/trigger/linkedin-sync";
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,24 +17,23 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: "Configure a Slack channel before scraping" }, { status: 400 });
     }
 
-    const profiles = await listProfiles(id);
+    const profiles = await listLinkedinProfiles(id, { outboundEnabled: true });
     if (profiles.length === 0) {
-      return NextResponse.json({ error: "No profiles to scrape" }, { status: 400 });
+      return NextResponse.json({ error: "No outbound profiles to scrape" }, { status: 400 });
     }
 
     const handles = await Promise.all(
       profiles.map((p) =>
-        tasks.trigger<typeof outboundEngagementScrapeTask>("outbound-engagement-scrape", {
+        tasks.trigger<typeof linkedinSyncProfileTask>("linkedin-sync-profile", {
           accountId: id,
           profileId: p.id,
-          maxPosts: 10,
         })
       )
     );
 
     return NextResponse.json({ triggered: profiles.length, runs: handles.map((h) => h.id) });
   } catch (err) {
-    console.error("[engagement-scrape] Failed to trigger scrape:", err);
+    console.error("[engagement-scrape] Failed to trigger sync:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

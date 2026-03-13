@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { accounts, managedProfiles } from "@/lib/schema";
-import { eq, like } from "drizzle-orm";
+import { accounts, linkedinProfiles } from "@/lib/schema";
+import { eq, like, and } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import { sendAnalyticsSlackMessage } from "@/lib/slack";
 import type { trackPostTask } from "@/trigger/post-tracker";
 
-const LINKEDIN_POST_RE =
-  /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/gi;
+const LINKEDIN_POST_RE = /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/gi;
 
 function extractAuthorSlugFromPostUrl(url: string): string | null {
   const match = url.match(/linkedin\.com\/posts\/([a-z0-9_-]+?)_/i);
@@ -20,19 +19,28 @@ async function findAccountByChannel(channelId: string) {
     .from(accounts)
     .where(like(accounts.analyticsSlackChannel, `%${channelId}%`));
 
-  return rows.find((r) => {
-    const ids = (r.analyticsSlackChannel ?? "").split(",").map((s) => s.trim());
-    return ids.includes(channelId);
-  }) ?? null;
+  return (
+    rows.find((r) => {
+      const ids = (r.analyticsSlackChannel ?? "").split(",").map((s) => s.trim());
+      return ids.includes(channelId);
+    }) ?? null
+  );
 }
 
 async function findProfileBySlug(accountId: string, slug: string) {
-  const profiles = await db
+  const [profile] = await db
     .select()
-    .from(managedProfiles)
-    .where(eq(managedProfiles.accountId, accountId));
+    .from(linkedinProfiles)
+    .where(
+      and(
+        eq(linkedinProfiles.accountId, accountId),
+        eq(linkedinProfiles.linkedinSlug, slug),
+        eq(linkedinProfiles.active, true)
+      )
+    )
+    .limit(1);
 
-  return profiles.find((p) => p.linkedinSlug === slug) ?? null;
+  return profile ?? null;
 }
 
 export async function POST(request: NextRequest) {
@@ -67,7 +75,7 @@ export async function POST(request: NextRequest) {
       channelId,
       "Please include a LinkedIn post URL to track.",
       [{ type: "section", text: { type: "mrkdwn", text: "Please include a LinkedIn post URL to track." } }],
-      { thread_ts: threadTs },
+      { thread_ts: threadTs }
     ).catch(() => {});
     return NextResponse.json({ ok: true });
   }
@@ -78,8 +86,16 @@ export async function POST(request: NextRequest) {
     await sendAnalyticsSlackMessage(
       channelId,
       "This channel isn't linked to any account's analytics. Set the Slack channel ID in the Analytics settings first.",
-      [{ type: "section", text: { type: "mrkdwn", text: "This channel isn't linked to any account's analytics. Set the Slack channel ID in the Analytics settings first." } }],
-      { thread_ts: threadTs },
+      [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: "This channel isn't linked to any account's analytics. Set the Slack channel ID in the Analytics settings first.",
+          },
+        },
+      ],
+      { thread_ts: threadTs }
     ).catch(() => {});
     return NextResponse.json({ ok: true });
   }
@@ -102,11 +118,13 @@ export async function POST(request: NextRequest) {
   await sendAnalyticsSlackMessage(
     channelId,
     `Tracking ${postWord} — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.`,
-    [{
-      type: "section",
-      text: { type: "mrkdwn", text: `Tracking ${linkList} — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.` },
-    }],
-    { thread_ts: threadTs },
+    [
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `Tracking ${linkList} — will report at 5 min, 30 min, 1 hr, 2 hr, and 4 hr.` },
+      },
+    ],
+    { thread_ts: threadTs }
   ).catch(() => {});
 
   // Trigger one task per checkpoint (handles all posts together)
@@ -120,16 +138,20 @@ export async function POST(request: NextRequest) {
 
   await Promise.all(
     checkpoints.map((cp) =>
-      tasks.trigger<typeof trackPostTask>("track-post", {
-        posts: trackedPosts,
-        accountId: account.id,
-        channelId,
-        threadTs,
-        label: cp.label,
-      }, {
-        delay: cp.delay,
-      }),
-    ),
+      tasks.trigger<typeof trackPostTask>(
+        "track-post",
+        {
+          posts: trackedPosts,
+          accountId: account.id,
+          channelId,
+          threadTs,
+          label: cp.label,
+        },
+        {
+          delay: cp.delay,
+        }
+      )
+    )
   );
 
   return NextResponse.json({ ok: true });

@@ -121,6 +121,7 @@ export const accountActions = pgTable("account_actions", {
   status: text("status").notNull().default("pending"),
   dueDate: timestamp("due_date"),
   assigneeId: text("assignee_id").references(() => users.id),
+  sourceUnitId: text("source_unit_id").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -456,6 +456,14 @@ function ExpandedView({
                     className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
                   >
                     <span className="text-sm flex-1 truncate">{action.title}</span>
+                    {action.sourceUnitId && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium leading-none shrink-0"
+                        title="Auto-created from Knowledge Hub"
+                      >
+                        KB
+                      </span>
+                    )}
                     {action.dueDate && (
                       <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
                         Due {relativeDate(action.dueDate)}

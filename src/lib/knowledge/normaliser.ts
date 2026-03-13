@@ -28,6 +28,7 @@ import {
   resolveAccountSlug,
   dedup,
 } from "./validation";
+import { syncUnitsToActions } from "./action-sync";
 
 type Logger = { info: (msg: string) => void; error: (msg: string) => void };
 
@@ -232,7 +233,11 @@ async function runExtractionWithRetry(
       if (dropped > 0) logger.info(`Deduped ${dropped} units (${kept.length} kept)`);
 
       if (kept.length > 0) {
-        await db.insert(knowledgeUnits).values(kept).onConflictDoNothing();
+        const inserted = await db.insert(knowledgeUnits).values(kept).onConflictDoNothing().returning();
+        // Sync actionable units to account actions (non-blocking — errors logged, not thrown)
+        if (inserted.length > 0) {
+          await syncUnitsToActions(inserted, logger);
+        }
         for (const u of kept) {
           extractedSoFar.push({ type: u.unitType, content: u.content, assignee: u.assignee, status: u.status });
           // Don't push to existingForDedup here — it should remain the DB snapshot.

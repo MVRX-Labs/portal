@@ -10,6 +10,7 @@ export const actionSchema = z.object({
   dueDate: dateStringNullable,
   assigneeId: z.string().nullable(),
   assigneeName: z.string().nullable().optional(),
+  sourceUnitId: z.string().nullable().optional(),
   createdAt: dateString,
   updatedAt: dateString,
 });

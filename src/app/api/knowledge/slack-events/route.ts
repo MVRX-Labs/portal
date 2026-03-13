@@ -26,6 +26,7 @@ import { eq, and, ne } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendSlackNotification } from "@/lib/slack";
 import { escapeSlackMrkdwn, capSlackBlockText } from "@/lib/knowledge/helpers";
+import { markLinkedActionCompleted, reopenLinkedAction } from "@/lib/knowledge/action-sync";
 
 // ---------- Slack signature verification ----------
 
@@ -205,6 +206,9 @@ async function handleReactionAdded(channelId: string, messageTs: string, reactin
     })
     .where(eq(knowledgeUnits.id, digestMsg.unitId));
 
+  // Sync completion to linked account action (if one exists)
+  await markLinkedActionCompleted(digestMsg.unitId);
+
   // Build the completed message text
   const typeEmoji: Record<string, string> = {
     action_item: "🔹",
@@ -309,6 +313,9 @@ async function handleReactionRemoved(channelId: string, messageTs: string): Prom
     .update(knowledgeUnits)
     .set({ status: "open", metadata: restMeta })
     .where(eq(knowledgeUnits.id, digestMsg.unitId));
+
+  // Sync reopen to linked account action (if one exists)
+  await reopenLinkedAction(digestMsg.unitId);
 
   // Update digest message record
   await db

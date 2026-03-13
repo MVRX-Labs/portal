@@ -25,6 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       dueDate: accountActions.dueDate,
       assigneeId: accountActions.assigneeId,
       assigneeName: users.name,
+      sourceUnitId: accountActions.sourceUnitId,
       createdAt: accountActions.createdAt,
       updatedAt: accountActions.updatedAt,
     })

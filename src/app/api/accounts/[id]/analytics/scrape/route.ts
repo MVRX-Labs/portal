@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
-import { listManagedProfiles } from "@/lib/managed-profiles";
+import { listLinkedinProfiles } from "@/lib/linkedin-profiles";
 import type { weeklyAnalyticsTask } from "@/trigger/analytics-scrape";
 import { parseBody } from "@/lib/api-schemas/common";
 import { analyticsScrapeBodySchema } from "@/lib/api-schemas/analytics";
@@ -13,13 +13,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }));
 
   try {
-    let profiles = await listManagedProfiles(accountId);
+    let profiles = await listLinkedinProfiles(accountId, { analyticsEnabled: true });
     if (data.profile_id) {
       profiles = profiles.filter((p) => p.id === data.profile_id);
     }
 
     if (profiles.length === 0) {
-      return NextResponse.json({ error: "No managed profiles found" }, { status: 404 });
+      return NextResponse.json({ error: "No analytics profiles found" }, { status: 404 });
     }
 
     const handles = await Promise.all(
@@ -27,7 +27,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         tasks.trigger<typeof weeklyAnalyticsTask>("weekly-analytics", {
           accountId,
           profileId: p.id,
-          maxPosts: 200,
         })
       )
     );

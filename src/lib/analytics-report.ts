@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
-import { managedPosts, analyticsReports } from "@/lib/schema";
+import { linkedinPosts, analyticsReports } from "@/lib/schema";
 import { eq, and, desc, lt } from "drizzle-orm";
-import { getManagedProfile, listManagedProfiles } from "./managed-profiles";
+import { getLinkedinProfile, listLinkedinProfiles } from "./linkedin-profiles";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,8 +94,8 @@ async function getPreviousReport(accountId: string, profileId: string, beforeDat
         eq(analyticsReports.accountId, accountId),
         eq(analyticsReports.profileId, profileId),
         eq(analyticsReports.reportType, "weekly"),
-        lt(analyticsReports.periodStart, beforeDate),
-      ),
+        lt(analyticsReports.periodStart, beforeDate)
+      )
     )
     .orderBy(desc(analyticsReports.periodStart))
     .limit(1);
@@ -106,21 +106,15 @@ async function getPreviousReport(accountId: string, profileId: string, beforeDat
 // Report generation — diffs against previous report, no snapshots needed
 // ---------------------------------------------------------------------------
 
-export async function generateWeeklyReport(
-  profileId: string,
-  weekStart?: Date,
-): Promise<WeeklyReportData> {
+export async function generateWeeklyReport(profileId: string, weekStart?: Date): Promise<WeeklyReportData> {
   const ws = weekStart ?? getWeekStart();
   const weekEnd = new Date(ws);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
 
-  const profile = await getManagedProfile(profileId);
+  const profile = await getLinkedinProfile(profileId);
   if (!profile) throw new Error(`Profile ${profileId} not found`);
 
-  const posts = await db
-    .select()
-    .from(managedPosts)
-    .where(eq(managedPosts.profileId, profileId));
+  const posts = await db.select().from(linkedinPosts).where(eq(linkedinPosts.profileId, profileId));
 
   // Previous report for week-over-week comparison
   const prevReport = await getPreviousReport(profile.accountId, profileId, ws);
@@ -141,7 +135,9 @@ export async function generateWeeklyReport(
   const totalEngagement = totalLikes + totalComments + totalReposts;
 
   // Deltas
-  let deltaLikes = 0, deltaComments = 0, deltaReposts = 0;
+  let deltaLikes = 0,
+    deltaComments = 0,
+    deltaReposts = 0;
   if (hasComparison) {
     for (const p of posts) {
       const prev = prevEngagement[p.id];
@@ -164,7 +160,7 @@ export async function generateWeeklyReport(
 
   const newPosts = posts
     .filter((p) => p.postedAt && p.postedAt >= ws && p.postedAt < new Date(weekEndMs))
-    .sort((a, b) => (b.likesCount + b.commentsCount + b.repostsCount) - (a.likesCount + a.commentsCount + a.repostsCount))
+    .sort((a, b) => b.likesCount + b.commentsCount + b.repostsCount - (a.likesCount + a.commentsCount + a.repostsCount))
     .map((p) => ({
       postId: p.id,
       content: p.content,
@@ -176,24 +172,23 @@ export async function generateWeeklyReport(
       engagement: p.likesCount + p.commentsCount + p.repostsCount,
     }));
 
-  const postsLastWeek = posts.filter(
-    (p) => p.postedAt && p.postedAt >= prevWs && p.postedAt < ws,
-  ).length;
+  const postsLastWeek = posts.filter((p) => p.postedAt && p.postedAt >= prevWs && p.postedAt < ws).length;
 
   const engagementThisWeek = newPosts.reduce((s, p) => s + p.engagement, 0);
   const avgEngagementPerPost = newPosts.length > 0 ? Math.round(engagementThisWeek / newPosts.length) : 0;
 
-  const bestPostThisWeek = newPosts.length > 0
-    ? {
-      content: newPosts[0].content,
-      postUrl: newPosts[0].postUrl,
-      postedAt: newPosts[0].postedAt,
-      likes: newPosts[0].likes,
-      comments: newPosts[0].comments,
-      reposts: newPosts[0].reposts,
-      engagement: newPosts[0].engagement,
-    }
-    : null;
+  const bestPostThisWeek =
+    newPosts.length > 0
+      ? {
+          content: newPosts[0].content,
+          postUrl: newPosts[0].postUrl,
+          postedAt: newPosts[0].postedAt,
+          likes: newPosts[0].likes,
+          comments: newPosts[0].comments,
+          reposts: newPosts[0].reposts,
+          engagement: newPosts[0].engagement,
+        }
+      : null;
 
   // Biggest movers (per-post week-over-week delta)
   const movers: WeeklyReportData["biggestMovers"] = [];
@@ -257,11 +252,7 @@ export async function generateWeeklyReport(
 // Storage
 // ---------------------------------------------------------------------------
 
-export async function saveWeeklyReport(
-  accountId: string,
-  profileId: string,
-  report: WeeklyReportData,
-) {
+export async function saveWeeklyReport(accountId: string, profileId: string, report: WeeklyReportData) {
   const periodStart = new Date(report.weekStart);
   const periodEnd = new Date(report.weekEnd);
 
@@ -276,7 +267,12 @@ export async function saveWeeklyReport(
       reportData: report,
     })
     .onConflictDoUpdate({
-      target: [analyticsReports.accountId, analyticsReports.profileId, analyticsReports.reportType, analyticsReports.periodStart],
+      target: [
+        analyticsReports.accountId,
+        analyticsReports.profileId,
+        analyticsReports.reportType,
+        analyticsReports.periodStart,
+      ],
       set: {
         reportData: report,
         periodEnd,
@@ -295,8 +291,8 @@ export async function getLatestReport(accountId: string, profileId: string) {
       and(
         eq(analyticsReports.accountId, accountId),
         eq(analyticsReports.profileId, profileId),
-        eq(analyticsReports.reportType, "weekly"),
-      ),
+        eq(analyticsReports.reportType, "weekly")
+      )
     )
     .orderBy(desc(analyticsReports.periodStart))
     .limit(1);
@@ -308,7 +304,7 @@ export async function getLatestReport(accountId: string, profileId: string) {
 // ---------------------------------------------------------------------------
 
 export async function getAccountAnalytics(accountId: string) {
-  const profiles = await listManagedProfiles(accountId);
+  const profiles = await listLinkedinProfiles(accountId, { analyticsEnabled: true });
 
   const profileReports = await Promise.all(
     profiles.map(async (profile) => {
@@ -316,10 +312,7 @@ export async function getAccountAnalytics(accountId: string) {
       const reportData = report?.reportData as WeeklyReportData | null;
 
       if (!reportData) {
-        const posts = await db
-          .select()
-          .from(managedPosts)
-          .where(eq(managedPosts.profileId, profile.id));
+        const posts = await db.select().from(linkedinPosts).where(eq(linkedinPosts.profileId, profile.id));
 
         const totalLikes = posts.reduce((s, p) => s + p.likesCount, 0);
         const totalComments = posts.reduce((s, p) => s + p.commentsCount, 0);
@@ -329,7 +322,7 @@ export async function getAccountAnalytics(accountId: string) {
           profileId: profile.id,
           displayName: profile.displayName,
           linkedinUrl: profile.linkedinUrl,
-          lastScrapedAt: profile.lastScrapedAt?.toISOString() ?? null,
+          lastScrapedAt: profile.lastSyncedAt?.toISOString() ?? null,
           totalPosts: posts.length,
           totalEngagement: totalLikes + totalComments + totalReposts,
           totalLikes,
@@ -345,7 +338,7 @@ export async function getAccountAnalytics(accountId: string) {
         profileId: profile.id,
         displayName: profile.displayName,
         linkedinUrl: profile.linkedinUrl,
-        lastScrapedAt: profile.lastScrapedAt?.toISOString() ?? null,
+        lastScrapedAt: profile.lastSyncedAt?.toISOString() ?? null,
         totalPosts: reportData.summary.totalPosts,
         totalEngagement: reportData.summary.totalEngagement,
         totalLikes: reportData.summary.totalLikes,
@@ -355,7 +348,7 @@ export async function getAccountAnalytics(accountId: string) {
         hasComparison: reportData.summary.hasComparison,
         report: reportData,
       };
-    }),
+    })
   );
 
   const totalPosts = profileReports.reduce((s, p) => s + p.totalPosts, 0);

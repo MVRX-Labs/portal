@@ -36,6 +36,12 @@ const PREFIXES = {
   kstate: "kstate",
   sectype: "sectype",
   secret: "secret",
+  lprof: "lprof",
+  lpost: "lpost",
+  lsnap: "lsnap",
+  lsync: "lsync",
+  lcomm: "lcomm",
+  leng: "leng",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -65,6 +71,12 @@ export type KnowledgeUnitId = `kunit_${string}`;
 export type KnowledgeStateId = `kstate_${string}`;
 export type SecretTypeId = `sectype_${string}`;
 export type SecretId = `secret_${string}`;
+export type LinkedinProfileId = `lprof_${string}`;
+export type LinkedinPostId = `lpost_${string}`;
+export type LinkedinPostSnapshotId = `lsnap_${string}`;
+export type LinkedinSyncRunId = `lsync_${string}`;
+export type LinkedinPostCommentId = `lcomm_${string}`;
+export type LinkedinPostEngagementId = `leng_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -90,7 +102,13 @@ export type ObjectId =
   | KnowledgeUnitId
   | KnowledgeStateId
   | SecretTypeId
-  | SecretId;
+  | SecretId
+  | LinkedinProfileId
+  | LinkedinPostId
+  | LinkedinPostSnapshotId
+  | LinkedinSyncRunId
+  | LinkedinPostCommentId
+  | LinkedinPostEngagementId;
 
 type PrefixToId = {
   user: UserId;
@@ -118,6 +136,12 @@ type PrefixToId = {
   kstate: KnowledgeStateId;
   sectype: SecretTypeId;
   secret: SecretId;
+  lprof: LinkedinProfileId;
+  lpost: LinkedinPostId;
+  lsnap: LinkedinPostSnapshotId;
+  lsync: LinkedinSyncRunId;
+  lcomm: LinkedinPostCommentId;
+  leng: LinkedinPostEngagementId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -162,6 +186,12 @@ export function prefixForTable(table: string): Prefix {
     knowledge_state: "kstate",
     secret_types: "sectype",
     secrets: "secret",
+    linkedin_profiles: "lprof",
+    linkedin_posts: "lpost",
+    linkedin_post_snapshots: "lsnap",
+    linkedin_sync_runs: "lsync",
+    linkedin_post_comments: "lcomm",
+    linkedin_post_engagements: "leng",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

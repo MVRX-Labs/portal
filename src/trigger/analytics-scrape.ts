@@ -1,14 +1,16 @@
 /**
- * Weekly analytics — scrapes managed profiles + generates reports + sends Slack.
+ * Weekly analytics — generates reports + sends Slack.
  *
- * One scheduled task (Monday 7 AM UTC) triggers per-profile pipeline tasks.
- * Each task: Apify scrape -> ingest posts -> generate report -> save -> Slack.
+ * Post scraping is handled by linkedin-sync (every 30 min).
+ * This task only generates weekly reports from data already in linkedin_posts.
+ *
+ * One scheduled task (Monday 7 AM UTC) triggers per-profile report tasks.
  */
 
 import { task, schedules, logger, metadata, queue } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
-import { managedProfiles } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { linkedinProfiles } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
 import { runWeeklyReportForProfile } from "@/lib/analytics-pipeline";
 import { sendSlackNotification } from "@/lib/slack";
 
@@ -20,7 +22,6 @@ const analyticsQueue = queue({
 interface WeeklyAnalyticsPayload {
   accountId: string;
   profileId: string;
-  maxPosts?: number;
 }
 
 export const weeklyAnalyticsTask = task({
@@ -29,18 +30,16 @@ export const weeklyAnalyticsTask = task({
   maxDuration: 300,
   retry: { maxAttempts: 2 },
   run: async (payload: WeeklyAnalyticsPayload, { ctx }) => {
-    const { accountId, profileId, maxPosts = 200 } = payload;
+    const { accountId, profileId } = payload;
 
     try {
       logger.info("Starting weekly analytics", { accountId, profileId });
       metadata.set("progress", { step: "Running pipeline", percentage: 10 });
 
-      const result = await runWeeklyReportForProfile(profileId, accountId, { maxPosts });
+      const result = await runWeeklyReportForProfile(profileId, accountId);
 
       metadata.set("progress", { step: "Done", percentage: 100 });
       logger.info("Weekly analytics complete", {
-        postsScraped: result.postsScraped,
-        newPosts: result.newPosts,
         slackSent: result.slackSent,
       });
 
@@ -69,22 +68,22 @@ export const weeklyAnalyticsScheduler = schedules.task({
 
     const profiles = await db
       .select({
-        id: managedProfiles.id,
-        accountId: managedProfiles.accountId,
-        displayName: managedProfiles.displayName,
+        id: linkedinProfiles.id,
+        accountId: linkedinProfiles.accountId,
+        displayName: linkedinProfiles.displayName,
       })
-      .from(managedProfiles)
-      .where(eq(managedProfiles.active, true));
+      .from(linkedinProfiles)
+      .where(and(eq(linkedinProfiles.active, true), eq(linkedinProfiles.analyticsEnabled, true)));
 
     if (profiles.length === 0) {
-      logger.info("No active managed profiles");
+      logger.info("No active analytics profiles");
       return { triggered: 0 };
     }
 
     await weeklyAnalyticsTask.batchTrigger(
       profiles.map((p) => ({
         payload: { accountId: p.accountId, profileId: p.id },
-      })),
+      }))
     );
 
     logger.info(`Triggered ${profiles.length} weekly analytics tasks`);

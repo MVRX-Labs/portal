@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bulkCreateProfiles } from "@/lib/engagement-bot-db";
+import { addLinkedinProfile } from "@/lib/linkedin-profiles";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +12,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const text = await file.text();
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     // Skip header if it looks like one
     const start = lines[0]?.toLowerCase().includes("linkedin") ? 1 : 0;
@@ -28,7 +31,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "No valid LinkedIn URLs found in CSV" }, { status: 400 });
     }
 
-    const profiles = await bulkCreateProfiles(id, urls);
+    const profiles = [];
+    for (const url of urls) {
+      const profile = await addLinkedinProfile(id, url, { outboundEnabled: true });
+      profiles.push(profile);
+    }
     return NextResponse.json({ profiles, parsed: urls.length });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

@@ -378,7 +378,7 @@ export const analyticsReports = pgTable(
     accountId: text("account_id")
       .notNull()
       .references(() => accounts.id),
-    profileId: text("profile_id").references(() => managedProfiles.id),
+    profileId: text("profile_id"),
     reportType: text("report_type").notNull().default("weekly"),
     periodStart: timestamp("period_start").notNull(),
     periodEnd: timestamp("period_end").notNull(),
@@ -410,6 +410,207 @@ export const engagementRawResults = pgTable(
   },
   (table) => ({
     uniqueProfileItem: unique().on(table.profileId, table.apifyItemId),
+  })
+);
+
+// --- Unified LinkedIn sync tables ---
+// Replaces the separate managedProfiles/engagementProfiles/contact-based scraping
+// with a single set of tables. See docs/plans/active/linkedin-sync-unification.md
+
+export const linkedinProfiles = pgTable(
+  "linkedin_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("lprof")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    linkedinUrl: text("linkedin_url").notNull(),
+    linkedinSlug: text("linkedin_slug"),
+    displayName: text("display_name").notNull().default(""),
+
+    // Feature flags (a profile can have multiple purposes)
+    analyticsEnabled: boolean("analytics_enabled").notNull().default(false),
+    outboundEnabled: boolean("outbound_enabled").notNull().default(false),
+    inboundEnabled: boolean("inbound_enabled").notNull().default(false),
+
+    // Outbound-specific
+    engagementPersona: text("engagement_persona").notNull().default(""),
+
+    // Inbound-specific
+    sourceType: text("source_type"), // "company" | "personal"
+    contactId: text("contact_id").references(() => contacts.id),
+
+    // Sync state
+    active: boolean("active").notNull().default(true),
+    lastSyncedAt: timestamp("last_synced_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueAccountUrl: unique().on(table.accountId, table.linkedinUrl),
+  })
+);
+
+export const linkedinPosts = pgTable(
+  "linkedin_posts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("lpost")),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => linkedinProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    apifyPostId: text("apify_post_id").notNull(),
+    content: text("content").notNull().default(""),
+    postUrl: text("post_url").notNull().default(""),
+    likesCount: integer("likes_count").notNull().default(0),
+    commentsCount: integer("comments_count").notNull().default(0),
+    repostsCount: integer("reposts_count").notNull().default(0),
+    postedAt: timestamp("posted_at"),
+    discoveredAt: timestamp("discovered_at").defaultNow().notNull(),
+
+    // Outbound engagement workflow (null for non-outbound posts)
+    engagementStatus: text("engagement_status"),
+    slackMessageTs: text("slack_message_ts"),
+    agentComment: text("agent_comment"),
+    engagedAt: timestamp("engaged_at"),
+
+    // Engager scraping windows
+    earlyEngagersScrapedAt: timestamp("early_engagers_scraped_at"),
+    lateEngagersScrapedAt: timestamp("late_engagers_scraped_at"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueProfilePost: unique().on(table.profileId, table.apifyPostId),
+  })
+);
+
+export const linkedinPostSnapshots = pgTable("linkedin_post_snapshots", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("lsnap")),
+  postId: text("post_id")
+    .notNull()
+    .references(() => linkedinPosts.id),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => linkedinProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  likesCount: integer("likes_count").notNull().default(0),
+  commentsCount: integer("comments_count").notNull().default(0),
+  repostsCount: integer("reposts_count").notNull().default(0),
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+});
+
+export const linkedinSyncRuns = pgTable("linkedin_sync_runs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("lsync")),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => linkedinProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  status: text("status").notNull().default("queued"),
+  postsFound: integer("posts_found").notNull().default(0),
+  postsNew: integer("posts_new").notNull().default(0),
+  errorMessage: text("error_message"),
+  apifyRunId: text("apify_run_id"),
+  triggerRunId: text("trigger_run_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const linkedinPostComments = pgTable(
+  "linkedin_post_comments",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("lcomm")),
+    postId: text("post_id")
+      .notNull()
+      .references(() => linkedinPosts.id),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => linkedinProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    apifyCommentId: text("apify_comment_id").notNull(),
+
+    // Author
+    authorName: text("author_name").notNull().default(""),
+    authorLinkedinUrl: text("author_linkedin_url"),
+    authorHeadline: text("author_headline"),
+
+    // Content
+    commentText: text("comment_text").notNull().default(""),
+    commentedAt: timestamp("commented_at"),
+
+    // Threading
+    parentCommentId: text("parent_comment_id"),
+    isReply: boolean("is_reply").notNull().default(false),
+
+    // Owner reply tracking
+    repliedToByOwner: boolean("replied_to_by_owner").notNull().default(false),
+
+    // Notification state
+    notifiedAt: timestamp("notified_at"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniquePostComment: unique().on(table.postId, table.apifyCommentId),
+  })
+);
+
+export const linkedinPostEngagements = pgTable(
+  "linkedin_post_engagements",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("leng")),
+    postId: text("post_id")
+      .notNull()
+      .references(() => linkedinPosts.id),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => linkedinProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+
+    // Engager
+    authorName: text("author_name").notNull().default(""),
+    authorLinkedinUrl: text("author_linkedin_url"),
+    authorLinkedinSlug: text("author_linkedin_slug"),
+    authorHeadline: text("author_headline"),
+    authorCompany: text("author_company"),
+    authorProfileImage: text("author_profile_image"),
+
+    // Engagement
+    engagementType: text("engagement_type").notNull(), // "reaction" | "repost"
+    engagedAt: timestamp("engaged_at"),
+
+    // Scrape metadata
+    scrapeWindow: text("scrape_window"), // "early" | "late"
+    capturedAt: timestamp("captured_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniquePostAuthorType: unique("lpe_post_author_type_unique").on(
+      table.postId,
+      table.authorLinkedinUrl,
+      table.engagementType
+    ),
   })
 );
 
@@ -563,11 +764,8 @@ export const knowledgeDigestMessages = pgTable(
     // Fix 5: Prevent duplicate digest entries per recipient per unit
     uniqueUnitRecipient: unique().on(table.unitId, table.recipientSlackId),
     // Fix 5: Fast webhook lookups by channel + message timestamp
-    channelMessageTsIdx: index("knowledge_digest_messages_channel_message_ts_idx").on(
-      table.channelId,
-      table.messageTs,
-    ),
-  }),
+    channelMessageTsIdx: index("knowledge_digest_messages_channel_message_ts_idx").on(table.channelId, table.messageTs),
+  })
 );
 
 // --- Secrets tables ---

@@ -58,10 +58,18 @@ const linkedinSyncQueue = queue({
 // Scheduler
 // ---------------------------------------------------------------------------
 
+/** Set to true to pause the scheduler (no sync runs will be triggered) */
+const LINKEDIN_SYNC_SCHEDULER_PAUSED = true;
+
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
   cron: "*/30 * * * *",
   run: async (_payload, { ctx }) => {
+    if (LINKEDIN_SYNC_SCHEDULER_PAUSED) {
+      logger.info("linkedin-sync-scheduler is paused");
+      return { profileCount: 0, paused: true };
+    }
+
     try {
       const profiles = await db
         .select({ id: linkedinProfiles.id, accountId: linkedinProfiles.accountId })

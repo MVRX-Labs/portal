@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { scrapeLinkedInProfile } from "@/lib/linkedin-audit";
 import { buildAuditDocx } from "@/lib/linkedin-audit-docx/builder";
+import { postProcessAudit } from "@/lib/audit-post-process";
 import { sendSlackNotification } from "@/lib/slack";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, uploadFile } from "@/lib/gdrive";
 import type { LinkedInAuditContent } from "@/lib/audit-schema";
@@ -121,7 +122,7 @@ export const linkedinAuditTask = task({
     const { runId, linkedinUrl, accountName, model } = payload;
 
     try {
-      const totalSteps = 5;
+      const totalSteps = 6;
       metadata.set("progress", {
         step: "Scraping LinkedIn profile",
         stepNumber: 1,
@@ -233,14 +234,24 @@ export const linkedinAuditTask = task({
         logger.info("JSON not found in text output, scanning session directory");
         json = await extractJSONFromSessionDir(sessionDir);
       }
-      const content: LinkedInAuditContent = JSON.parse(json);
+      const rawContent: LinkedInAuditContent = JSON.parse(json);
+
+      metadata.set("progress", {
+        step: "Post-processing report text",
+        stepNumber: 5,
+        totalSteps,
+        percentage: 72,
+      });
+
+      logger.info("Post-processing: removing AI writing patterns and improving scannability");
+      const content = await postProcessAudit(rawContent, logger);
 
       logger.info("Building DOCX");
       const buf = await buildAuditDocx(content);
 
       metadata.set("progress", {
         step: "Uploading to Google Drive",
-        stepNumber: 5,
+        stepNumber: 6,
         totalSteps,
         percentage: 85,
       });
@@ -259,7 +270,7 @@ export const linkedinAuditTask = task({
 
       await rm(sessionDir, { recursive: true, force: true }).catch(() => {});
 
-      metadata.set("progress", { step: "Complete", stepNumber: 5, totalSteps, percentage: 100 });
+      metadata.set("progress", { step: "Complete", stepNumber: 6, totalSteps, percentage: 100 });
       const outputMessage = `Audit document saved: ${filename}`;
       await db
         .update(toolRuns)

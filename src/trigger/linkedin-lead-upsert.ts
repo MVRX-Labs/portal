@@ -325,8 +325,8 @@ export const linkedinLeadUpsertTask = task({
 
       logger.info(`Upserted ${upsertCount} leads for account ${accountId} (${newLeads.length} new)`);
 
-      // Send Slack notification with new leads CSV
-      if (newLeads.length > 0) {
+      // Send Slack notification with new leads CSV (only in early/late windows)
+      if (newLeads.length > 0 && (scrapeWindow === "early" || scrapeWindow === "late")) {
         try {
           const [account] = await db
             .select({ name: accounts.name })
@@ -357,17 +357,15 @@ export const linkedinLeadUpsertTask = task({
           );
           const slackData = await slackRes.json();
           if (slackData.ok) {
-            const windowLabel =
+            const windowBlurb =
               scrapeWindow === "early"
-                ? " (early analysis — ~6h after post)"
-                : scrapeWindow === "late"
-                  ? " (72h analysis)"
-                  : "";
+                ? "These are early engagers (~6h after posting) — great candidates for a quick follow-up."
+                : "These leads engaged over 72h — they showed sustained interest in the post.";
             await sendSlackFile(
               slackData.user.id,
               filename,
               csvContent,
-              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*${windowLabel}`
+              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*\n${windowBlurb}`
             );
             logger.info(`Sent new leads CSV to Tarun for ${accountName}`);
           } else {

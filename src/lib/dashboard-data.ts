@@ -32,6 +32,7 @@ export interface DashboardData {
     reposts: number;
     engagement: number;
     profileName: string;
+    category: string | null;
   }>;
   profileComparison: Array<{
     profileId: string;
@@ -125,6 +126,7 @@ export async function getAccountDashboardData(accountId: string): Promise<Dashbo
         comments: linkedinPosts.commentsCount,
         reposts: linkedinPosts.repostsCount,
         profileName: linkedinProfiles.displayName,
+        category: linkedinPosts.category,
       })
       .from(linkedinPosts)
       .leftJoin(linkedinProfiles, eq(linkedinPosts.profileId, linkedinProfiles.id))
@@ -206,6 +208,7 @@ export async function getAccountDashboardData(accountId: string): Promise<Dashbo
       reposts: p.reposts,
       engagement: p.likes + p.comments + p.reposts,
       profileName: p.profileName ?? "Unknown",
+      category: p.category,
     })),
     profileComparison: profileRows.map((r) => ({
       profileId: r.profileId,

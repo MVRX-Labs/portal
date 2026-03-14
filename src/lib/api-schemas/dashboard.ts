@@ -22,6 +22,7 @@ const postSchema = z.object({
   reposts: z.number(),
   engagement: z.number(),
   profileName: z.string(),
+  category: z.string().nullable(),
 });
 
 const profileComparisonSchema = z.object({

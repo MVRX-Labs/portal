@@ -318,6 +318,9 @@ export const linkedinPosts = pgTable(
     earlyEngagersScrapedAt: timestamp("early_engagers_scraped_at"),
     lateEngagersScrapedAt: timestamp("late_engagers_scraped_at"),
 
+    // Content categorisation
+    category: text("category"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

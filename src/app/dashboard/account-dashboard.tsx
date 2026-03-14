@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, apiMutate } from "@/lib/api-client";
 import { dashboardDataSchema, type DashboardData } from "@/lib/api-schemas/dashboard";
+import {
+  POST_CATEGORIES,
+  POST_CATEGORY_LABELS,
+  patchLinkedinPostResponseSchema,
+  categorisePostsResponseSchema,
+} from "@/lib/api-schemas/post-categories";
 import {
   BarChart,
   Bar,
@@ -186,17 +192,47 @@ function LeadGrowthChart({ data }: { data: DashboardData["leadsPerWeek"] }) {
   );
 }
 
+// --- Category helpers ---
+
+const categoryColors: Record<string, string> = {
+  thought_leadership: "bg-purple-500/20 text-purple-400",
+  domain_knowledge: "bg-blue-500/20 text-blue-400",
+  third_party_validation: "bg-teal-500/20 text-teal-400",
+  case_study: "bg-orange-500/20 text-orange-400",
+  storytelling: "bg-pink-500/20 text-pink-400",
+  other: "bg-gray-500/20 text-gray-400",
+};
+
 // --- Posts Table ---
 
 type PostSortKey = "postedAt" | "likes" | "comments" | "reposts" | "engagement";
 type SortDir = "asc" | "desc";
 
-function PostsTable({ data }: { data: DashboardData["posts"] }) {
+function PostsTable({
+  data,
+  onUpdateCategory,
+  onCategoriseAll,
+  categorising,
+  status,
+}: {
+  data: DashboardData["posts"];
+  onUpdateCategory: (postId: string, category: string | null) => void;
+  onCategoriseAll: () => void;
+  categorising: boolean;
+  status: string | null;
+}) {
   const [sortKey, setSortKey] = useState<PostSortKey>("postedAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+
+  const filtered = useMemo(() => {
+    if (filterCategory === "all") return data;
+    if (filterCategory === "uncategorised") return data.filter((p) => !p.category);
+    return data.filter((p) => p.category === filterCategory);
+  }, [data, filterCategory]);
 
   const sorted = useMemo(() => {
-    const copy = [...data];
+    const copy = [...filtered];
     copy.sort((a, b) => {
       let av: number, bv: number;
       if (sortKey === "postedAt") {
@@ -209,7 +245,7 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
       return sortDir === "desc" ? bv - av : av - bv;
     });
     return copy;
-  }, [data, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
 
   if (data.length === 0) return null;
 
@@ -227,6 +263,8 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
     return sortDir === "desc" ? " \u2193" : " \u2191";
   };
 
+  const uncategorisedCount = data.filter((p) => !p.category).length;
+
   const thClass =
     "px-3 py-2 text-left text-xs font-medium text-[var(--muted)] uppercase tracking-wide cursor-pointer hover:text-white select-none whitespace-nowrap";
   const numTh =
@@ -234,7 +272,34 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
 
   return (
     <div className="card mb-4">
-      <h3 className="text-sm font-semibold mb-3">All Posts ({data.length})</h3>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <h3 className="text-sm font-semibold">All Posts ({data.length})</h3>
+        <button
+          onClick={onCategoriseAll}
+          disabled={categorising || uncategorisedCount === 0}
+          className="btn-secondary text-xs"
+        >
+          {categorising ? "Categorising..." : "Categorise Posts"}
+        </button>
+        {uncategorisedCount > 0 && <span className="text-xs text-yellow-400">{uncategorisedCount} uncategorised</span>}
+        {status && <span className="text-xs text-green-400">{status}</span>}
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="ml-auto text-xs bg-[var(--input)] border border-[var(--border)] rounded px-2 py-1"
+        >
+          <option value="all">All categories</option>
+          <option value="uncategorised">Uncategorised ({uncategorisedCount})</option>
+          {POST_CATEGORIES.map((cat) => {
+            const count = data.filter((p) => p.category === cat).length;
+            return (
+              <option key={cat} value={cat}>
+                {POST_CATEGORY_LABELS[cat]} ({count})
+              </option>
+            );
+          })}
+        </select>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -244,6 +309,7 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
               </th>
               <th className={thClass}>Post</th>
               <th className={thClass}>Profile</th>
+              <th className={thClass}>Category</th>
               <th className={numTh} onClick={() => toggleSort("likes")}>
                 Likes{arrow("likes")}
               </th>
@@ -268,7 +334,7 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
                         day: "numeric",
                         year: "numeric",
                       })
-                    : "—"}
+                    : "\u2014"}
                 </td>
                 <td className="px-3 py-2 max-w-xs">
                   <a
@@ -281,6 +347,24 @@ function PostsTable({ data }: { data: DashboardData["posts"] }) {
                   </a>
                 </td>
                 <td className="px-3 py-2 text-xs text-[var(--muted)] whitespace-nowrap">{post.profileName}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <select
+                    value={post.category || ""}
+                    onChange={(e) => onUpdateCategory(post.id, e.target.value || null)}
+                    className={`text-xs rounded px-1 py-0.5 border border-[var(--border)] w-fit ${
+                      post.category
+                        ? categoryColors[post.category] || "bg-[var(--input)]"
+                        : "bg-[var(--input)] text-[var(--muted)]"
+                    }`}
+                  >
+                    <option value="">--</option>
+                    {POST_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {POST_CATEGORY_LABELS[cat]}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums">{post.likes.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{post.comments.toLocaleString()}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{post.reposts.toLocaleString()}</td>
@@ -330,6 +414,8 @@ export function AccountDashboard({ accountId }: { accountId: string }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categorising, setCategorising] = useState(false);
+  const [catStatus, setCatStatus] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -346,6 +432,40 @@ export function AccountDashboard({ accountId }: { accountId: string }) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const updateCategory = async (postId: string, category: string | null) => {
+    try {
+      await apiMutate(`/api/linkedin-posts/${postId}`, patchLinkedinPostResponseSchema, {
+        method: "PATCH",
+        body: { category },
+      });
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              posts: prev.posts.map((p) => (p.id === postId ? { ...p, category } : p)),
+            }
+          : prev
+      );
+    } catch {
+      /* toast handled by apiMutate */
+    }
+  };
+
+  const categoriseAll = async () => {
+    setCategorising(true);
+    setCatStatus(null);
+    try {
+      await apiMutate("/api/categorise-posts", categorisePostsResponseSchema, {
+        method: "POST",
+        body: {},
+      });
+      setCatStatus("Triggered. Refresh in a minute to see results.");
+    } catch {
+      /* toast handled by apiMutate */
+    }
+    setCategorising(false);
+  };
 
   if (loading) {
     return <p className="text-sm text-[var(--muted)]">Loading dashboard...</p>;
@@ -388,7 +508,13 @@ export function AccountDashboard({ accountId }: { accountId: string }) {
         <LeadGrowthChart data={data.leadsPerWeek} />
       </div>
 
-      <PostsTable data={data.posts} />
+      <PostsTable
+        data={data.posts}
+        onUpdateCategory={updateCategory}
+        onCategoriseAll={categoriseAll}
+        categorising={categorising}
+        status={catStatus}
+      />
       <ProfileComparisonChart data={data.profileComparison} />
     </div>
   );

@@ -42,7 +42,7 @@ export type LinkedinHumanizerBody = z.infer<typeof linkedinHumanizerBodySchema>;
 export const linkedinToTwitterBodySchema = z.object({
   postContent: z.string().min(1, "postContent is required"),
   model: z.string().optional(),
-  accountId: z.string().optional(),
+  accountId: z.string().nullable().optional(),
 });
 
 export type LinkedinToTwitterBody = z.infer<typeof linkedinToTwitterBodySchema>;

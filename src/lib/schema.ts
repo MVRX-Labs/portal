@@ -66,6 +66,7 @@ export const leads = pgTable(
       .notNull()
       .references(() => accounts.id),
     contactId: text("contact_id").references(() => contacts.id),
+    leadCsvId: text("lead_csv_id"),
     linkedinUrl: text("linkedin_url").notNull(),
     linkedinUrnUrl: text("linkedin_urn_url"),
     linkedinSlug: text("linkedin_slug"),
@@ -87,6 +88,24 @@ export const leads = pgTable(
     uniqueAccountLead: unique().on(table.accountId, table.linkedinUrl),
   })
 );
+
+export const leadCsvs = pgTable("lead_csvs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("lcsv")),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  contactId: text("contact_id").references(() => contacts.id),
+  profileId: text("profile_id").references(() => linkedinProfiles.id),
+  scrapeWindow: text("scrape_window").notNull(),
+  description: text("description").notNull(),
+  filename: text("filename").notNull(),
+  csvContent: text("csv_content").notNull(),
+  leadCount: integer("lead_count").notNull(),
+  postUrls: jsonb("post_urls").$type<string[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const toolRuns = pgTable("tool_runs", {
   id: text("id")

@@ -190,6 +190,13 @@
       "when": 1773488374031,
       "tag": "0026_demonic_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1773496175617,
+      "tag": "0027_flimsy_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

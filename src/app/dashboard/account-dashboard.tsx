@@ -194,13 +194,13 @@ function LeadGrowthChart({ data }: { data: DashboardData["leadsPerWeek"] }) {
 
 // --- Category helpers ---
 
-const categoryColors: Record<string, string> = {
-  thought_leadership: "bg-purple-500/20 text-purple-400",
-  domain_knowledge: "bg-blue-500/20 text-blue-400",
-  third_party_validation: "bg-teal-500/20 text-teal-400",
-  case_study: "bg-orange-500/20 text-orange-400",
-  storytelling: "bg-pink-500/20 text-pink-400",
-  other: "bg-gray-500/20 text-gray-400",
+const categoryStyles: Record<string, { bg: string; color: string }> = {
+  thought_leadership: { bg: "rgba(168,85,247,0.2)", color: "#c084fc" },
+  domain_knowledge: { bg: "rgba(59,130,246,0.2)", color: "#60a5fa" },
+  third_party_validation: { bg: "rgba(20,184,166,0.2)", color: "#2dd4bf" },
+  case_study: { bg: "rgba(249,115,22,0.2)", color: "#fb923c" },
+  storytelling: { bg: "rgba(236,72,153,0.2)", color: "#f472b6" },
+  other: { bg: "rgba(107,114,128,0.2)", color: "#9ca3af" },
 };
 
 // --- Posts Table ---
@@ -351,11 +351,18 @@ function PostsTable({
                   <select
                     value={post.category || ""}
                     onChange={(e) => onUpdateCategory(post.id, e.target.value || null)}
-                    className={`text-xs rounded px-1 py-0.5 border border-[var(--border)] w-fit ${
-                      post.category
-                        ? categoryColors[post.category] || "bg-[var(--input)]"
-                        : "bg-[var(--input)] text-[var(--muted)]"
-                    }`}
+                    className="text-xs rounded px-1 py-0.5 border border-[var(--border)] max-w-[200px]"
+                    style={
+                      post.category && categoryStyles[post.category]
+                        ? {
+                            backgroundColor: categoryStyles[post.category].bg,
+                            color: categoryStyles[post.category].color,
+                          }
+                        : {
+                            backgroundColor: "var(--input)",
+                            color: "var(--muted)",
+                          }
+                    }
                   >
                     <option value="">--</option>
                     {POST_CATEGORIES.map((cat) => (

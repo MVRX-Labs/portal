@@ -48,3 +48,28 @@ export const scrapeLeadsResponseSchema = z.object({
 });
 
 export type ScrapeLeadsResponse = z.infer<typeof scrapeLeadsResponseSchema>;
+
+// Lead CSV schemas
+
+export const leadCsvSchema = z.object({
+  id: z.string(),
+  accountId: z.string(),
+  contactName: z.string().nullable().optional(),
+  profileName: z.string().nullable().optional(),
+  scrapeWindow: z.string(),
+  description: z.string(),
+  filename: z.string(),
+  leadCount: z.number(),
+  postUrls: z.array(z.string()),
+  createdAt: dateString,
+});
+
+export type LeadCsv = z.infer<typeof leadCsvSchema>;
+
+// GET /api/accounts/[id]/leads/csvs
+export const getLeadCsvsResponseSchema = z.object({
+  csvs: z.array(leadCsvSchema),
+  pagination: paginationSchema,
+});
+
+export type GetLeadCsvsResponse = z.infer<typeof getLeadCsvsResponseSchema>;

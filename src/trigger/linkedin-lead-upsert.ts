@@ -8,7 +8,7 @@
 
 import { task, logger, queue } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
-import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, accounts } from "@/lib/schema";
+import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, leadCsvs, accounts } from "@/lib/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { sendSlackNotification, sendSlackFile } from "@/lib/slack";
 import { escapeCsv } from "@/lib/csv";
@@ -120,10 +120,11 @@ export const linkedinLeadUpsertTask = task({
       }
 
       const postRows = await db
-        .select({ id: linkedinPosts.id, postUrl: linkedinPosts.postUrl })
+        .select({ id: linkedinPosts.id, postUrl: linkedinPosts.postUrl, content: linkedinPosts.content })
         .from(linkedinPosts)
         .where(eq(linkedinPosts.profileId, profileId));
       const postUrlMap = new Map(postRows.map((p) => [p.id, p.postUrl]));
+      const postContentMap = new Map(postRows.map((p) => [p.postUrl, p.content]));
 
       // Convert to a common format for dedup
       type EngagerRecord = {
@@ -267,6 +268,7 @@ export const linkedinLeadUpsertTask = task({
 
       let upsertCount = 0;
       const newLeads: DedupedEngager[] = [];
+      const newLeadIds: string[] = [];
       const now = new Date();
 
       await db.transaction(async (tx) => {
@@ -301,23 +303,27 @@ export const linkedinLeadUpsertTask = task({
               })
               .where(eq(leads.id, existing.id));
           } else {
-            await tx.insert(leads).values({
-              accountId,
-              contactId,
-              linkedinUrl: normalizedUrl,
-              linkedinUrnUrl: engager.linkedinUrnUrl,
-              linkedinSlug: engager.linkedinSlug,
-              firstName: engager.firstName,
-              lastName: engager.lastName,
-              headline: engager.headline,
-              company: engager.company,
-              profileImageUrl: engager.profileImageUrl,
-              engagementTypes: engager.engagementTypes,
-              engagementPosts: engager.engagementPosts,
-              firstSeenAt: engager.firstEngagedAt,
-              lastSeenAt: engager.lastEngagedAt,
-            });
+            const [inserted] = await tx
+              .insert(leads)
+              .values({
+                accountId,
+                contactId,
+                linkedinUrl: normalizedUrl,
+                linkedinUrnUrl: engager.linkedinUrnUrl,
+                linkedinSlug: engager.linkedinSlug,
+                firstName: engager.firstName,
+                lastName: engager.lastName,
+                headline: engager.headline,
+                company: engager.company,
+                profileImageUrl: engager.profileImageUrl,
+                engagementTypes: engager.engagementTypes,
+                engagementPosts: engager.engagementPosts,
+                firstSeenAt: engager.firstEngagedAt,
+                lastSeenAt: engager.lastEngagedAt,
+              })
+              .returning({ id: leads.id });
             newLeads.push(engager);
+            newLeadIds.push(inserted.id);
           }
           upsertCount++;
         }
@@ -325,7 +331,7 @@ export const linkedinLeadUpsertTask = task({
 
       logger.info(`Upserted ${upsertCount} leads for account ${accountId} (${newLeads.length} new)`);
 
-      // Send Slack notification with new leads CSV (only in early/late windows)
+      // Persist CSV and send Slack notification (only in early/late windows)
       if (newLeads.length > 0 && (scrapeWindow === "early" || scrapeWindow === "late")) {
         try {
           const [account] = await db
@@ -351,21 +357,65 @@ export const linkedinLeadUpsertTask = task({
           const csvContent = csvRows.join("\n");
           const filename = `new-leads-${accountName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`;
 
+          const windowBlurb =
+            scrapeWindow === "early"
+              ? "Early engagers (~6h after posting)"
+              : "Late engagers (72h+ — sustained interest)";
+
+          // Collect all post URLs from new leads
+          const allPostUrls = [...new Set(newLeads.flatMap((l) => l.engagementPosts))];
+
+          // Build description with post summaries
+          const postSummaries = allPostUrls
+            .map((url) => {
+              const content = postContentMap.get(url) || "";
+              const firstLine = content.split("\n").find((l) => l.trim()) || "";
+              const summary = firstLine.length > 80 ? firstLine.slice(0, 80) + "..." : firstLine;
+              return summary || url;
+            })
+            .filter(Boolean);
+          const description =
+            postSummaries.length > 0 ? `${windowBlurb}. Posts: ${postSummaries.join("; ")}` : windowBlurb;
+
+          // Persist CSV record
+          const [csvRecord] = await db
+            .insert(leadCsvs)
+            .values({
+              accountId,
+              contactId,
+              profileId,
+              scrapeWindow,
+              description,
+              filename,
+              csvContent,
+              leadCount: newLeads.length,
+              postUrls: allPostUrls,
+            })
+            .returning({ id: leadCsvs.id });
+
+          // Link new leads to this CSV
+          if (csvRecord && newLeadIds.length > 0) {
+            await db.update(leads).set({ leadCsvId: csvRecord.id }).where(inArray(leads.id, newLeadIds));
+          }
+
+          logger.info(`Persisted lead CSV ${csvRecord.id} with ${newLeads.length} leads`);
+
+          // Send Slack notification
+          const slackBlurb =
+            scrapeWindow === "early"
+              ? "These are early engagers (~6h after posting) — great candidates for a quick follow-up."
+              : "These leads engaged over 72h — they showed sustained interest in the post.";
           const slackRes = await fetch(
             `https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent("tarun@mvrxlabs.com")}`,
             { headers: { Authorization: `Bearer ${process.env.SLACKBOT_TOKEN}` } }
           );
           const slackData = await slackRes.json();
           if (slackData.ok) {
-            const windowBlurb =
-              scrapeWindow === "early"
-                ? "These are early engagers (~6h after posting) — great candidates for a quick follow-up."
-                : "These leads engaged over 72h — they showed sustained interest in the post.";
             await sendSlackFile(
               slackData.user.id,
               filename,
               csvContent,
-              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*\n${windowBlurb}`
+              `${newLeads.length} new lead${newLeads.length === 1 ? "" : "s"} from *${accountName}*\n${slackBlurb}`
             );
             logger.info(`Sent new leads CSV to Tarun for ${accountName}`);
           } else {

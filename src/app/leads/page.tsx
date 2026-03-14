@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
-import type { GetLeadsResponse } from "@/lib/api-schemas/leads";
-import { getLeadsResponseSchema, scrapeLeadsResponseSchema } from "@/lib/api-schemas/leads";
+import type { GetLeadsResponse, LeadCsv, GetLeadCsvsResponse } from "@/lib/api-schemas/leads";
+import { getLeadsResponseSchema, scrapeLeadsResponseSchema, getLeadCsvsResponseSchema } from "@/lib/api-schemas/leads";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAccount } from "@/components/account-provider";
@@ -48,6 +48,10 @@ function LeadsContent() {
   const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
   const [daysBack, setDaysBack] = useState(1);
   const scrapingRef = useRef(false);
+  const [tab, setTab] = useState<"leads" | "csvs">("leads");
+  const [csvs, setCsvs] = useState<LeadCsv[]>([]);
+  const [csvPagination, setCsvPagination] = useState<Pagination | null>(null);
+  const [csvsLoading, setCsvsLoading] = useState(false);
 
   const fetchLeads = useCallback(async () => {
     if (!account) {
@@ -78,6 +82,24 @@ function LeadsContent() {
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  const fetchCsvs = useCallback(async () => {
+    if (!account) return;
+    setCsvsLoading(true);
+    try {
+      const data = await apiFetch(`/api/accounts/${account.id}/leads/csvs?page=1&limit=50`, getLeadCsvsResponseSchema);
+      setCsvs((data.csvs || []) as LeadCsv[]);
+      setCsvPagination(data.pagination || null);
+    } catch {
+      // ignore
+    } finally {
+      setCsvsLoading(false);
+    }
+  }, [account]);
+
+  useEffect(() => {
+    if (tab === "csvs") fetchCsvs();
+  }, [tab, fetchCsvs]);
 
   const navigate = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -155,99 +177,188 @@ function LeadsContent() {
         <div className="text-sm px-3 py-2 mb-4 rounded bg-(--input) border border-(--border)">{scrapeStatus}</div>
       )}
 
-      <div className="flex gap-3 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search leads..."
-          className="w-64"
-        />
-        <select value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} className="w-48">
-          <option value="">All Sources</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      <div className="flex gap-1 mb-4 border-b border-(--border)">
+        <button
+          onClick={() => setTab("leads")}
+          className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            tab === "leads" ? "border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-white"
+          }`}
+        >
+          All Leads{pagination ? ` (${pagination.total})` : ""}
+        </button>
+        <button
+          onClick={() => setTab("csvs")}
+          className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            tab === "csvs" ? "border-(--accent) text-white" : "border-transparent text-(--muted) hover:text-white"
+          }`}
+        >
+          CSV Reports{csvPagination ? ` (${csvPagination.total})` : ""}
+        </button>
       </div>
 
-      <div className="card overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-(--border) text-left text-(--muted)">
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Headline</th>
-              <th className="px-3 py-2 font-medium">Company</th>
-              <th className="px-3 py-2 font-medium">Engagement</th>
-              <th className="px-3 py-2 font-medium">Source</th>
-              <th className="px-3 py-2 font-medium">First Seen</th>
-              <th className="px-3 py-2 font-medium">Last Seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-(--muted)">
-                  Loading...
-                </td>
-              </tr>
-            ) : leads.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-(--muted)">
-                  No leads found
-                </td>
-              </tr>
-            ) : (
-              leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-(--border) last:border-0">
-                  <td className="px-3 py-1.5">
-                    <a
-                      href={lead.linkedinUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-(--accent) hover:underline"
-                    >
-                      {lead.firstName}
-                      {lead.lastName ? ` ${lead.lastName}` : ""}
-                    </a>
-                  </td>
-                  <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
-                  <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
-                  <td className="px-3 py-1.5">
-                    <div className="flex gap-1 flex-wrap">
-                      {(lead.engagementTypes || []).map((type) => (
-                        <span
-                          key={type}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
-                        >
-                          {type}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
+      {tab === "leads" && (
+        <>
+          <div className="flex gap-3 mb-4">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search leads..."
+              className="w-64"
+            />
+            <select value={contactFilter} onChange={(e) => setContactFilter(e.target.value)} className="w-48">
+              <option value="">All Sources</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="card overflow-x-auto p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-(--border) text-left text-(--muted)">
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Headline</th>
+                  <th className="px-3 py-2 font-medium">Company</th>
+                  <th className="px-3 py-2 font-medium">Engagement</th>
+                  <th className="px-3 py-2 font-medium">Source</th>
+                  <th className="px-3 py-2 font-medium">First Seen</th>
+                  <th className="px-3 py-2 font-medium">Last Seen</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : leads.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                      No leads found
+                    </td>
+                  </tr>
+                ) : (
+                  leads.map((lead) => (
+                    <tr key={lead.id} className="border-b border-(--border) last:border-0">
+                      <td className="px-3 py-1.5">
+                        <a
+                          href={lead.linkedinUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-(--accent) hover:underline"
+                        >
+                          {lead.firstName}
+                          {lead.lastName ? ` ${lead.lastName}` : ""}
+                        </a>
+                      </td>
+                      <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
+                      <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
+                      <td className="px-3 py-1.5">
+                        <div className="flex gap-1 flex-wrap">
+                          {(lead.engagementTypes || []).map((type) => (
+                            <span
+                              key={type}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
+                      <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
+                      <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
-            Previous
-          </button>
-          <span className="text-sm text-(--muted)">
-            Page {page} of {pagination.totalPages}
-          </span>
-          <button onClick={() => navigate(page + 1)} disabled={page >= pagination.totalPages} className="btn-secondary">
-            Next
-          </button>
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <button onClick={() => navigate(page - 1)} disabled={page <= 1} className="btn-secondary">
+                Previous
+              </button>
+              <span className="text-sm text-(--muted)">
+                Page {page} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => navigate(page + 1)}
+                disabled={page >= pagination.totalPages}
+                className="btn-secondary"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "csvs" && (
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-(--border) text-left text-(--muted)">
+                <th className="px-3 py-2 font-medium">Date</th>
+                <th className="px-3 py-2 font-medium">Window</th>
+                <th className="px-3 py-2 font-medium">Source</th>
+                <th className="px-3 py-2 font-medium">Leads</th>
+                <th className="px-3 py-2 font-medium">Posts</th>
+                <th className="px-3 py-2 font-medium">Description</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {csvsLoading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    Loading...
+                  </td>
+                </tr>
+              ) : csvs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    No CSV reports yet
+                  </td>
+                </tr>
+              ) : (
+                csvs.map((csv) => (
+                  <tr key={csv.id} className="border-b border-(--border) last:border-0">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(csv.createdAt)}</td>
+                    <td className="px-3 py-1.5">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
+                          csv.scrapeWindow === "early"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-orange-500/20 text-orange-400"
+                        }`}
+                      >
+                        {csv.scrapeWindow}
+                      </span>
+                    </td>
+                    <td className="px-3 py-1.5">{csv.profileName || csv.contactName || "\u2014"}</td>
+                    <td className="px-3 py-1.5">{csv.leadCount}</td>
+                    <td className="px-3 py-1.5">{(csv.postUrls || []).length}</td>
+                    <td className="px-3 py-1.5 max-w-xs truncate text-(--muted)">{csv.description}</td>
+                    <td className="px-3 py-1.5">
+                      <a
+                        href={`/api/accounts/${account.id}/leads/csvs/${csv.id}/download`}
+                        className="text-(--accent) hover:underline text-sm"
+                      >
+                        Download
+                      </a>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

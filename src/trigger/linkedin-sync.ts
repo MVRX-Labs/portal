@@ -16,8 +16,8 @@ import {
   linkedinPostEngagements,
   linkedinSyncRuns,
 } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
-import { scrapeProfilePosts, normalizePost, extractAuthorName, sendPostToSlack } from "@/lib/engagement-bot";
+import { eq, and, or } from "drizzle-orm";
+import { scrapeProfilePosts, extractAuthorName, sendPostToSlack } from "@/lib/engagement-bot";
 import { normalizeApifyPost } from "@/lib/post-ingestion";
 import { scrapePostReactions, scrapePostReshares, scrapePostComments } from "@/lib/linkedin-engagement";
 import { extractLinkedinSlug } from "@/lib/linkedin-profiles";
@@ -31,21 +31,21 @@ import { isNull } from "drizzle-orm";
 // ---------------------------------------------------------------------------
 
 /** Max posts to fetch per profile per sync */
-const MAX_POSTS_PER_SYNC = 10; // Assuming profiles don't make more than 10 posts per week
+const MAX_POSTS_PER_SYNC = 7; // Assuming profiles don't make more than 7 posts per week
 
 /** Only set engagement_status=pending on posts newer than this for outbound */
 const OUTBOUND_MAX_AGE_DAYS = 1;
 
 /** Only scrape comments on posts newer than this */
-const COMMENT_SCRAPE_MAX_AGE_DAYS = 7;
+const COMMENT_SCRAPE_MAX_AGE_DAYS = 3;
 
 /** Early engager window: 6–7 hours after posting */
-const EARLY_WINDOW_MIN_H = 6;
-const EARLY_WINDOW_MAX_H = 7;
+const EARLY_WINDOW_MIN_H = 5;
+const EARLY_WINDOW_MAX_H = 8;
 
 /** Late engager window: 72–73 hours after posting */
 const LATE_WINDOW_MIN_H = 72;
-const LATE_WINDOW_MAX_H = 73;
+const LATE_WINDOW_MAX_H = 75;
 
 const linkedinSyncQueue = queue({
   name: "linkedin-sync",
@@ -58,13 +58,22 @@ const linkedinSyncQueue = queue({
 
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
-  cron: "5 * * * *",
+  cron: "5 */2 * * *",
   run: async (_payload, { ctx }) => {
     try {
       const profiles = await db
         .select({ id: linkedinProfiles.id, accountId: linkedinProfiles.accountId })
         .from(linkedinProfiles)
-        .where(eq(linkedinProfiles.active, true));
+        .where(
+          and(
+            eq(linkedinProfiles.active, true),
+            or(
+              eq(linkedinProfiles.inboundEnabled, true),
+              eq(linkedinProfiles.analyticsEnabled, true),
+              eq(linkedinProfiles.outboundEnabled, true)
+            )
+          )
+        );
 
       if (profiles.length === 0) {
         logger.info("No active linkedin profiles to sync");
@@ -96,18 +105,12 @@ export const linkedinSyncScheduler = schedules.task({
 // Per-profile sync task
 // ---------------------------------------------------------------------------
 
-const DISABLED = true;
 export const linkedinSyncProfileTask = task({
   id: "linkedin-sync-profile",
   queue: linkedinSyncQueue,
   maxDuration: 600,
   retry: { maxAttempts: 2 },
   run: async (payload: { profileId: string; accountId: string }, { ctx }) => {
-    if (DISABLED) {
-      logger.info("linkedin-sync-profile is disabled");
-      return { skipped: true };
-    }
-    // return { skipped: true };
     const { profileId, accountId } = payload;
 
     // Load profile

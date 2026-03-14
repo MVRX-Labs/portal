@@ -178,7 +178,7 @@ export const linkedinAuditTask = task({
             allowedTools: ["Read", "WebSearch", "WebFetch"],
             permissionMode: "bypassPermissions",
             allowDangerouslySkipPermissions: true,
-            maxTurns: 25,
+            maxTurns: 40,
             persistSession: false,
           },
         })) {

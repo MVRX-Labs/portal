@@ -132,7 +132,7 @@ export const growthReportTask = task({
 
       const analysisResult = await runClaudeAgent(prompt, sessionDir, {
         allowedTools: ["Read", "Glob"],
-        maxTurns: 30,
+        maxTurns: 40,
         model: resolvedModel,
       });
 
@@ -163,7 +163,7 @@ export const growthReportTask = task({
 
       const reviewResult = await runClaudeAgent(reviewPrompt, sessionDir, {
         allowedTools: ["Read", "Glob"],
-        maxTurns: 20,
+        maxTurns: 40,
         model: reviewModel,
       });
 

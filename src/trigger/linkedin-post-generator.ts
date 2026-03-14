@@ -200,14 +200,14 @@ Pick any of the 3 hooks to open with. Then write the body:
 - Reference specific details from the source material (names, numbers, timeframes, quotes)
 - Write from first person as ${posterName}. This is YOUR experience, YOUR insight, YOUR story. You lived it.
 ${
-    hasSourceUrls
-      ? `- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
+  hasSourceUrls
+    ? `- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
 - Include the source URL naturally as "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
 - Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.`
-      : `- The post should deliver the full insight within the post itself. The reader should walk away feeling they got something valuable without needing to click anywhere.
+    : `- The post should deliver the full insight within the post itself. The reader should walk away feeling they got something valuable without needing to click anywhere.
 - Do NOT fabricate or invent a link. There is no linked article for this post.
 - End with a CTA that invites conversation or reflection (not "What do you think?" which is overused). Ask a specific question tied to the post's insight, invite people to share a related experience, or end on a provocative open question. The CTA should feel like a peer starting a conversation, not a brand asking for engagement.`
-  }
+}
 - 3-5 relevant hashtags at the end
 - Never start with "I'm" or "We're"
 - No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
@@ -225,10 +225,10 @@ Pick any of the 3 hooks to open with (can be the same or different from Body A).
 - One aside or parenthetical maximum. It must earn its place by adding texture that makes the moment more vivid.
 - Let the ending be quieter. End on a specific detail, an open question, or a soft invitation. Not a polished takeaway.
 ${
-    hasSourceUrls
-      ? `- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.`
-      : `- There is no linked article for this post. Do NOT invent or fabricate a link. Let the post's insight stand on its own.`
-  }
+  hasSourceUrls
+    ? `- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.`
+    : `- There is no linked article for this post. Do NOT invent or fabricate a link. Let the post's insight stand on its own.`
+}
 - The company name should appear at most once, and only if it's natural to the story. The reader should not feel marketed to at any point.
 - Fewer or no hashtags.
 - Soft CTA or none.
@@ -440,7 +440,7 @@ export const linkedinPostGeneratorTask = task({
           allowedTools: ["Read", "WebFetch"],
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          maxTurns: 25,
+          maxTurns: 40,
           persistSession: false,
         },
       })) {

@@ -85,6 +85,21 @@ export const TOOLS: ToolConfig[] = [
     ],
   },
   {
+    id: "linkedin-to-twitter",
+    name: "LinkedIn Post to Tweets",
+    description: "Convert a LinkedIn post into a catchy Twitter thread.",
+    href: "/tools/linkedin-to-twitter",
+    fields: [
+      {
+        name: "postContent",
+        label: "LinkedIn Post",
+        type: "textarea",
+        placeholder: "Paste your LinkedIn post here...",
+        required: true,
+      },
+    ],
+  },
+  {
     id: "gtm-strategy",
     name: "GTM Strategy Generator",
     description: "Generate a comprehensive go-to-market strategy for a company or product.",

@@ -202,7 +202,7 @@ export const gtmStrategyTask = task({
           allowedTools: ["WebSearch", "WebFetch", "Read"],
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          maxTurns: 25,
+          maxTurns: 40,
           persistSession: false,
         },
       })) {

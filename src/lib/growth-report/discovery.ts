@@ -73,7 +73,7 @@ export async function runDiscovery(
 
   const result = await runClaudeAgent(prompt, tmpdir(), {
     allowedTools: ["WebSearch", "WebFetch"],
-    maxTurns: 20,
+    maxTurns: 40,
     model: MODEL_MAP.sonnet,
   });
 

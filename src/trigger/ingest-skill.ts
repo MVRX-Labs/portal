@@ -65,7 +65,7 @@ export const ingestSkillTask = task({
       const analysisPrompt = buildAnalysisPrompt(skillMd, notes);
       const analysisResult = await runClaudeAgent(analysisPrompt, cloneDir, {
         allowedTools: ["Read", "Glob", "Grep"],
-        maxTurns: 30,
+        maxTurns: 40,
       });
       totalCostUsd += analysisResult.costUsd;
       logger.info(`Analysis finished: ${analysisResult.turns} turns, $${analysisResult.costUsd.toFixed(4)}`);

@@ -97,7 +97,7 @@ export const accountEnrichmentTask = task({
           model: MODEL_MAP.haiku,
           cwd: sessionDir,
           allowedTools: ["WebSearch", "WebFetch"],
-          maxTurns: 10,
+          maxTurns: 30,
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
         },

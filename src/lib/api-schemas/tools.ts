@@ -38,6 +38,15 @@ export const linkedinHumanizerBodySchema = z.object({
 
 export type LinkedinHumanizerBody = z.infer<typeof linkedinHumanizerBodySchema>;
 
+// POST /api/tools/linkedin-to-twitter
+export const linkedinToTwitterBodySchema = z.object({
+  postContent: z.string().min(1, "postContent is required"),
+  model: z.string().optional(),
+  accountId: z.string().optional(),
+});
+
+export type LinkedinToTwitterBody = z.infer<typeof linkedinToTwitterBodySchema>;
+
 // POST /api/tools/linkedin-post-generator
 export const linkedinPostGeneratorBodySchema = z.object({
   contactId: z.string().min(1, "contactId is required"),

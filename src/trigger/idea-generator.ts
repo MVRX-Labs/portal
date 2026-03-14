@@ -91,7 +91,7 @@ export const ideaGeneratorTask = schedules.task({
 
       const ideationResult = await runClaudeAgent(ideationPrompt, cloneDir, {
         allowedTools: ideationTools,
-        maxTurns: 30,
+        maxTurns: 40,
       });
       totalCostUsd += ideationResult.costUsd;
       logger.info(

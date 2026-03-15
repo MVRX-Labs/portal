@@ -286,6 +286,15 @@ export function ToolForm({ tool }: ToolFormProps) {
   const inProgressRuns = activeRuns.filter((r) => r.status === "running" || r.status === "pending");
   const finishedRuns = activeRuns.filter((r) => r.status === "completed" || r.status === "failed");
 
+  if (!account) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-1">{tool.name}</h1>
+        <p className="text-sm text-(--muted)">Select an account from the sidebar.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">

@@ -7,13 +7,23 @@ import type { AccountListItem } from "@/lib/api-schemas/accounts";
 import { apiFetch } from "@/lib/api-client";
 import { CreateAccountModal } from "./create-account-modal";
 
-export function AccountSelector() {
+export function AccountSelector({ highlight }: { highlight?: boolean }) {
   const { account, setAccount } = useAccount();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Account[]>([]);
   const [open, setOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [pulsing, setPulsing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlight) {
+      setPulsing(true);
+      setOpen(true);
+      const timer = setTimeout(() => setPulsing(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlight]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +77,9 @@ export function AccountSelector() {
       <label className="block text-[10px] uppercase tracking-wider text-(--muted) mb-1">Account</label>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full text-left text-sm px-2 py-1.5 rounded bg-(--input) border border-(--border) hover:border-(--accent) transition-colors truncate"
+        className={`w-full text-left text-sm px-2 py-1.5 rounded bg-(--input) border hover:border-(--accent) transition-colors truncate ${
+          pulsing ? "border-(--accent) ring-2 ring-(--accent)/50 animate-pulse" : "border-(--border)"
+        }`}
       >
         {account ? account.name : "Select account..."}
       </button>

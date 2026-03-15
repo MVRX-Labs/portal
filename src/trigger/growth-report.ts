@@ -101,13 +101,17 @@ export const growthReportTask = task({
       // --- Step 3.5: Capture & evaluate screenshots ---
       let approvedScreenshots: ApprovedScreenshot[] = [];
 
-      if (discovery.screenshotTargets?.length) {
-        logger.info("Capturing screenshots", { targets: discovery.screenshotTargets.length });
-        const rawScreenshots = await screenshotPages(discovery.screenshotTargets);
+      // TODO: Re-enable once we find a better screenshot provider (Apify quality too low)
+      let skipScreenshots = false;
+      if (!skipScreenshots) {
+        if (discovery.screenshotTargets?.length) {
+          logger.info("Capturing screenshots", { targets: discovery.screenshotTargets.length });
+          const rawScreenshots = await screenshotPages(discovery.screenshotTargets);
 
-        if (rawScreenshots.length > 0) {
-          approvedScreenshots = await evaluateScreenshots(rawScreenshots, account.name, sessionDir);
-          logger.info(`Screenshots: ${approvedScreenshots.length}/${rawScreenshots.length} approved`);
+          if (rawScreenshots.length > 0) {
+            approvedScreenshots = await evaluateScreenshots(rawScreenshots, account.name, sessionDir);
+            logger.info(`Screenshots: ${approvedScreenshots.length}/${rawScreenshots.length} approved`);
+          }
         }
       }
 

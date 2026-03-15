@@ -104,16 +104,15 @@ export const seoAuditBodySchema = z.object({
 
 export type SeoAuditBody = z.infer<typeof seoAuditBodySchema>;
 
-// POST /api/tools/outbound-sequence (uses createToolHandler)
-export const outboundSequenceBodySchema = z
-  .object({
-    targetPersona: z.string().optional(),
-    valueProp: z.string().optional(),
-    steps: z.union([z.number(), z.string()]).optional(),
-    channel: z.string().optional(),
-    accountId: z.string().optional(),
-  })
-  .passthrough();
+// POST /api/tools/outbound-sequence
+export const outboundSequenceBodySchema = z.object({
+  accountId: z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first")),
+  senderContactId: z.string().optional(),
+  targetIcp: z.string().min(1, "Target ICP is required"),
+  valueProp: z.string().min(1, "Value proposition is required"),
+  toneNotes: z.string().optional(),
+  model: z.string().optional(),
+});
 
 export type OutboundSequenceBody = z.infer<typeof outboundSequenceBodySchema>;
 

@@ -259,41 +259,40 @@ export const TOOLS: ToolConfig[] = [
   },
   {
     id: "outbound-sequence",
-    name: "Outbound Sequence Generator",
-    description: "Generate multi-step outbound sequences for email and LinkedIn outreach.",
+    name: "LinkedIn Outbound Sequences",
+    description:
+      "Generate HeyReach-ready LinkedIn outbound sequences — 3 structures × 2 A/B variants with human-sounding copy.",
     href: "/tools/outbound-sequence",
     fields: [
       {
-        name: "targetPersona",
-        label: "Target Persona",
-        type: "text",
-        placeholder: "e.g. VP of Marketing at Series B startups",
+        name: "senderContactId",
+        label: "Sender",
+        type: "contact",
+        placeholder: "Who is sending these messages?",
+        required: false,
+      },
+      {
+        name: "targetIcp",
+        label: "Target ICP",
+        type: "textarea",
+        placeholder:
+          "e.g. VP of Marketing at Series B SaaS companies (50-200 employees) who are scaling content but struggling with organic growth",
         required: true,
       },
       {
         name: "valueProp",
         label: "Value Proposition",
         type: "textarea",
-        placeholder: "What value do you offer this persona?",
+        placeholder:
+          "What specific value does the sender offer this ICP? Be concrete — what outcomes, what proof points?",
         required: true,
       },
       {
-        name: "steps",
-        label: "Number of Steps",
-        type: "number",
-        placeholder: "5",
-        required: true,
-      },
-      {
-        name: "channel",
-        label: "Channel",
-        type: "select",
-        required: true,
-        options: [
-          { label: "Email", value: "email" },
-          { label: "LinkedIn", value: "linkedin" },
-          { label: "Both", value: "both" },
-        ],
+        name: "toneNotes",
+        label: "Tone / Style Notes",
+        type: "textarea",
+        placeholder: "Optional: any specific tone guidance, phrases to include, or style preferences for the sender",
+        required: false,
       },
     ],
   },

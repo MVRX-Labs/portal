@@ -19,7 +19,6 @@ const AHREFS_ACTOR = "radeance/ahrefs-scraper";
 const SEO_AUDIT_ACTOR = "UFSUQD7pWNwN3jExC";
 const IG_PROFILE_ACTOR = "apify/instagram-profile-scraper";
 const TIKTOK_PROFILE_ACTOR = "clockworks/tiktok-profile-scraper";
-const TRUSTPILOT_ACTOR = "casper11515/trustpilot-reviews-scraper";
 
 function token(): string {
   const t = process.env.APIFY_API_TOKEN;
@@ -27,9 +26,16 @@ function token(): string {
   return t;
 }
 
-async function apify(actorId: string, input: unknown, label: string, retries = 2): Promise<unknown> {
+async function apify(
+  actorId: string,
+  input: unknown,
+  label: string,
+  retries = 2,
+  timeoutSecs?: number
+): Promise<unknown> {
   const encodedId = actorId.includes("/") ? actorId.replace("/", "~") : actorId;
-  const url = `${APIFY_BASE}/acts/${encodedId}/run-sync-get-dataset-items?token=${token()}`;
+  const timeoutParam = timeoutSecs ? `&timeout=${timeoutSecs}` : "";
+  const url = `${APIFY_BASE}/acts/${encodedId}/run-sync-get-dataset-items?token=${token()}${timeoutParam}`;
   logger.info(`Scraper start: ${label}`, { actorId });
   const start = Date.now();
 
@@ -41,10 +47,13 @@ async function apify(actorId: string, input: unknown, label: string, retries = 2
         logger.info(`Scraper retry ${attempt}/${retries}: ${label} (waiting ${delay}ms)`, { actorId });
         await new Promise((r) => setTimeout(r, delay));
       }
+      // Client-side timeout: Apify timeout + 30s buffer (default 5 min + 30s)
+      const fetchTimeoutMs = ((timeoutSecs ?? 300) + 30) * 1000;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
+        signal: AbortSignal.timeout(fetchTimeoutMs),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
@@ -106,13 +115,9 @@ export function scrapeGoogleSerp(queries: string[]) {
   return apify(GOOGLE_SERP_ACTOR, { queries: queries.join("\n"), maxPagesPerQuery: 1, resultsPerPage: 10 }, "SERP");
 }
 
-export function scrapeTrustpilot(url: string) {
-  return apify(TRUSTPILOT_ACTOR, { urls: [url], maxReviews: 5 }, "Trustpilot");
-}
-
-// Crunchbase/Tracxn scrapers removed — all available Apify actors are
-// broken, expired, or require paid subscriptions. Company funding data
-// is now gathered by the Claude discovery phase via web research.
+// Trustpilot/Crunchbase/Tracxn scrapers removed — Apify actors are
+// broken, expired, or require paid subscriptions. This data is now
+// gathered by the Claude discovery phase via web research.
 
 export function scrapeReddit(brandName: string) {
   // trudax/reddit-scraper-lite — lightweight, no rental required
@@ -158,34 +163,49 @@ export interface RawScreenshot extends ScreenshotTarget {
 }
 
 export async function screenshotPages(targets: ScreenshotTarget[]): Promise<RawScreenshot[]> {
-  const items = (await apify(
-    SCREENSHOT_ACTOR,
-    {
-      urls: targets.map((t) => ({ url: t.url })),
-      waitUntil: "networkidle2",
-      delay: 2000,
-      viewportWidth: 1280,
-    },
-    `Screenshots (${targets.length} pages)`
-  )) as Array<{ url?: string; screenshotUrl?: string }>;
+  logger.info(`Taking screenshots for ${targets.length} pages (individual calls)`);
 
-  // Match results back to targets by URL
-  const itemByUrl = new Map(items.map((item) => [item.url, item.screenshotUrl]));
+  // Make separate Apify calls for each URL so one slow page doesn't block all others
+  const settled = await Promise.allSettled(
+    targets.map((target) =>
+      apify(
+        SCREENSHOT_ACTOR,
+        {
+          urls: [{ url: target.url }],
+          waitUntil: "networkidle2",
+          delay: 2000,
+          viewportWidth: 1280,
+        },
+        `Screenshot: ${target.url}`,
+        1, // single retry per screenshot
+        600 // 10 minute timeout
+      ).then((items) => {
+        const arr = items as Array<{ url?: string; screenshotUrl?: string }>;
+        const screenshotUrl = arr[0]?.screenshotUrl;
+        if (!screenshotUrl) throw new Error(`No screenshotUrl in response for ${target.url}`);
+        return { ...target, screenshotUrl } as RawScreenshot;
+      })
+    )
+  );
 
   const results: RawScreenshot[] = [];
-  for (const target of targets) {
-    const screenshotUrl = itemByUrl.get(target.url);
-    if (!screenshotUrl) {
-      logger.warn(`No screenshot returned for ${target.url}`);
-      continue;
+  const failures: string[] = [];
+
+  settled.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      results.push(result.value);
+    } else {
+      const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      failures.push(`${targets[i].url}: ${errorMsg}`);
+      logger.error(`Screenshot failed for ${targets[i].url}`, { error: errorMsg });
     }
-    results.push({ ...target, screenshotUrl });
+  });
+
+  if (failures.length > 0) {
+    logger.warn(`Screenshots: ${failures.length}/${targets.length} failed`, { failures });
   }
 
-  if (results.length < targets.length) {
-    logger.warn(`Screenshots: ${targets.length - results.length}/${targets.length} missing from results`);
-  }
-
+  logger.info(`Screenshots complete: ${results.length}/${targets.length} succeeded`);
   return results;
 }
 
@@ -201,7 +221,6 @@ export interface ScrapedData {
   tiktok: unknown;
   aiVisibility: unknown;
   serpResults: unknown;
-  trustpilot: unknown;
   reddit: unknown;
   failures: string[];
 }
@@ -233,8 +252,6 @@ export async function collectAllData(p: CollectParams): Promise<ScrapedData> {
   if (p.companyLinkedinUrl) jobs.push(["linkedinCompany", scrapeLinkedInProfile(p.companyLinkedinUrl)]);
   if (sh.instagram) jobs.push(["instagram", scrapeInstagram(sh.instagram)]);
   if (sh.tiktok) jobs.push(["tiktok", scrapeTikTok(sh.tiktok)]);
-  if (p.discovery.trustpilotUrl) jobs.push(["trustpilot", scrapeTrustpilot(p.discovery.trustpilotUrl)]);
-
   const liPeopleJobs = p.contacts.map((c) => ({
     name: c.name,
     promise: scrapeLinkedInProfile(c.linkedinUrl),
@@ -280,7 +297,6 @@ export async function collectAllData(p: CollectParams): Promise<ScrapedData> {
     tiktok: data.tiktok ?? null,
     aiVisibility: data.aiVisibility ?? null,
     serpResults: data.serpResults ?? null,
-    trustpilot: data.trustpilot ?? null,
     reddit: data.reddit ?? null,
     failures,
   };

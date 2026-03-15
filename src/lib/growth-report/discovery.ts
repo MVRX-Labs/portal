@@ -19,7 +19,6 @@ export interface DiscoveryResult {
     twitter?: string;
     youtube?: string;
   };
-  trustpilotUrl: string | null;
   screenshotTargets?: ScreenshotTarget[];
 }
 
@@ -47,11 +46,7 @@ Your job is to research and discover key information we need before running our 
 - If not found on the site, search the web for "${companyName} instagram", "${companyName} tiktok" etc.
 - Return the handle/username for each platform found (e.g. "@acmewellness" or just "acmewellness")
 
-## 4. Find Trustpilot URL
-- Search for "${companyName} trustpilot" or try fetching trustpilot.com/review/${new URL("https://" + websiteUrl.replace(/^https?:\/\//, "")).hostname}
-- Return the full Trustpilot business page URL, or null if not found
-
-## 5. Identify Pages to Screenshot (4-8 URLs)
+## 4. Identify Pages to Screenshot (4-8 URLs)
 We will capture screenshots of key pages to include as visuals in the report. Pick pages that would be most valuable to show:
 - The target company's homepage (always include this, section: "executiveSummary")
 - 1-2 key product/feature/pricing pages from the target site (section: "siteAudit")
@@ -75,7 +70,6 @@ Return a single JSON object (no markdown fences, no explanation):
     "twitter": "handle_or_null",
     "youtube": "handle_or_null"
   },
-  "trustpilotUrl": "https://trustpilot.com/review/..." or null,
   "screenshotTargets": [
     { "url": "https://example.com", "context": "Company homepage", "section": "executiveSummary" },
     { "url": "https://competitor.com", "context": "Top competitor homepage", "section": "competitiveBenchmarking" }
@@ -122,7 +116,6 @@ export async function runDiscovery(
     socialHandles: Object.keys(parsed.socialHandles || {}).filter(
       (k) => parsed.socialHandles[k as keyof typeof parsed.socialHandles]
     ).length,
-    hasTrustpilot: !!parsed.trustpilotUrl,
     screenshotTargets: parsed.screenshotTargets?.length ?? 0,
   });
 

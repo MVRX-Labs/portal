@@ -122,7 +122,6 @@ export const growthReportTask = task({
         ["tiktok.json", scraped.tiktok],
         ["ai-visibility.json", scraped.aiVisibility],
         ["serp-results.json", scraped.serpResults],
-        ["trustpilot.json", scraped.trustpilot],
         ["reddit.json", scraped.reddit],
         ["failures.json", scraped.failures],
         ...(approvedScreenshots.length > 0 ? [["screenshots.json", approvedScreenshots] as [string, unknown]] : []),

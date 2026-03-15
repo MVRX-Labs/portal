@@ -15,7 +15,6 @@ All scraped data has been saved as JSON files in this directory. Read ALL files 
 - tiktok.json — TikTok profile data
 - ai-visibility.json — robots.txt analysis, llms.txt check, bot statuses
 - serp-results.json — Google SERP results for category queries
-- trustpilot.json — Trustpilot reviews/ratings
 - reddit.json — Reddit brand mentions
 - discovery.json — Company info, competitors, social handles (from web research)
 - failures.json — List of scrapers that failed (handle gracefully)

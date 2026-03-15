@@ -178,6 +178,15 @@ export interface GrowthReportContent {
     recommendations: string[];
   };
 
+  screenshots?: Array<{
+    url: string;
+    section: string;
+    caption: string;
+    filename: string;
+    width: number;
+    height: number;
+  }>;
+
   caseStudies: Array<{
     title: string;
     subtitle: string;

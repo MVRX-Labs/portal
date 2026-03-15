@@ -1,8 +1,11 @@
 import { logger } from "@trigger.dev/sdk/v3";
-import type { DiscoveryResult } from "./discovery";
+import type { DiscoveryResult, ScreenshotTarget } from "./discovery";
 import { AI_BOTS } from "./constants";
 
 const APIFY_BASE = "https://api.apify.com/v2";
+
+// Screenshot actor
+const SCREENSHOT_ACTOR = "apify/screenshot-url";
 
 // Existing actor IDs (already in codebase)
 const LI_PROFILE_ACTOR = "VhxlqQXRwhW8H5hNV";
@@ -146,6 +149,44 @@ export async function fetchAiVisibility(websiteUrl: string): Promise<{
   });
 
   return { robotsTxt, llmsTxt, botStatuses };
+}
+
+// --- Screenshots ---
+
+export interface RawScreenshot extends ScreenshotTarget {
+  screenshotUrl: string;
+}
+
+export async function screenshotPages(targets: ScreenshotTarget[]): Promise<RawScreenshot[]> {
+  const items = (await apify(
+    SCREENSHOT_ACTOR,
+    {
+      urls: targets.map((t) => ({ url: t.url })),
+      waitUntil: "networkidle2",
+      delay: 2000,
+      viewportWidth: 1280,
+    },
+    `Screenshots (${targets.length} pages)`
+  )) as Array<{ url?: string; screenshotUrl?: string }>;
+
+  // Match results back to targets by URL
+  const itemByUrl = new Map(items.map((item) => [item.url, item.screenshotUrl]));
+
+  const results: RawScreenshot[] = [];
+  for (const target of targets) {
+    const screenshotUrl = itemByUrl.get(target.url);
+    if (!screenshotUrl) {
+      logger.warn(`No screenshot returned for ${target.url}`);
+      continue;
+    }
+    results.push({ ...target, screenshotUrl });
+  }
+
+  if (results.length < targets.length) {
+    logger.warn(`Screenshots: ${targets.length - results.length}/${targets.length} missing from results`);
+  }
+
+  return results;
 }
 
 // --- Orchestrator ---

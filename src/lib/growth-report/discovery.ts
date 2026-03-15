@@ -3,6 +3,12 @@ import { extractJSON, MODEL_MAP } from "../audit-utils";
 import { logger } from "@trigger.dev/sdk/v3";
 import { tmpdir } from "os";
 
+export interface ScreenshotTarget {
+  url: string;
+  context: string;
+  section: string;
+}
+
 export interface DiscoveryResult {
   competitors: string[];
   searchQueries: string[];
@@ -14,6 +20,7 @@ export interface DiscoveryResult {
     youtube?: string;
   };
   trustpilotUrl: string | null;
+  screenshotTargets?: ScreenshotTarget[];
 }
 
 function buildDiscoveryPrompt(websiteUrl: string, companyName: string, industry: string | null): string {
@@ -44,6 +51,17 @@ Your job is to research and discover key information we need before running our 
 - Search for "${companyName} trustpilot" or try fetching trustpilot.com/review/${new URL("https://" + websiteUrl.replace(/^https?:\/\//, "")).hostname}
 - Return the full Trustpilot business page URL, or null if not found
 
+## 5. Identify Pages to Screenshot (4-8 URLs)
+We will capture screenshots of key pages to include as visuals in the report. Pick pages that would be most valuable to show:
+- The target company's homepage (always include this, section: "executiveSummary")
+- 1-2 key product/feature/pricing pages from the target site (section: "siteAudit")
+- 1-2 top competitor homepages for visual comparison (section: "competitiveBenchmarking")
+- The company's blog or content hub if it exists (section: "contentAudit")
+- Any page you noticed during research that has notable UX/design issues worth highlighting
+
+For each, provide the full URL, a short description of why it's worth capturing, and which report section it relates to.
+Valid section values: "executiveSummary", "trafficAnalysis", "siteAudit", "competitiveBenchmarking", "contentAudit", "linkedinAudit", "socialSeo", "aiVisibility", "entitySeo", "redditAudit"
+
 ## Output Format
 Return a single JSON object (no markdown fences, no explanation):
 
@@ -57,7 +75,11 @@ Return a single JSON object (no markdown fences, no explanation):
     "twitter": "handle_or_null",
     "youtube": "handle_or_null"
   },
-  "trustpilotUrl": "https://trustpilot.com/review/..." or null
+  "trustpilotUrl": "https://trustpilot.com/review/..." or null,
+  "screenshotTargets": [
+    { "url": "https://example.com", "context": "Company homepage", "section": "executiveSummary" },
+    { "url": "https://competitor.com", "context": "Top competitor homepage", "section": "competitiveBenchmarking" }
+  ]
 }
 
 CRITICAL: Your final response MUST be ONLY the raw JSON object. No explanation, no markdown.`;
@@ -101,6 +123,7 @@ export async function runDiscovery(
       (k) => parsed.socialHandles[k as keyof typeof parsed.socialHandles]
     ).length,
     hasTrustpilot: !!parsed.trustpilotUrl,
+    screenshotTargets: parsed.screenshotTargets?.length ?? 0,
   });
 
   return parsed;

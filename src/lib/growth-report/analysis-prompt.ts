@@ -19,8 +19,12 @@ All scraped data has been saved as JSON files in this directory. Read ALL files 
 - reddit.json — Reddit brand mentions
 - discovery.json — Company info, competitors, social handles (from web research)
 - failures.json — List of scrapers that failed (handle gracefully)
+- screenshots.json — Approved website screenshots with captions and section assignments (may not exist if no screenshots were taken)
 
 Some files may be missing if scrapers failed. Work with what's available and note data gaps.
+
+## Screenshots
+If screenshots.json exists, it contains pre-approved website screenshots that will be embedded as images in the report. Each screenshot has a "section" field indicating which report section it belongs to, a "caption" that will appear beneath the image, and a "url" showing which page was captured. You do not need to do anything special with these — they are embedded automatically by the document builder. However, be aware they exist so your analysis text can reference them naturally (e.g., "As visible in the homepage screenshot above..." or "The competitor's landing page, shown below, illustrates...").
 
 ## Output Schema
 Produce a SINGLE JSON object matching this TypeScript interface exactly:

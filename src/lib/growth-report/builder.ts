@@ -13,6 +13,7 @@ import {
   sectionH,
   pageBreak,
   tr,
+  screenshotBlock,
 } from "./styles";
 import { coverPage, executiveSummary } from "./sections/cover";
 import {
@@ -58,7 +59,22 @@ function footerContent(): Footer {
   });
 }
 
-export async function buildGrowthReportDocx(content: GrowthReportContent): Promise<Buffer> {
+export async function buildGrowthReportDocx(
+  content: GrowthReportContent,
+  screenshotBuffers?: Map<string, Buffer>
+): Promise<Buffer> {
+  /** Insert any screenshots assigned to the given section */
+  function insertScreenshots(sectionName: string): Paragraph[] {
+    if (!content.screenshots || !screenshotBuffers) return [];
+    return content.screenshots
+      .filter((s) => s.section === sectionName)
+      .flatMap((s) => {
+        const buf = screenshotBuffers.get(s.filename);
+        if (!buf) return [];
+        return screenshotBlock(buf, s.caption, s.width, s.height);
+      });
+  }
+
   // --- Cover page children (Section 0) ---
   const coverChildren = coverPage(content);
 
@@ -80,21 +96,23 @@ export async function buildGrowthReportDocx(content: GrowthReportContent): Promi
   );
 
   // Executive Summary (includes KPI cards) — sectionH has pageBreakBefore
-  body.push(sectionH("Executive Summary"), ...executiveSummary(content));
+  body.push(sectionH("Executive Summary"), ...executiveSummary(content), ...insertScreenshots("executiveSummary"));
 
   // Data analysis sections — each sectionH has pageBreakBefore built in
   // Sections are optional; skip if removed by the review step
-  if (content.trafficAnalysis) body.push(...trafficSection(content));
-  if (content.domainAuthority) body.push(...domainAuthoritySection(content));
-  if (content.siteAudit) body.push(...siteAuditSection(content));
-  if (content.competitiveBenchmarking) body.push(...competitiveSection(content));
-  if (content.contentAudit) body.push(...contentAuditSection(content));
+  if (content.trafficAnalysis) body.push(...trafficSection(content), ...insertScreenshots("trafficAnalysis"));
+  if (content.domainAuthority) body.push(...domainAuthoritySection(content), ...insertScreenshots("domainAuthority"));
+  if (content.siteAudit) body.push(...siteAuditSection(content), ...insertScreenshots("siteAudit"));
+  if (content.competitiveBenchmarking)
+    body.push(...competitiveSection(content), ...insertScreenshots("competitiveBenchmarking"));
+  if (content.contentAudit) body.push(...contentAuditSection(content), ...insertScreenshots("contentAudit"));
 
   // Social & platform sections
-  if (content.linkedinAudit) body.push(...linkedinAuditSection(content));
-  if (content.socialSeo) body.push(...socialSeoSection(content));
-  if (content.aiVisibility) body.push(...aiVisibilitySection(content));
-  if (content.entitySeo) body.push(...entitySeoSection(content));
+  if (content.linkedinAudit) body.push(...linkedinAuditSection(content), ...insertScreenshots("linkedinAudit"));
+  if (content.socialSeo) body.push(...socialSeoSection(content), ...insertScreenshots("socialSeo"));
+  if (content.aiVisibility) body.push(...aiVisibilitySection(content), ...insertScreenshots("aiVisibility"));
+  if (content.entitySeo) body.push(...entitySeoSection(content), ...insertScreenshots("entitySeo"));
+  if (content.redditAudit) body.push(...redditSection(content), ...insertScreenshots("redditAudit"));
 
   // Strategy sections
   if (content.linkedinStrategy) body.push(...linkedinStrategySection(content));

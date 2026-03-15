@@ -1,5 +1,5 @@
 import { task, logger, metadata } from "@trigger.dev/sdk/v3";
-import { mkdir, writeFile, rm } from "fs/promises";
+import { mkdir, writeFile, readFile, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
@@ -12,12 +12,14 @@ import { extractJSON, resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { uploadFile, findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { sendSlackNotification } from "@/lib/slack";
 import { runDiscovery } from "@/lib/growth-report/discovery";
-import { collectAllData } from "@/lib/growth-report/scrapers";
+import { collectAllData, screenshotPages } from "@/lib/growth-report/scrapers";
+import { evaluateScreenshots } from "@/lib/growth-report/screenshots";
 import { buildAnalysisPrompt } from "@/lib/growth-report/analysis-prompt";
 import { buildReviewPrompt } from "@/lib/growth-report/review-prompt";
 import { buildGrowthReportDocx } from "@/lib/growth-report/builder";
 import { MVRX_CASE_STUDIES, STANDARD_PRICING } from "@/lib/growth-report/constants";
 import type { GrowthReportContent } from "@/lib/growth-report/schema";
+import type { ApprovedScreenshot } from "@/lib/growth-report/screenshots";
 
 interface GrowthReportPayload {
   runId: string;
@@ -96,6 +98,19 @@ export const growthReportTask = task({
         });
       }
 
+      // --- Step 3.5: Capture & evaluate screenshots ---
+      let approvedScreenshots: ApprovedScreenshot[] = [];
+
+      if (discovery.screenshotTargets?.length) {
+        logger.info("Capturing screenshots", { targets: discovery.screenshotTargets.length });
+        const rawScreenshots = await screenshotPages(discovery.screenshotTargets);
+
+        if (rawScreenshots.length > 0) {
+          approvedScreenshots = await evaluateScreenshots(rawScreenshots, account.name, sessionDir);
+          logger.info(`Screenshots: ${approvedScreenshots.length}/${rawScreenshots.length} approved`);
+        }
+      }
+
       // Write all data to session dir for Claude
       const files: [string, unknown][] = [
         ["discovery.json", discovery],
@@ -110,6 +125,7 @@ export const growthReportTask = task({
         ["trustpilot.json", scraped.trustpilot],
         ["reddit.json", scraped.reddit],
         ["failures.json", scraped.failures],
+        ...(approvedScreenshots.length > 0 ? [["screenshots.json", approvedScreenshots] as [string, unknown]] : []),
       ];
 
       for (const person of scraped.linkedinPeople) {
@@ -149,6 +165,18 @@ export const growthReportTask = task({
       reportContent.statementOfWork = reportContent.statementOfWork || buildDefaultSow();
       reportContent.pricing = reportContent.pricing || buildDefaultPricing();
 
+      // Inject approved screenshots
+      if (approvedScreenshots.length > 0) {
+        reportContent.screenshots = approvedScreenshots.map((s) => ({
+          url: s.url,
+          section: s.section,
+          caption: s.caption,
+          filename: s.filename,
+          width: s.width,
+          height: s.height,
+        }));
+      }
+
       // --- Step 5: Initial build & review ---
       progress("Building initial document & running quality review", 5);
 
@@ -182,6 +210,17 @@ export const growthReportTask = task({
           reportContent.caseStudies = MVRX_CASE_STUDIES;
           reportContent.statementOfWork = reportContent.statementOfWork || buildDefaultSow();
           reportContent.pricing = reportContent.pricing || buildDefaultPricing();
+          // Re-inject screenshots (review agent shouldn't be managing these)
+          if (approvedScreenshots.length > 0) {
+            reportContent.screenshots = approvedScreenshots.map((s) => ({
+              url: s.url,
+              section: s.section,
+              caption: s.caption,
+              filename: s.filename,
+              width: s.width,
+              height: s.height,
+            }));
+          }
           logger.info("Review applied — report cleaned up");
         } else {
           logger.warn("Review output missing core fields, using original analysis");
@@ -195,7 +234,18 @@ export const growthReportTask = task({
       // --- Step 6: Final build & upload ---
       progress("Building final document & uploading", 6);
 
-      const docxBuffer = await buildGrowthReportDocx(reportContent);
+      // Load screenshot image buffers for DOCX embedding
+      const screenshotBuffers = new Map<string, Buffer>();
+      for (const s of approvedScreenshots) {
+        try {
+          const buf = await readFile(join(sessionDir, s.filename));
+          screenshotBuffers.set(s.filename, buf);
+        } catch {
+          logger.warn(`Could not read screenshot file: ${s.filename}`);
+        }
+      }
+
+      const docxBuffer = await buildGrowthReportDocx(reportContent, screenshotBuffers);
       const hostname = new URL(account.website.startsWith("http") ? account.website : `https://${account.website}`)
         .hostname;
       const filename = `MVRX | ${hostname} | SEO & Growth Report.docx`;

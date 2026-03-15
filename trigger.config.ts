@@ -21,7 +21,7 @@ export default defineConfig({
     external: ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk", "postgres"],
     extensions: [
       additionalPackages({
-        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk"],
+        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk", "image-size"],
       }),
     ],
   },

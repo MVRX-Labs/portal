@@ -73,18 +73,6 @@ function tr(
   });
 }
 
-function textRuns(
-  text: string,
-  opts?: { bold?: boolean; italics?: boolean; size?: number; color?: string }
-): TextRun[] {
-  const lines = text.split("\n");
-  const runs: TextRun[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    runs.push(tr(lines[i], { ...opts, break: i > 0 ? 1 : undefined }));
-  }
-  return runs;
-}
-
 function emptyPara(): Paragraph {
   return new Paragraph({ children: [] });
 }
@@ -120,29 +108,35 @@ function bodyPara(text: string, opts?: { bold?: boolean; italics?: boolean }): P
   return new Paragraph({
     alignment: AlignmentType.LEFT,
     spacing: { after: 120 },
-    children: textRuns(text, { ...opts }),
+    children: [tr(text, { ...opts })],
   });
 }
 
-function labeledPara(label: string, text: string): Paragraph {
-  return new Paragraph({
-    spacing: { after: 120 },
-    children: [tr(label + " ", { bold: true }), ...textRuns(text)],
-  });
-}
+/** Bullet with bold lead-in: splits on first ": " to bold the label */
+function bullet(text: string): Paragraph {
+  const sepIdx = text.indexOf(": ");
+  const children =
+    sepIdx > 0 && sepIdx < 80
+      ? [tr(text.slice(0, sepIdx + 1), { bold: true }), tr(text.slice(sepIdx + 1))]
+      : [tr(text)];
 
-function bulletItem(text: string, opts?: { bold?: boolean }): Paragraph {
   return new Paragraph({
     numbering: { reference: BULLET_REF, level: 0 },
     spacing: { after: 60 },
-    children: [tr(text, { bold: opts?.bold })],
+    children,
   });
 }
 
 function numberedItem(index: number, text: string): Paragraph {
+  const sepIdx = text.indexOf(": ");
+  const children =
+    sepIdx > 0 && sepIdx < 80
+      ? [tr(`${index}. ${text.slice(0, sepIdx + 1)}`, { bold: true }), tr(text.slice(sepIdx + 1))]
+      : [tr(`${index}. ${text}`, { bold: true })];
+
   return new Paragraph({
     spacing: { after: 80 },
-    children: [tr(`${index}. ${text}`, { bold: true })],
+    children,
   });
 }
 
@@ -272,22 +266,26 @@ function situationOverviewSection(so: GTMStrategyContent["situationOverview"]): 
   const out: (Paragraph | Table)[] = [];
 
   out.push(sectionHeading("1. Situation Overview"));
-  out.push(bodyPara(so.summary));
+  out.push(bodyPara(so.summaryIntro));
+  for (const point of so.summaryPoints) {
+    out.push(bullet(point));
+  }
   out.push(emptyPara());
 
   out.push(subHeading("What's Working"));
   for (const item of so.whatsWorking) {
-    out.push(bulletItem(item));
+    out.push(bullet(item));
   }
   out.push(emptyPara());
 
   out.push(subHeading("The Challenge"));
   for (const item of so.theChallenge) {
-    out.push(bulletItem(item));
+    out.push(bullet(item));
   }
   out.push(emptyPara());
 
-  out.push(labeledPara("Key Observation:", so.keyObservation));
+  out.push(subHeading("Key Observation"));
+  out.push(bullet(so.keyObservation));
   out.push(emptyPara());
 
   out.push(subHeading("Strategic Priorities"));
@@ -336,7 +334,10 @@ function presenceAuditSection(pa: GTMStrategyContent["presenceAudit"]): (Paragra
   );
 
   out.push(emptyPara());
-  out.push(labeledPara("Overall Assessment:", pa.overallAssessment));
+  out.push(subHeading("Overall Assessment"));
+  for (const item of pa.overallAssessment) {
+    out.push(bullet(item));
+  }
   out.push(emptyPara());
 
   return out;
@@ -349,7 +350,7 @@ function competitiveLandscapeSection(cl: GTMStrategyContent["competitiveLandscap
 
   for (const comp of cl.competitors) {
     out.push(subHeading(comp.name));
-    out.push(labeledPara("Positioning:", comp.positioning));
+    out.push(bullet(`Positioning: ${comp.positioning}`));
 
     out.push(
       new Paragraph({
@@ -358,7 +359,7 @@ function competitiveLandscapeSection(cl: GTMStrategyContent["competitiveLandscap
       })
     );
     for (const s of comp.strengths) {
-      out.push(bulletItem(s));
+      out.push(bullet(s));
     }
 
     out.push(
@@ -368,19 +369,22 @@ function competitiveLandscapeSection(cl: GTMStrategyContent["competitiveLandscap
       })
     );
     for (const w of comp.weaknesses) {
-      out.push(bulletItem(w));
+      out.push(bullet(w));
     }
 
-    out.push(bodyPara(comp.keyTakeaway, { italics: true }));
+    out.push(bullet(`Key Takeaway: ${comp.keyTakeaway}`));
     out.push(emptyPara());
   }
 
-  out.push(labeledPara("Strategic Position:", cl.strategicPosition));
+  out.push(subHeading("Strategic Position"));
+  for (const item of cl.strategicPosition) {
+    out.push(bullet(item));
+  }
   out.push(emptyPara());
 
   out.push(subHeading("Positioning Takeaways"));
   for (const t of cl.positioningTakeaways) {
-    out.push(bulletItem(t));
+    out.push(bullet(t));
   }
   out.push(emptyPara());
 
@@ -420,11 +424,14 @@ function channelOverviewSection(cs: GTMStrategyContent["channelStrategyOverview"
 
   out.push(subHeading("Why Not Other Channels?"));
   for (const reason of cs.whyNotOtherChannels) {
-    out.push(bulletItem(reason));
+    out.push(bullet(reason));
   }
   out.push(emptyPara());
 
-  out.push(labeledPara("How Channels Work Together:", cs.howChannelsWorkTogether));
+  out.push(subHeading("How Channels Work Together"));
+  for (const item of cs.howChannelsWorkTogether) {
+    out.push(bullet(item));
+  }
   out.push(emptyPara());
 
   return out;
@@ -448,12 +455,15 @@ function channelDetailSection(
   );
   out.push(emptyPara());
 
-  out.push(labeledPara("Strategic Rationale:", cd.strategicRationale));
+  out.push(subHeading("Strategic Rationale"));
+  for (const item of cd.strategicRationale) {
+    out.push(bullet(item));
+  }
   out.push(emptyPara());
 
   out.push(subHeading("Key Tactics"));
   for (const tactic of cd.keyTactics) {
-    out.push(bulletItem(tactic));
+    out.push(bullet(tactic));
   }
   out.push(emptyPara());
 
@@ -481,11 +491,11 @@ function executionRoadmapSection(er: GTMStrategyContent["executionRoadmap"]): (P
     out.push(bodyPara(month.theme, { italics: true }));
 
     for (const action of month.actions) {
-      out.push(bulletItem(action));
+      out.push(bullet(action));
     }
     out.push(emptyPara());
 
-    out.push(labeledPara("Checkpoint:", month.checkpoint));
+    out.push(bullet(`Checkpoint: ${month.checkpoint}`));
     out.push(emptyPara());
   }
 
@@ -506,7 +516,10 @@ function successMetricsSection(sm: GTMStrategyContent["successMetrics"]): (Parag
   );
   out.push(emptyPara());
 
-  out.push(labeledPara("Tracking Notes:", sm.trackingNotes));
+  out.push(subHeading("Tracking Notes"));
+  for (const note of sm.trackingNotes) {
+    out.push(bullet(note));
+  }
   out.push(emptyPara());
 
   return out;

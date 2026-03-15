@@ -16,7 +16,8 @@ export interface GTMStrategyContent {
 }
 
 export interface SituationOverview {
-  summary: string;
+  summaryIntro: string;
+  summaryPoints: string[];
   whatsWorking: string[];
   theChallenge: string[];
   keyObservation: string;
@@ -30,7 +31,7 @@ export interface PresenceAudit {
   seoAssessment: string;
   socialMediaScore: number;
   socialMediaAssessment: string;
-  overallAssessment: string;
+  overallAssessment: string[];
 }
 
 export interface CompetitorEntry {
@@ -43,7 +44,7 @@ export interface CompetitorEntry {
 
 export interface CompetitiveLandscape {
   competitors: CompetitorEntry[];
-  strategicPosition: string;
+  strategicPosition: string[];
   positioningTakeaways: string[];
 }
 
@@ -56,7 +57,7 @@ export interface RecommendedChannel {
 export interface ChannelStrategyOverview {
   recommendedChannels: RecommendedChannel[];
   whyNotOtherChannels: string[];
-  howChannelsWorkTogether: string;
+  howChannelsWorkTogether: string[];
 }
 
 export interface WeekPlan {
@@ -69,7 +70,7 @@ export interface ChannelDetail {
   investment: string;
   timeToResults: string;
   keyMetric: string;
-  strategicRationale: string;
+  strategicRationale: string[];
   keyTactics: string[];
   twelveWeekPlan: WeekPlan[];
 }
@@ -95,7 +96,7 @@ export interface GrowthTarget {
 
 export interface SuccessMetrics {
   growthTargets: GrowthTarget[];
-  trackingNotes: string;
+  trackingNotes: string[];
 }
 
 export interface NextSteps {

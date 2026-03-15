@@ -240,10 +240,44 @@ ${THREAD_EXAMPLE}
   },
 };
 
+export type OutputFormat = "single" | "thread";
+
+/**
+ * When the user selects "Single Tweet", this modifier is appended to the
+ * resolved prompt so the AI produces exactly one tweet instead of a thread.
+ */
+export const SINGLE_TWEET_MODIFIER = `
+
+# IMPORTANT — OUTPUT FORMAT OVERRIDE
+
+Ignore all previous instructions about creating a thread or multiple tweets.
+Instead, produce **exactly one single tweet** (maximum 280 characters).
+
+Rules for the single tweet:
+- Distill the entire post into one punchy, self-contained tweet
+- It must be under 280 characters — no exceptions
+- Do NOT label it "TWEET 1" or use any thread numbering
+- Do NOT add "Thread:" or ↓ arrows
+- Keep the same tone and style rules from above (no emojis or hashtags unless the original author used them)
+- Make it the single most compelling, shareable takeaway from the post
+- Output ONLY the tweet text — nothing else (no preamble, no explanation, no alternatives)`;
+
 /** Replace {{POST}} in a template with the actual post content. */
-export function resolvePromptTemplate(template: string, postContent: string): string {
-  if (template.includes("{{POST}}")) {
-    return template.replace("{{POST}}", postContent);
+export function resolvePromptTemplate(
+  template: string,
+  postContent: string,
+  outputFormat?: OutputFormat,
+): string {
+  let resolved = template;
+  if (resolved.includes("{{POST}}")) {
+    resolved = resolved.replace("{{POST}}", postContent);
+  } else {
+    resolved = `${resolved}\n\n# The post to convert\n\n${postContent}`;
   }
-  return `${template}\n\n# The post to convert\n\n${postContent}`;
+
+  if (outputFormat === "single") {
+    resolved += SINGLE_TWEET_MODIFIER;
+  }
+
+  return resolved;
 }

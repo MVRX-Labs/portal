@@ -5,20 +5,26 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
-import { TWITTER_PROMPT_PRESETS, resolvePromptTemplate } from "@/lib/twitter-prompts";
+import { TWITTER_PROMPT_PRESETS, resolvePromptTemplate, type OutputFormat } from "@/lib/twitter-prompts";
 
-function buildPrompt(postContent: string, promptStyle?: string, customPrompt?: string): string {
+function buildPrompt(
+  postContent: string,
+  promptStyle?: string,
+  customPrompt?: string,
+  outputFormat?: OutputFormat,
+): string {
   if (customPrompt && customPrompt.trim()) {
-    return resolvePromptTemplate(customPrompt, postContent);
+    return resolvePromptTemplate(customPrompt, postContent, outputFormat);
   }
 
   const preset = TWITTER_PROMPT_PRESETS[promptStyle || "default"] || TWITTER_PROMPT_PRESETS.default;
-  return resolvePromptTemplate(preset.template, postContent);
+  return resolvePromptTemplate(preset.template, postContent, outputFormat);
 }
 
 interface LinkedInToTwitterPayload {
   runId: string;
   postContent: string;
+  outputFormat?: OutputFormat;
   model?: string;
   promptStyle?: string;
   customPrompt?: string;
@@ -32,11 +38,12 @@ export const linkedinToTwitterTask = task({
     minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInToTwitterPayload, { signal }) => {
-    const { runId, postContent, model, promptStyle, customPrompt } = payload;
+    const { runId, postContent, outputFormat, model, promptStyle, customPrompt } = payload;
 
     try {
+      const formatLabel = outputFormat === "single" ? "single tweet" : "tweet thread";
       metadata.set("progress", {
-        step: "Converting post to tweets",
+        step: `Converting post to ${formatLabel}`,
         stepNumber: 1,
         totalSteps: 2,
         percentage: 10,
@@ -44,7 +51,7 @@ export const linkedinToTwitterTask = task({
 
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
       const usedStyle = customPrompt?.trim() ? "custom" : promptStyle || "default";
-      logger.info("Starting LinkedIn-to-Twitter conversion", { runId, model: resolvedModel, promptStyle: usedStyle });
+      logger.info("Starting LinkedIn-to-Twitter conversion", { runId, model: resolvedModel, promptStyle: usedStyle, outputFormat: outputFormat || "thread" });
 
       const abortController = new AbortController();
       signal.addEventListener("abort", () => abortController.abort());
@@ -52,7 +59,7 @@ export const linkedinToTwitterTask = task({
       let output = "";
 
       for await (const message of query({
-        prompt: buildPrompt(postContent, promptStyle, customPrompt),
+        prompt: buildPrompt(postContent, promptStyle, customPrompt, outputFormat),
         options: {
           model: resolvedModel,
           abortController,

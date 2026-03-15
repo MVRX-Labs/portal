@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const handle = await tasks.trigger<typeof linkedinToTwitterTask>("linkedin-to-twitter", {
       runId: run.id,
       postContent: inputs.postContent,
+      outputFormat: inputs.outputFormat,
       model: inputs.model,
       promptStyle: inputs.promptStyle,
       customPrompt: inputs.customPrompt,

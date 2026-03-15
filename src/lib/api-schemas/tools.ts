@@ -43,6 +43,7 @@ export type LinkedinHumanizerBody = z.infer<typeof linkedinHumanizerBodySchema>;
 // POST /api/tools/linkedin-to-twitter
 export const linkedinToTwitterBodySchema = z.object({
   postContent: z.string().min(1, "postContent is required"),
+  outputFormat: z.enum(["single", "thread"]).optional().default("thread"),
   promptStyle: z.enum(["default", "human", "viral"]).optional(),
   customPrompt: z.string().optional(),
   model: z.string().optional(),

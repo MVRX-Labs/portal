@@ -3,7 +3,9 @@ import { runApifyActor } from "@/lib/apify";
 import type { DiscoveryResult, ScreenshotTarget } from "./discovery";
 import { AI_BOTS } from "./constants";
 
-const SCREENSHOT_ACTOR = "apify/screenshot-url";
+// Apify screenshot actor — kept as fallback reference but no longer used.
+// Screenshots now use Playwright via take-screenshots.ts for better quality.
+// const SCREENSHOT_ACTOR = "apify/screenshot-url";
 const LI_PROFILE_ACTOR = "VhxlqQXRwhW8H5hNV";
 const LI_POSTS_ACTOR = "Wpp1BZ6yGWjySadk3";
 const GOOGLE_SERP_ACTOR = "nFJndFXA5zjCTuudP";
@@ -106,61 +108,9 @@ export async function fetchAiVisibility(websiteUrl: string): Promise<{
   return { robotsTxt, llmsTxt, botStatuses };
 }
 
-// --- Screenshots ---
+// --- Screenshots (re-exported from take-screenshots.ts) ---
 
-export interface RawScreenshot extends ScreenshotTarget {
-  screenshotUrl: string;
-}
-
-export async function screenshotPages(targets: ScreenshotTarget[]): Promise<RawScreenshot[]> {
-  logger.info(`Taking screenshots for ${targets.length} pages (individual calls)`);
-
-  const settled = await Promise.allSettled(
-    targets.map((target) =>
-      runApifyActor(
-        SCREENSHOT_ACTOR,
-        {
-          urls: [{ url: target.url }],
-          waitUntil: "networkidle2",
-          delay: 2000,
-          viewportWidth: 1280,
-        },
-        {
-          label: `Screenshot: ${target.url}`,
-          retries: 1,
-          timeoutSecs: 600,
-          skipCache: true,
-          log,
-        }
-      ).then((items) => {
-        const arr = items as Array<{ url?: string; screenshotUrl?: string }>;
-        const screenshotUrl = arr[0]?.screenshotUrl;
-        if (!screenshotUrl) throw new Error(`No screenshotUrl in response for ${target.url}`);
-        return { ...target, screenshotUrl } as RawScreenshot;
-      })
-    )
-  );
-
-  const results: RawScreenshot[] = [];
-  const failures: string[] = [];
-
-  settled.forEach((result, i) => {
-    if (result.status === "fulfilled") {
-      results.push(result.value);
-    } else {
-      const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      failures.push(`${targets[i].url}: ${errorMsg}`);
-      logger.error(`Screenshot failed for ${targets[i].url}`, { error: errorMsg });
-    }
-  });
-
-  if (failures.length > 0) {
-    logger.warn(`Screenshots: ${failures.length}/${targets.length} failed`, { failures });
-  }
-
-  logger.info(`Screenshots complete: ${results.length}/${targets.length} succeeded`);
-  return results;
-}
+export { takeScreenshots, type CapturedScreenshot } from "./take-screenshots";
 
 // --- Orchestrator ---
 

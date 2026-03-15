@@ -1,5 +1,6 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { additionalPackages } from "@trigger.dev/build/extensions/core";
+import { playwright } from "@trigger.dev/build/extensions/playwright";
 
 export default defineConfig({
   project: "proj_omchykblaxtcsrpezhql",
@@ -18,11 +19,12 @@ export default defineConfig({
   },
   dirs: ["./src/trigger"],
   build: {
-    external: ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk", "postgres"],
+    external: ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk", "postgres", "playwright-core"],
     extensions: [
       additionalPackages({
-        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk", "image-size"],
+        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk", "sharp"],
       }),
+      playwright({ browsers: ["chromium"] }),
     ],
   },
   machine: "small-2x",

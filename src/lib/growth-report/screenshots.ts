@@ -2,12 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { logger } from "@trigger.dev/sdk/v3";
-import sizeOf from "image-size";
-import sharp from "sharp";
 import { MODEL_MAP } from "../audit-utils";
-import type { RawScreenshot } from "./scrapers";
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB Claude limit
+import type { CapturedScreenshot } from "./take-screenshots";
 
 const anthropic = new Anthropic();
 
@@ -22,83 +18,25 @@ export interface ApprovedScreenshot {
 }
 
 /**
- * Shrink a PNG buffer until it's under the Claude 5 MB limit.
- * Progressively reduces dimensions by 25% each pass.
- */
-async function shrinkToLimit(buf: Buffer, url: string): Promise<Buffer> {
-  if (buf.length <= MAX_IMAGE_BYTES) return buf;
-
-  const meta = await sharp(buf).metadata();
-  let width = meta.width ?? 1280;
-  let result = buf;
-
-  while (result.length > MAX_IMAGE_BYTES && width > 400) {
-    width = Math.round(width * 0.75);
-    result = await sharp(buf).resize({ width }).png({ quality: 80 }).toBuffer();
-    logger.info(`Resized screenshot for ${url}: width=${width}, size=${result.length} bytes`);
-  }
-
-  if (result.length > MAX_IMAGE_BYTES) {
-    // Last resort: convert to JPEG
-    result = await sharp(buf).resize({ width }).jpeg({ quality: 70 }).toBuffer();
-    logger.info(`Converted screenshot to JPEG for ${url}: size=${result.length} bytes`);
-  }
-
-  return result;
-}
-
-/**
- * Download screenshot PNGs from Apify KV store URLs, send them to Claude
- * for multimodal evaluation, save approved ones to the session directory.
+ * Evaluate captured screenshots with Claude, save approved ones to session dir.
+ * Accepts pre-captured buffers from Playwright (no downloading needed).
  */
 export async function evaluateScreenshots(
-  screenshots: RawScreenshot[],
+  screenshots: CapturedScreenshot[],
   companyName: string,
   sessionDir: string
 ): Promise<ApprovedScreenshot[]> {
   if (screenshots.length === 0) return [];
 
-  // Download all screenshot images in parallel, shrinking any that exceed 5 MB
-  const downloads = await Promise.allSettled(
-    screenshots.map(async (s) => {
-      logger.info(`Downloading screenshot from ${s.screenshotUrl}`);
-      const res = await fetch(s.screenshotUrl);
-      if (!res.ok) throw new Error(`Download failed for ${s.url}: ${res.status} ${res.statusText}`);
-      const buf = Buffer.from(await res.arrayBuffer());
-      logger.info(`Downloaded screenshot for ${s.url}: ${buf.length} bytes`);
-      if (buf.length > MAX_IMAGE_BYTES) {
-        logger.warn(`Screenshot for ${s.url} exceeds 5 MB (${buf.length} bytes), resizing`);
-        return await shrinkToLimit(buf, s.url);
-      }
-      return buf;
-    })
-  );
+  logger.info(`Evaluating ${screenshots.length} screenshots individually via Claude`);
 
-  // Filter to successfully downloaded screenshots
-  const downloaded: Array<{ index: number; screenshot: RawScreenshot; buffer: Buffer }> = [];
-  downloads.forEach((result, i) => {
-    if (result.status !== "fulfilled") {
-      logger.warn(`Screenshot download failed for ${screenshots[i].url}`, {
-        error: result.reason?.message,
-      });
-      return;
-    }
-    downloaded.push({ index: i, screenshot: screenshots[i], buffer: result.value });
-  });
-
-  const downloadsFailed = downloads.length - downloaded.length;
-  logger.info(`Screenshot downloads: ${downloaded.length} succeeded, ${downloadsFailed} failed`);
-
-  if (downloaded.length === 0) {
-    logger.warn("All screenshot downloads failed — skipping evaluation");
-    return [];
+  // Detect media type from buffer header (JPEG starts with FF D8)
+  function mediaType(buf: Buffer): "image/jpeg" | "image/png" {
+    return buf[0] === 0xff && buf[1] === 0xd8 ? "image/jpeg" : "image/png";
   }
 
-  // Evaluate each screenshot individually so one failure doesn't block the rest
-  logger.info(`Evaluating ${downloaded.length} screenshots individually via Claude`);
-
   const evalResults = await Promise.allSettled(
-    downloaded.map(async ({ screenshot, buffer }) => {
+    screenshots.map(async (s) => {
       const response = await anthropic.messages.create({
         model: MODEL_MAP.sonnet,
         max_tokens: 1024,
@@ -108,14 +46,14 @@ export async function evaluateScreenshots(
             content: [
               {
                 type: "text",
-                text: `Screenshot: ${screenshot.url}\nContext: ${screenshot.context}\nTarget section: ${screenshot.section}`,
+                text: `Screenshot: ${s.url}\nContext: ${s.context}\nTarget section: ${s.section}`,
               },
               {
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: "image/png",
-                  data: buffer.toString("base64"),
+                  media_type: mediaType(s.buffer),
+                  data: s.buffer.toString("base64"),
                 },
               },
               {
@@ -150,12 +88,12 @@ CRITICAL: Return ONLY the raw JSON object. No markdown fences, no explanation.`,
   // Save approved screenshots and build metadata
   const approved: ApprovedScreenshot[] = [];
 
-  for (let i = 0; i < downloaded.length; i++) {
-    const { screenshot, buffer } = downloaded[i];
+  for (let i = 0; i < screenshots.length; i++) {
+    const s = screenshots[i];
     const evalResult = evalResults[i];
 
     let include = true;
-    let caption = `Screenshot of ${screenshot.context}`;
+    let caption = `Screenshot of ${s.context}`;
     let reason = "default";
 
     if (evalResult.status === "fulfilled") {
@@ -164,35 +102,35 @@ CRITICAL: Return ONLY the raw JSON object. No markdown fences, no explanation.`,
       reason = evalResult.value.reason;
     } else {
       const errMsg = evalResult.reason instanceof Error ? evalResult.reason.message : String(evalResult.reason);
-      logger.error(`Claude evaluation failed for ${screenshot.url} — including with generic caption`, {
+      logger.error(`Claude evaluation failed for ${s.url} — including with generic caption`, {
         error: errMsg,
       });
       reason = "Evaluation API failed — included by default";
     }
 
     if (!include) {
-      logger.info(`Screenshot excluded: ${screenshot.url} — ${reason}`);
+      logger.info(`Screenshot excluded: ${s.url} — ${reason}`);
       continue;
     }
 
-    const filename = `screenshot-${approved.length}.png`;
-    await writeFile(join(sessionDir, filename), buffer);
+    const ext = mediaType(s.buffer) === "image/jpeg" ? "jpg" : "png";
+    const filename = `screenshot-${approved.length}.${ext}`;
+    await writeFile(join(sessionDir, filename), s.buffer);
 
-    const dimensions = sizeOf(buffer);
     approved.push({
-      url: screenshot.url,
-      section: screenshot.section,
-      context: screenshot.context,
+      url: s.url,
+      section: s.section,
+      context: s.context,
       caption,
       filename,
-      width: dimensions.width ?? 1280,
-      height: dimensions.height ?? 800,
+      width: s.width,
+      height: s.height,
     });
 
-    logger.info(`Screenshot approved: ${screenshot.url} → ${filename}`);
+    logger.info(`Screenshot approved: ${s.url} → ${filename}`);
   }
 
-  const excludedCount = downloaded.length - approved.length;
+  const excludedCount = screenshots.length - approved.length;
   logger.info(`Screenshot evaluation complete: ${approved.length} approved, ${excludedCount} excluded`);
 
   return approved;

@@ -265,13 +265,17 @@ export function screenshotBlock(
   const renderW = Math.round(imgWidth * scale);
   const renderH = Math.round(imgHeight * scale);
 
+  // Detect format from buffer magic bytes (JPEG: FF D8, PNG: 89 50)
+  const isJpeg = imageBuffer[0] === 0xff && imageBuffer[1] === 0xd8;
+  const imageType = isJpeg ? "jpg" : "png";
+
   return [
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 200, after: 80 },
       children: [
         new ImageRun({
-          type: "png",
+          type: imageType,
           data: imageBuffer,
           transformation: { width: renderW, height: renderH },
           outline: {

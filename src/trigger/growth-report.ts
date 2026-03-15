@@ -12,7 +12,7 @@ import { extractJSON, resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { uploadFile, findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { sendSlackNotification } from "@/lib/slack";
 import { runDiscovery } from "@/lib/growth-report/discovery";
-import { collectAllData, screenshotPages } from "@/lib/growth-report/scrapers";
+import { collectAllData, takeScreenshots } from "@/lib/growth-report/scrapers";
 import { evaluateScreenshots } from "@/lib/growth-report/screenshots";
 import { buildAnalysisPrompt } from "@/lib/growth-report/analysis-prompt";
 import { buildReviewPrompt } from "@/lib/growth-report/review-prompt";
@@ -98,20 +98,16 @@ export const growthReportTask = task({
         });
       }
 
-      // --- Step 3.5: Capture & evaluate screenshots ---
+      // --- Step 3.5: Capture & evaluate screenshots (Playwright) ---
       let approvedScreenshots: ApprovedScreenshot[] = [];
 
-      // TODO: Re-enable once we find a better screenshot provider (Apify quality too low)
-      let skipScreenshots = false;
-      if (!skipScreenshots) {
-        if (discovery.screenshotTargets?.length) {
-          logger.info("Capturing screenshots", { targets: discovery.screenshotTargets.length });
-          const rawScreenshots = await screenshotPages(discovery.screenshotTargets);
+      if (discovery.screenshotTargets?.length) {
+        logger.info("Capturing screenshots with Playwright", { targets: discovery.screenshotTargets.length });
+        const captured = await takeScreenshots(discovery.screenshotTargets);
 
-          if (rawScreenshots.length > 0) {
-            approvedScreenshots = await evaluateScreenshots(rawScreenshots, account.name, sessionDir);
-            logger.info(`Screenshots: ${approvedScreenshots.length}/${rawScreenshots.length} approved`);
-          }
+        if (captured.length > 0) {
+          approvedScreenshots = await evaluateScreenshots(captured, account.name, sessionDir);
+          logger.info(`Screenshots: ${approvedScreenshots.length}/${captured.length} approved`);
         }
       }
 

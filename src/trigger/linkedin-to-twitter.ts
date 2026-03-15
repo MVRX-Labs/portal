@@ -7,13 +7,34 @@ import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { TWITTER_PROMPT_PRESETS, resolvePromptTemplate } from "@/lib/twitter-prompts";
 
-function buildPrompt(postContent: string, promptStyle?: string, customPrompt?: string): string {
+function buildPrompt(
+  postContent: string,
+  promptStyle?: string,
+  customPrompt?: string,
+  outputFormat?: string,
+  callToAction?: string
+): string {
+  let prompt: string;
   if (customPrompt && customPrompt.trim()) {
-    return resolvePromptTemplate(customPrompt, postContent);
+    prompt = resolvePromptTemplate(customPrompt, postContent);
+  } else {
+    const preset = TWITTER_PROMPT_PRESETS[promptStyle || "default"] || TWITTER_PROMPT_PRESETS.default;
+    prompt = resolvePromptTemplate(preset.template, postContent);
   }
 
-  const preset = TWITTER_PROMPT_PRESETS[promptStyle || "default"] || TWITTER_PROMPT_PRESETS.default;
-  return resolvePromptTemplate(preset.template, postContent);
+  if (outputFormat === "single-tweet") {
+    prompt += `\n\n# IMPORTANT: Output format override
+
+Do NOT write a thread. Write a SINGLE tweet only (max 280 characters). Condense the key insight from the post into one punchy, self-contained tweet. No "TWEET 1", no numbering, no thread indicators. Just one tweet.`;
+  }
+
+  if (callToAction?.trim()) {
+    prompt += `\n\n# Call to action
+
+End the ${outputFormat === "single-tweet" ? "tweet" : "thread"} with this call to action (weave it in naturally): ${callToAction.trim()}`;
+  }
+
+  return prompt;
 }
 
 interface LinkedInToTwitterPayload {
@@ -22,6 +43,8 @@ interface LinkedInToTwitterPayload {
   model?: string;
   promptStyle?: string;
   customPrompt?: string;
+  outputFormat?: string;
+  callToAction?: string;
 }
 
 export const linkedinToTwitterTask = task({
@@ -32,7 +55,7 @@ export const linkedinToTwitterTask = task({
     minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInToTwitterPayload, { signal }) => {
-    const { runId, postContent, model, promptStyle, customPrompt } = payload;
+    const { runId, postContent, model, promptStyle, customPrompt, outputFormat, callToAction } = payload;
 
     try {
       metadata.set("progress", {
@@ -52,7 +75,7 @@ export const linkedinToTwitterTask = task({
       let output = "";
 
       for await (const message of query({
-        prompt: buildPrompt(postContent, promptStyle, customPrompt),
+        prompt: buildPrompt(postContent, promptStyle, customPrompt, outputFormat, callToAction),
         options: {
           model: resolvedModel,
           abortController,

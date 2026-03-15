@@ -89,7 +89,7 @@ export const TOOLS: ToolConfig[] = [
   {
     id: "linkedin-to-twitter",
     name: "LinkedIn Post to Tweets",
-    description: "Convert a LinkedIn post into a catchy Twitter thread.",
+    description: "Convert a LinkedIn post into a catchy Twitter thread or single tweet.",
     href: "/tools/linkedin-to-twitter",
     fields: [
       {
@@ -98,6 +98,21 @@ export const TOOLS: ToolConfig[] = [
         type: "textarea",
         placeholder: "Paste your LinkedIn post here...",
         required: true,
+      },
+      {
+        name: "outputFormat",
+        label: "Format",
+        type: "select",
+        options: [
+          { label: "Thread", value: "thread" },
+          { label: "Single Tweet", value: "single-tweet" },
+        ],
+      },
+      {
+        name: "callToAction",
+        label: "Call to Action (optional)",
+        type: "text",
+        placeholder: "e.g. Full breakdown in the blog: https://...",
       },
       {
         name: "customPrompt",

@@ -45,6 +45,8 @@ export const linkedinToTwitterBodySchema = z.object({
   postContent: z.string().min(1, "postContent is required"),
   promptStyle: z.enum(["default", "human", "viral"]).optional(),
   customPrompt: z.string().optional(),
+  outputFormat: z.enum(["thread", "single-tweet"]).optional(),
+  callToAction: z.string().optional(),
   model: z.string().optional(),
   accountId: requiredAccountId,
 });

@@ -1,0 +1,6 @@
+{
+  "urls": [{ "url": "https://example.com" }],
+  "waitUntil": "networkidle2",
+  "delay": 2000,
+  "viewportWidth": 1280
+}

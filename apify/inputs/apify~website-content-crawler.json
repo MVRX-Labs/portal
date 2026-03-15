@@ -1,0 +1,5 @@
+{
+  "startUrls": [{ "url": "https://example.com" }],
+  "maxCrawlingDepth": 0,
+  "maxPagesPerCrawl": 1
+}

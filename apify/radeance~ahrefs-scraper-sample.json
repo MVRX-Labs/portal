@@ -1,0 +1,332 @@
+[
+  {
+    "data_captured_at": "2026-03-15T12:03:24.899737",
+    "type": "authority",
+    "domain": "https://hubspot.com",
+    "mode": "subdomains",
+    "website_authority": {
+      "domainRating": 93,
+      "urlRating": 29,
+      "ahrefsRank": 140,
+      "backlinks": 43234184,
+      "refdomains": 312480,
+      "dofollowBacklinks": 97,
+      "dofollowRefdomains": 89
+    }
+  },
+  {
+    "data_captured_at": "2026-03-15T12:03:27.325278",
+    "type": "traffic",
+    "domain": "https://hubspot.com",
+    "mode": "subdomains",
+    "website_overall_search_traffic": 4046846,
+    "website_overall_search_traffic_history": [
+      {
+        "date": "2015-06-01",
+        "traffic": 475078
+      },
+      {
+        "date": "2015-07-01",
+        "traffic": 526882
+      },
+      {
+        "date": "2015-08-01",
+        "traffic": 569692
+      }
+    ],
+    "website_overall_search_traffic_value": 9686517,
+    "website_overall_search_traffic_value_history": [
+      {
+        "date": "2015-06-01",
+        "value": 1193883
+      },
+      {
+        "date": "2015-07-01",
+        "value": 1264247
+      },
+      {
+        "date": "2015-08-01",
+        "value": 1338314
+      }
+    ],
+    "website_traffic": {
+      "trafficMonthlyAvg": 4905317,
+      "costMontlyAvg": 1233234800
+    },
+    "website_traffic_history": [
+      {
+        "date": "2025-10-01",
+        "organic": 4774553
+      },
+      {
+        "date": "2025-11-01",
+        "organic": 4761951
+      },
+      {
+        "date": "2025-12-01",
+        "organic": 4751793
+      }
+    ],
+    "website_overall_search_traffic_by_country": [
+      {
+        "country": "US",
+        "traffic": 1689683,
+        "trafficLastMonth": 1793447,
+        "trafficShare": 0.417
+      },
+      {
+        "country": "GB",
+        "traffic": 378455,
+        "trafficLastMonth": 309946,
+        "trafficShare": 0.093
+      },
+      {
+        "country": "IN",
+        "traffic": 375771,
+        "trafficLastMonth": 365746,
+        "trafficShare": 0.092
+      },
+      {
+        "country": "BR",
+        "traffic": 198145,
+        "trafficLastMonth": 159453,
+        "trafficShare": 0.048
+      },
+      {
+        "country": "CA",
+        "traffic": 181819,
+        "trafficLastMonth": 188521,
+        "trafficShare": 0.044
+      }
+    ],
+    "website_traffic_by_country": [
+      {
+        "country": "us",
+        "share": 47.93842554042887,
+        "monthly_traffic": [
+          {
+            "date": "2025-10-01",
+            "organic": 2288846
+          },
+          {
+            "date": "2025-11-01",
+            "organic": 2282805
+          },
+          {
+            "date": "2025-12-01",
+            "organic": 2277935
+          },
+          {
+            "date": "2026-01-01",
+            "organic": 2257575
+          },
+          {
+            "date": "2026-02-01",
+            "organic": 2201477
+          },
+          {
+            "date": "2026-03-01",
+            "organic": 2294967
+          }
+        ]
+      },
+      {
+        "country": "in",
+        "share": 7.674592162202923,
+        "monthly_traffic": [
+          {
+            "date": "2025-10-01",
+            "organic": 366428
+          },
+          {
+            "date": "2025-11-01",
+            "organic": 365461
+          },
+          {
+            "date": "2025-12-01",
+            "organic": 364681
+          },
+          {
+            "date": "2026-01-01",
+            "organic": 361422
+          },
+          {
+            "date": "2026-02-01",
+            "organic": 352441
+          },
+          {
+            "date": "2026-03-01",
+            "organic": 367408
+          }
+        ]
+      },
+      {
+        "country": "gb",
+        "share": 7.395796496694465,
+        "monthly_traffic": [
+          {
+            "date": "2025-10-01",
+            "organic": 353117
+          },
+          {
+            "date": "2025-11-01",
+            "organic": 352185
+          },
+          {
+            "date": "2025-12-01",
+            "organic": 351433
+          },
+          {
+            "date": "2026-01-01",
+            "organic": 348292
+          },
+          {
+            "date": "2026-02-01",
+            "organic": 339638
+          },
+          {
+            "date": "2026-03-01",
+            "organic": 354061
+          }
+        ]
+      },
+      {
+        "country": "ph",
+        "share": 5.156484790936338,
+        "monthly_traffic": [
+          {
+            "date": "2025-10-01",
+            "organic": 246200
+          },
+          {
+            "date": "2025-11-01",
+            "organic": 245550
+          },
+          {
+            "date": "2025-12-01",
+            "organic": 245026
+          },
+          {
+            "date": "2026-01-01",
+            "organic": 242836
+          },
+          {
+            "date": "2026-02-01",
+            "organic": 236802
+          },
+          {
+            "date": "2026-03-01",
+            "organic": 246858
+          }
+        ]
+      },
+      {
+        "country": "br",
+        "share": 3.921811809254663,
+        "monthly_traffic": [
+          {
+            "date": "2025-10-01",
+            "organic": 187249
+          },
+          {
+            "date": "2025-11-01",
+            "organic": 186755
+          },
+          {
+            "date": "2025-12-01",
+            "organic": 186357
+          },
+          {
+            "date": "2026-01-01",
+            "organic": 184691
+          },
+          {
+            "date": "2026-02-01",
+            "organic": 180102
+          },
+          {
+            "date": "2026-03-01",
+            "organic": 187750
+          }
+        ]
+      }
+    ],
+    "website_traffic_top_pages": [
+      {
+        "url": "https://www.hubspot.com/",
+        "traffic": 367979,
+        "share": 15.990118585662824
+      },
+      {
+        "url": "https://knowledge.hubspot.com/customer-feedback/create-and-send-customer-satisfaction-surveys",
+        "traffic": 170049,
+        "share": 7.389290354540281
+      },
+      {
+        "url": "https://blog.hubspot.com/marketing/marketing-101",
+        "traffic": 122895,
+        "share": 5.34026567707677
+      },
+      {
+        "url": "https://app.hubspot.com/login",
+        "traffic": 122077,
+        "share": 5.304720395951835
+      },
+      {
+        "url": "https://www.hubspot.com/products/crm",
+        "traffic": 118983,
+        "share": 5.170274063677329
+      }
+    ],
+    "website_traffic_top_countries": [
+      {
+        "country": "us",
+        "share": 47.93842554042887
+      },
+      {
+        "country": "in",
+        "share": 7.674592162202923
+      },
+      {
+        "country": "gb",
+        "share": 7.395796496694465
+      },
+      {
+        "country": "ph",
+        "share": 5.156484790936338
+      },
+      {
+        "country": "br",
+        "share": 3.921811809254663
+      }
+    ],
+    "website_overall_search_traffic_keywords": [],
+    "website_traffic_top_keywords": [
+      {
+        "keyword": "hubspot",
+        "position": 1,
+        "traffic": 402000
+      },
+      {
+        "keyword": "customer feedback surveys",
+        "position": 1,
+        "traffic": 1440000
+      },
+      {
+        "keyword": "marketing fundamentals",
+        "position": 3,
+        "traffic": 780000
+      },
+      {
+        "keyword": "hubspot login",
+        "position": 1,
+        "traffic": 114000
+      },
+      {
+        "keyword": "faq templates",
+        "position": 5,
+        "traffic": 939000
+      }
+    ]
+  }
+]

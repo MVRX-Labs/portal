@@ -1,0 +1,152 @@
+[
+  {
+    "#debug": {
+      "requestId": "BvJn17WV5R1eI0d",
+      "url": "http://www.google.com/search?q=MVRX+Labs",
+      "loadedUrl": "http://www.google.com/search?q=MVRX+Labs",
+      "method": "GET",
+      "retryCount": 0,
+      "errorMessages": [],
+      "statusCode": 200
+    },
+    "#error": false,
+    "searchQuery": {
+      "term": "MVRX Labs",
+      "url": "http://www.google.com/search?q=MVRX+Labs",
+      "device": "DESKTOP",
+      "page": 1,
+      "type": "SEARCH",
+      "domain": "google.com",
+      "countryCode": "US",
+      "languageCode": null,
+      "locationUule": null,
+      "resultsPerPage": 10
+    },
+    "url": "http://www.google.com/search?q=MVRX+Labs",
+    "hasNextPage": true,
+    "serpProviderCode": "N",
+    "resultsTotal": 46,
+    "relatedQueries": [],
+    "paidResults": [],
+    "paidProducts": [],
+    "organicResults": [
+      {
+        "title": "https://www.mvrxlabs.com/",
+        "url": "https://www.mvrxlabs.com/",
+        "displayedUrl": "https://www.mvrxlabs.com",
+        "description": "",
+        "emphasizedKeywords": [],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 1
+      },
+      {
+        "title": "MVRX Labs",
+        "url": "https://www.linkedin.com/company/mvrx-labs",
+        "displayedUrl": "LinkedIn\u00a0\u203a\u00a0MVRX Labs",
+        "description": "MVRX Labs | 22 followers on LinkedIn. Growth for startups | Helping startups capture attention optimally.",
+        "emphasizedKeywords": ["MVRX Labs"],
+        "siteLinks": [],
+        "productInfo": {},
+        "followersAmount": "10+ followers",
+        "type": "organic",
+        "position": 2
+      },
+      {
+        "title": "MVRX Labs",
+        "url": "https://mvrxlabs.dev/",
+        "displayedUrl": "https://mvrxlabs.dev",
+        "description": "MVRX Labs. Sign in to the internal portal. Sign in with Google. Only @mvrxlabs.com accounts are allowed.Read more",
+        "emphasizedKeywords": ["Sign in to the internal portal"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 3
+      },
+      {
+        "title": "MVRx 2025 Company Profile: Valuation, Funding & Investors",
+        "url": "https://pitchbook.com/profiles/company/154693-99",
+        "displayedUrl": "https://pitchbook.com \u203a profiles \u203a company",
+        "description": "The company specializes in designing and developing a mitral valve repair system that treats heart failure by reducing the backward leakage of blood through the\u00a0...Read more",
+        "emphasizedKeywords": ["designing and developing a mitral valve repair system"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 4
+      },
+      {
+        "title": "haroldadmin/MvRx - Android on Autopilot",
+        "url": "https://github.com/haroldadmin/MvRx",
+        "displayedUrl": "https://github.com \u203a haroldadmin \u203a MvRx",
+        "description": "MvRx (pronounced mavericks) is the Android framework from Airbnb that we use for nearly all product development at Airbnb. When we began creating MvRx,\u00a0...Read more",
+        "emphasizedKeywords": ["Android framework from Airbnb"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 5
+      },
+      {
+        "title": "Introducing Mavericks (MvRx) 2.0 - Gabriel Peal",
+        "url": "https://gpeal.medium.com/introducing-mavericks-mvrx-2-0-57d430a94070",
+        "displayedUrl": "410+ likes  \u00b7  5 years ago",
+        "description": "Mavericks 2.0 is a ground-up (but fully backward compatible) rewrite of MvRx 1.0 built for Coroutines, with an entirely new world-class testing suite.Read more",
+        "emphasizedKeywords": ["Mavericks 2.0"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 6
+      },
+      {
+        "title": "A half year MvRx review on a medium sized project | by Jirka",
+        "url": "https://proandroiddev.com/a-half-year-mvrx-review-on-a-medium-sized-project-d25b6212d4d7",
+        "displayedUrl": "https://proandroiddev.com \u203a a-half-year-mvrx-review-o...",
+        "description": "So upon exploring some of the popular frameworks I found an (at that time) new project called MvRx (https://github.com/airbnb/MvRx) created in\u00a0...Read more",
+        "date": "2019-01-26T12:00:00.000Z",
+        "emphasizedKeywords": ["MvRx", "MvRx"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 7
+      },
+      {
+        "title": "MvRx Testing \u00b7 airbnb/mavericks Wiki",
+        "url": "https://github.com/airbnb/MvRx/wiki/MvRx-Testing",
+        "displayedUrl": "https://github.com \u203a airbnb \u203a wiki \u203a MvRx-Testing",
+        "description": "The mvrx-testing artifact can be added as a test dependency to provide additional tooling when writing tests for MvRx ViewModels and screens.Read more",
+        "date": "2019-12-10T12:00:00.000Z",
+        "emphasizedKeywords": ["mvrx", "MvRx"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 8
+      },
+      {
+        "title": "MA{VR}X Lab",
+        "url": "https://mavrxlab.org/",
+        "displayedUrl": "https://mavrxlab.org",
+        "description": "The University of Arizona's home for research, exploration, and development for alternative and extended reality media and training in southeastern Arizona.Read more",
+        "emphasizedKeywords": ["research, exploration, and development"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 9
+      },
+      {
+        "title": "MvRx Mocking System \u00b7 airbnb/mavericks Wiki",
+        "url": "https://github.com/airbnb/mavericks/wiki/MvRx-Mocking-System",
+        "displayedUrl": "https://github.com \u203a airbnb \u203a MvRx-Mocking-System",
+        "description": "MvRx has an integrated mocking system to declare test data for screens and leverage that data with various testing tools.Read more",
+        "emphasizedKeywords": ["MvRx"],
+        "siteLinks": [],
+        "productInfo": {},
+        "type": "organic",
+        "position": 10
+      }
+    ],
+    "suggestedResults": [],
+    "peopleAlsoAsk": [],
+    "customData": null,
+    "htmlSnapshotUrl": "https://api.apify.com/v2/key-value-stores/nUnRl4rKJeaVb3ghg/records/BvJn17WV5R1eI0d-0.html?signature=1JrOuQ3YZLNLTLyLNYey4"
+  }
+]

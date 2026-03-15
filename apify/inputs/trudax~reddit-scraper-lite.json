@@ -1,0 +1,6 @@
+{
+  "searches": ["startup marketing"],
+  "maxItems": 3,
+  "sort": "relevance",
+  "time": "all"
+}

@@ -1,0 +1,40 @@
+[
+  {
+    "url": "https://example.com/",
+    "crawl": {
+      "loadedUrl": "https://example.com/",
+      "loadedTime": "2026-03-15T12:05:14.397Z",
+      "referrerUrl": "https://example.com/",
+      "httpStatusCode": 200,
+      "depth": 0,
+      "contentType": "text/html"
+    },
+    "metadata": {
+      "title": "Example Domain",
+      "description": null,
+      "author": null,
+      "keywords": null,
+      "languageCode": "en",
+      "jsonLd": null,
+      "headers": {
+        "date": "Sun, 15 Mar 2026 12:05:13 GMT",
+        "content-type": "text/html",
+        "content-encoding": "gzip",
+        "last-modified": "Wed, 11 Mar 2026 19:08:51 GMT",
+        "allow": "GET, HEAD",
+        "age": "5275",
+        "cf-cache-status": "HIT",
+        "vary": "Accept-Encoding",
+        "server": "cloudflare",
+        "cf-ray": "9dcb62962c4f3650-FRA",
+        "x-firefox-spdy": "h2"
+      }
+    },
+    "screenshotUrl": null,
+    "text": "Example Domain\nThis domain is for use in documentation examples without needing permission. Avoid use in operations.\nLearn more",
+    "markdown": "# Example Domain\n\nThis domain is for use in documentation examples without needing permission. Avoid use in operations.\n\n[Learn more](https://iana.org/domains/example)",
+    "debug": {
+      "requestHandlerMode": "browser"
+    }
+  }
+]

@@ -1,0 +1,254 @@
+[
+  {
+    "basic_info": {
+      "fullname": "Campbell Pritchard",
+      "first_name": "Campbell",
+      "last_name": "Pritchard",
+      "headline": "CEO @SpotsNow \u2013\u00a0helping brands test podcast ads",
+      "public_identifier": "campbellpritchard",
+      "profile_url": "https://linkedin.com/in/campbellpritchard",
+      "profile_picture_url": "https://media.licdn.com/dms/image/v2/D5603AQEMzFUA5CavBA/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1718290005650?e=1775088000&v=beta&t=T9ZCBpP8m96nFO2i1Duda5oSWR46kswohgiL5Fj9pvc",
+      "about": "Product leader, ex-podcaster (@803am club) building @SpotsNow.",
+      "location": {
+        "country": "United States",
+        "city": "Nashville, Tennessee",
+        "full": "Nashville, Tennessee, United States",
+        "country_code": "US"
+      },
+      "creator_hashtags": [],
+      "is_creator": false,
+      "is_influencer": false,
+      "is_premium": false,
+      "open_to_work": false,
+      "created_timestamp": 1281112255333,
+      "show_follower_count": false,
+      "background_picture_url": "https://media.licdn.com/dms/image/v2/D4E16AQEpWbeFUecfaA/profile-displaybackgroundimage-shrink_350_1400/B4EZsBVXm0GYAg-/0/1765253937885?e=1775088000&v=beta&t=-0ft7PXJo8l_GBqvlVqyhJ_lAQ45qnq_xAuhc0edChs",
+      "urn": "ACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE",
+      "follower_count": 3972,
+      "connection_count": 3709,
+      "current_company": "SpotsNow",
+      "current_company_urn": "89529680",
+      "current_company_url": "https://www.linkedin.com/company/spotsnow",
+      "top_skills": ["Product Management", "Product Strategy", "Online Marketplace", "Customer Experience"],
+      "email": null
+    },
+    "experience": [
+      {
+        "title": "Co-Founder & CEO",
+        "company": "SpotsNow",
+        "location": "San Francisco Bay Area",
+        "description": "SpotsNow is the new way brands test podcast ads by offering last-minute spots from trusted publishers \u2013 reducing the friction of podcast buying and make it easier for brands to run smart, controlled test campaigns. \n\nSpotsNow\u2019s suite of services include Station.page for creators; and StationBrands a managed service to help brands run their first podcast test campaigns and thoughtfully scale into the channel.",
+        "duration": "Aug 2022 - Present \u00b7 3 yrs 8 mos",
+        "start_date": {
+          "year": 2022,
+          "month": "Aug"
+        },
+        "is_current": true,
+        "company_linkedin_url": "https://www.linkedin.com/company/89529680/",
+        "company_logo_url": "https://media.licdn.com/dms/image/v2/D4E0BAQEbJ2FdQ0EB9g/company-logo_400_400/B4EZsBQD.OKMAY-/0/1765252546847/spotsnow_logo?e=1775088000&v=beta&t=xE-lCJ1iM5U7a3qqjpvTaxVpaoYXbpCa4oTbH7557Vw",
+        "employment_type": "Full-time",
+        "company_id": "89529680"
+      },
+      {
+        "title": "Founder Fellow (ODF 14)",
+        "company": "On Deck",
+        "location": "San Francisco Bay Area",
+        "duration": "Aug 2022 - Oct 2022 \u00b7 3 mos",
+        "start_date": {
+          "year": 2022,
+          "month": "Aug"
+        },
+        "end_date": {
+          "year": 2022,
+          "month": "Oct"
+        },
+        "is_current": false,
+        "company_linkedin_url": "https://www.linkedin.com/company/18776174/",
+        "company_logo_url": "https://media.licdn.com/dms/image/v2/D4D0BAQGeaQn0wm72pA/company-logo_400_400/B4DZjjn0hEHwAY-/0/1756165524510/odf_logo?e=1775088000&v=beta&t=pp2-9Z9ZiujMnE8IUpgj7jUXBQzPlM_s0yzbIfOu3AI",
+        "company_id": "18776174"
+      },
+      {
+        "title": "Senior Product Manager",
+        "company": "Thumbtack",
+        "location": "San Francisco Bay Area",
+        "description": "- Led the new home care experience product line from zero to one.\n- Graduated 'home care' to Thumbtack's core customer experience. \n- Helped shape Thumbtack's 3 year vision.",
+        "duration": "Nov 2020 - Jul 2022 \u00b7 1 yr 9 mos",
+        "start_date": {
+          "year": 2020,
+          "month": "Nov"
+        },
+        "end_date": {
+          "year": 2022,
+          "month": "Jul"
+        },
+        "is_current": false,
+        "company_linkedin_url": "https://www.linkedin.com/company/912833/",
+        "company_logo_url": "https://media.licdn.com/dms/image/v2/D560BAQEDU0VKGbKGIA/company-logo_400_400/B56ZfEIO45HQAc-/0/1751342182267/thumbtack_inc_logo?e=1775088000&v=beta&t=g36z8q4DjhpZAy4Fbbod3FhkOlsFJv-LksOItx3JQLM",
+        "skills": ["Online Marketplace", "Product Strategy"],
+        "company_id": "912833",
+        "skills_url": "https://www.linkedin.com/in/campbellpritchard/overlay/urn:li:fsd_profilePosition:(ACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE,1727762170)/skill-associations-details?profileUrn=urn%3Ali%3Afsd_profile%3AACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE"
+      },
+      {
+        "title": "Featured Speaker",
+        "company": "Product School",
+        "description": "Product School is a global leader in Product Management training with a community of over one million product professionals. As a featured speaker, I help inspire the next generation of Product Managers to create innovative products and apply best practices in their work.",
+        "duration": "Jun 2021 - Jun 2022 \u00b7 1 yr 1 mo",
+        "start_date": {
+          "year": 2021,
+          "month": "Jun"
+        },
+        "end_date": {
+          "year": 2022,
+          "month": "Jun"
+        },
+        "is_current": false,
+        "company_linkedin_url": "https://www.linkedin.com/company/3861577/",
+        "company_logo_url": "https://media.licdn.com/dms/image/v2/D4D0BAQEr9fCvuEeWHw/company-logo_400_400/B4DZl6sI3MJYAY-/0/1758700016213/product_school_logo?e=1775088000&v=beta&t=PBxnrip_d4BW3NyCVO6hegfQlLmWnEzKco3FdbBWCvw",
+        "company_id": "3861577"
+      },
+      {
+        "title": "Senior Product Manager (Acq. by Thumbtack)",
+        "company": "Setter, a Thumbtack company",
+        "location": "Toronto, Canada Area",
+        "description": "- Led the home hub product and Setter homeowner experience. \n- Led the home consultation product and took it from zero to one. \n- Led payments (pro and customer).\n- Led pro customer experience.",
+        "duration": "Oct 2019 - Dec 2020 \u00b7 1 yr 3 mos",
+        "start_date": {
+          "year": 2019,
+          "month": "Oct"
+        },
+        "end_date": {
+          "year": 2020,
+          "month": "Dec"
+        },
+        "is_current": false,
+        "company_linkedin_url": "https://www.linkedin.com/company/10574463/",
+        "company_logo_url": "https://media.licdn.com/dms/image/v2/C560BAQEagKbQW0ROdA/company-logo_400_400/company-logo_400_400/0/1630609186604/meetsetter_logo?e=1775088000&v=beta&t=5AvDX8BZbmN5Iqo_9ObqNCm5moj3SlIR9UtMMgULMXk",
+        "skills": ["Consumer Products", "Online Marketplace"],
+        "company_id": "10574463",
+        "skills_url": "https://www.linkedin.com/in/campbellpritchard/overlay/urn:li:fsd_profilePosition:(ACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE,1525132464)/skill-associations-details?profileUrn=urn%3Ali%3Afsd_profile%3AACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE"
+      }
+    ],
+    "education": [
+      {
+        "school": "University of Otago",
+        "degree": "Post Grad Diploma, Entrepreneurship",
+        "degree_name": "Post Grad Diploma",
+        "field_of_study": "Entrepreneurship",
+        "duration": "2011 - 2011",
+        "school_linkedin_url": "https://www.linkedin.com/company/166660/",
+        "school_logo_url": "https://media.licdn.com/dms/image/v2/D560BAQEnMm0JXh_RuA/company-logo_400_400/company-logo_400_400/0/1714511856153/university_of_otago_logo?e=1775088000&v=beta&t=YkvV7zeU8O3iRk2rqVlnEClCkZV-_4X9nqBIqzykXPc",
+        "start_date": {
+          "year": 2011
+        },
+        "end_date": {
+          "year": 2011
+        },
+        "school_id": "166660"
+      },
+      {
+        "school": "University of Otago",
+        "degree": "Bachelor of Commerce - BCom, Finance major",
+        "degree_name": "Bachelor of Commerce - BCom",
+        "field_of_study": "Finance major",
+        "duration": "2007 - 2010",
+        "school_linkedin_url": "https://www.linkedin.com/company/166660/",
+        "school_logo_url": "https://media.licdn.com/dms/image/v2/D560BAQEnMm0JXh_RuA/company-logo_400_400/company-logo_400_400/0/1714511856153/university_of_otago_logo?e=1775088000&v=beta&t=YkvV7zeU8O3iRk2rqVlnEClCkZV-_4X9nqBIqzykXPc",
+        "start_date": {
+          "year": 2007
+        },
+        "end_date": {
+          "year": 2010
+        },
+        "school_id": "166660"
+      }
+    ],
+    "featured": [
+      {
+        "type": "post",
+        "description": "Very excited to launch the New Heights fan club hosted by Travis & Jason Kelce this morning! ",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7125491014496108544?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7125491014496108544%29",
+        "image_url": "https://media.licdn.com/dms/image/v2/D5622AQHSnZdGS1GL-g/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1698847341612?e=1775088000&v=beta&t=GEXQKgxVCdYQWyGjpVoYqgg2PHBhhoW9ZsYzltQCcKU",
+        "social_counts": {
+          "likes": 32,
+          "comments": 4,
+          "reaction_counts": [
+            {
+              "type": "like",
+              "count": 25
+            },
+            {
+              "type": "praise",
+              "count": 5
+            },
+            {
+              "type": "empathy",
+              "count": 2
+            }
+          ]
+        }
+      },
+      {
+        "type": "post",
+        "description": "Huge week for Drop Station\u00a0last week\u00a0\ud83d\ude80\ud83d\ude80\n\nWe've outperformed Reddit for Travis and Jason Kelce's (New Heights) podcast fan area! \n\nHuge shout out to Brian Verne, Jake Perlmutter and our partners at Wave Sports + Entertainment who helped New Heights go to #1 on Apple Podcasts and are constantly investing in their growth and pushing the boundaries here.\u00a0\n\u00a0\nNow New\u00a0Heights has a whole new digital experience where...\u00a0\n\u00a0\n1. They have many\u00a0more listeners using\u00a0Drop Station than their reddit group.\n\n2. They are now getting more upvotes than the top reddit posts. \n\nReddit is a well oiled machine and we\u2019re new. We have no push notifications or fancy engagement mechanisms yet either. So I couldn\u2019t be more proud of the team to be driving this engagement so soon.\u00a0Engagement is the cornerstone of growing a podcast audience and is one of the strongest mechanisms to sparks word of mouth.\n\nBest part is we\u2019re just getting started!\u00a0\u00a0\u00a0",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7160759744813486080?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7160759744813486080%29",
+        "image_url": "https://media.licdn.com/dms/image/v2/D5622AQHSOuvglFLCCQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1707258162165?e=1775088000&v=beta&t=Skj5HNfrqkzyKBrneo_6E9W1aA6gqhlWL_b_EqKHUH4",
+        "social_counts": {
+          "likes": 61,
+          "comments": 5,
+          "reaction_counts": [
+            {
+              "type": "like",
+              "count": 45
+            },
+            {
+              "type": "praise",
+              "count": 9
+            },
+            {
+              "type": "empathy",
+              "count": 7
+            }
+          ]
+        }
+      },
+      {
+        "type": "post",
+        "description": "Today I had the most profound media experience \ud83e\udd14\ud83c\udf99 \u2013\u00a0I attended my first podcast AMA call with Lenny Rachitsky and Shreman Shrestha from Lenny's Newsletter. \n\n1. It was incredibly authentic and unproduced \u2013\u00a0and that made it perfect and special. \n\n2. It likely only costed Lenny an hour of his time too \u2013 No editing, no scripting. \n\n3. I was allowed into the inner-circle \u2013 As an ex-product manager, I've tuned into Lenny's podcast over the years and there's something exciting/ valuable/ humanizing about just being in a room (even virtual) with those you've listened to for some time. \n\n4. Most of all, I felt like I got a chance to connect with my tribe (people like me) \u2013\u00a0and learn through their thoughtful questions and experience how moved they felt from Lenny's work too. \n\nAs someone that's focused on building the future of media experiences,  I was transported from consuming a podcast to being included as part of Lenny' story \u2013\u00a0where Lenny took me behind his scenes and shared some of his inner workings and learnings. \n\nNow I feel even more pulled to replicate this feeling and connect people to the shows and tribes they love \u2013\u00a0so more of us can feel this too! \n\nIf you're a business/ product thinker. I highly recommend tuning into Lenny's podcast here: (https://lnkd.in/eMWhAn_V). Not just to learn from him and his guests - but also to experience the future of media through his tech stack and inclusive community experiences where his community has become his product as much as his incredible content! \ud83e\udd2f \n\n#podcast #podcastcommunity #podcasters",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7140800439792345090?updateEntityUrn=urn%3Ali%3Afs_feedUpdate%3A%28V2%2Curn%3Ali%3Aactivity%3A7140800439792345090%29",
+        "image_url": "https://media.licdn.com/dms/image/v2/D4E22AQH-pQMhjSrOAQ/feedshare-shrink_2048_1536/feedshare-shrink_2048_1536/0/1702499492218?e=1775088000&v=beta&t=q8CIKoUgsp104jzRxYfieNtc0P16p4DFdy34KdJ1L3c",
+        "social_counts": {
+          "likes": 91,
+          "comments": 7,
+          "reaction_counts": [
+            {
+              "type": "like",
+              "count": 69
+            },
+            {
+              "type": "empathy",
+              "count": 12
+            },
+            {
+              "type": "praise",
+              "count": 10
+            }
+          ]
+        }
+      },
+      {
+        "type": "link",
+        "title": "803am club breakfast show",
+        "description": "Spotify",
+        "url": "https://www.linkedin.com/in/campbellpritchard/overlay/1635540856019/single-media-viewer?type=LINK&profileId=ACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE",
+        "image_url": "https://media.licdn.com/dms/image/sync/v2/D5627AQEQXVeijj_hdg/articleshare-shrink_800/articleshare-shrink_800/0/1711835281784?e=1774184400&v=beta&t=6gWd-EoSiOMujJIOlqtNsEbLZRQ5-8kHfzqHvp1VvSE"
+      },
+      {
+        "type": "link",
+        "title": "Building your product team | Campbell Pritchard, Co-founder @ Drop Station",
+        "description": "YouTube",
+        "url": "https://www.linkedin.com/in/campbellpritchard/overlay/1635540855101/single-media-viewer?type=LINK&profileId=ACoAAATw87kBTYi0vZIf9uVQQ1l2NHLWN9dvDNE",
+        "image_url": "https://media.licdn.com/dms/image/v2/D562DAQEM4BdX4TOpPg/profile-treasury-image-shrink_8192_8192/profile-treasury-image-shrink_8192_8192/0/1694801691583?e=1774184400&v=beta&t=26Ukjx7TASn_vsDJLVUbgaTZHqlFOyGfgKX_xwwnT0o"
+      }
+    ]
+  }
+]

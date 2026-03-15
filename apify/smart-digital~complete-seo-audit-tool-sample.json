@@ -1,0 +1,495 @@
+[
+  {
+    "type": "page",
+    "pageUrl": "https://example.com",
+    "title": "Example Domain",
+    "httpStatus": 200,
+    "audit": {
+      "url": "https://example.com",
+      "title": "Example Domain",
+      "httpStatus": 200,
+      "overallScore": 52,
+      "categoryScores": {
+        "metaTags": 25,
+        "headings": 100,
+        "content": 0,
+        "technical": 50,
+        "schema": 0,
+        "performance": 100,
+        "links": 100,
+        "images": 100,
+        "accessibility": 40
+      },
+      "issues": {
+        "critical": [],
+        "warnings": [
+          "Title tag length is 14 characters (optimal: 30-60)",
+          "Missing meta description",
+          "Missing canonical URL",
+          "Thin content: only 17 words (minimum recommended: 300)",
+          "No internal links found"
+        ],
+        "info": [
+          "Missing Open Graph tags",
+          "Sitemap not found",
+          "No structured data found",
+          "robots.txt not found",
+          "1 redirects found",
+          "No ARIA labels found",
+          "No skip links found"
+        ],
+        "structured": {
+          "critical": [],
+          "warnings": [
+            {
+              "id": "TITLE_TOO_SHORT",
+              "message": "Title tag length is 14 characters (optimal: 30-60)",
+              "category": "meta",
+              "priority": 3,
+              "estimatedImpact": "medium",
+              "fixHint": "Adjust title length to 30-60 characters for better visibility in SERPs.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "MISSING_DESCRIPTION",
+              "message": "Missing meta description",
+              "category": "meta",
+              "priority": 4,
+              "estimatedImpact": "medium",
+              "fixHint": "Add a unique and attractive meta description (120-160 characters).",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "MISSING_CANONICAL",
+              "message": "Missing canonical tag",
+              "category": "meta",
+              "priority": 3,
+              "estimatedImpact": "medium",
+              "fixHint": "Add a <link rel=\"canonical\" href=\"...\"> tag to avoid duplicate content.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "THIN_CONTENT",
+              "message": "Thin content: only 17 words (minimum recommended: 300)",
+              "category": "content",
+              "priority": 3,
+              "estimatedImpact": "medium",
+              "fixHint": "Add more content (minimum 300 words) to improve SEO and value for users.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "NO_INTERNAL_LINKS",
+              "message": "No internal links found",
+              "category": "links",
+              "priority": 3,
+              "estimatedImpact": "medium",
+              "fixHint": "Add internal links to other relevant pages to improve navigation and SEO.",
+              "pagesAffected": ["https://example.com/"]
+            }
+          ],
+          "info": [
+            {
+              "id": "MISSING_OG_TAGS",
+              "message": "Missing Open Graph tags",
+              "category": "meta",
+              "priority": 1,
+              "estimatedImpact": "low",
+              "fixHint": "Add Open Graph tags (og:title, og:description, og:image) to improve social media sharing.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "NO_SITEMAP",
+              "message": "Sitemap not found",
+              "category": "technical",
+              "priority": 2,
+              "estimatedImpact": "low",
+              "fixHint": "Create a sitemap.xml and reference it in robots.txt.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "NO_STRUCTURED_DATA",
+              "message": "No structured data found",
+              "category": "schema",
+              "priority": 2,
+              "estimatedImpact": "medium",
+              "fixHint": "Add JSON-LD, Microdata or RDFa to improve SEO.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "NO_ROBOTS_TXT",
+              "message": "robots.txt not found",
+              "category": "technical",
+              "priority": 1,
+              "estimatedImpact": "low",
+              "fixHint": "Create a robots.txt file at the site root to control indexing.",
+              "pagesAffected": ["https://example.com/"]
+            },
+            {
+              "id": "REDIRECTS_FOUND",
+              "message": "1 redirects detected",
+              "category": "links",
+              "priority": 2,
+              "estimatedImpact": "low",
+              "fixHint": "Verify that redirects are necessary and optimize them if possible.",
+              "pagesAffected": ["https://example.com/"]
+            }
+          ]
+        }
+      },
+      "metaTags": {
+        "title": {
+          "present": true,
+          "value": "Example Domain",
+          "length": 14,
+          "lengthPixels": 91,
+          "optimal": false,
+          "unique": true,
+          "recommendation": "Title too short (14 characters, ~91px). Recommended: 30-60 characters (~195-390px)."
+        },
+        "description": {
+          "present": false,
+          "length": 0,
+          "optimal": false,
+          "unique": false,
+          "recommendation": "Missing meta description. Add a unique and attractive meta description (120-160 characters)."
+        },
+        "viewport": {
+          "present": true,
+          "value": "width=device-width, initial-scale=1",
+          "valid": true
+        },
+        "charset": {
+          "present": false,
+          "value": ""
+        },
+        "language": {
+          "present": true,
+          "value": "en"
+        },
+        "canonical": {
+          "present": false,
+          "url": "",
+          "selfReferencing": false,
+          "recommendation": "Missing canonical tag. Add a <link rel=\"canonical\" href=\"...\"> tag to avoid duplicate content."
+        },
+        "robots": {
+          "present": false,
+          "noindex": false,
+          "nofollow": false,
+          "directives": []
+        },
+        "openGraph": {
+          "present": false,
+          "complete": false
+        },
+        "twitterCard": {
+          "present": false,
+          "complete": false
+        }
+      },
+      "headings": {
+        "h1": {
+          "count": 1,
+          "texts": ["Example Domain"],
+          "optimal": true
+        },
+        "h2": {
+          "count": 0,
+          "texts": []
+        },
+        "h3": {
+          "count": 0,
+          "texts": []
+        },
+        "h4": {
+          "count": 0,
+          "texts": []
+        },
+        "h5": {
+          "count": 0,
+          "texts": []
+        },
+        "h6": {
+          "count": 0,
+          "texts": []
+        },
+        "structure": {
+          "valid": true,
+          "issues": [],
+          "hierarchy": [
+            {
+              "tag": "h1",
+              "level": 1,
+              "text": "Example Domain"
+            }
+          ]
+        }
+      },
+      "content": {
+        "length": 125,
+        "wordCount": 17,
+        "characterCount": 125,
+        "paragraphCount": 2,
+        "sentenceCount": 3,
+        "averageWordsPerSentence": 5.67,
+        "averageCharsPerWord": 7.35,
+        "readability": {
+          "score": 0,
+          "level": "Difficult",
+          "recommendation": "Low readability (Difficult). Simplify sentences and use shorter words."
+        },
+        "keywordDensity": {
+          "keywords": {
+            "use": 13.333333333333334,
+            "example": 6.666666666666667,
+            "domainthis": 6.666666666666667,
+            "domain": 6.666666666666667,
+            "documentation": 6.666666666666667,
+            "examples": 6.666666666666667,
+            "without": 6.666666666666667,
+            "needing": 6.666666666666667,
+            "permission": 6.666666666666667,
+            "avoid": 6.666666666666667
+          },
+          "topKeywords": [
+            {
+              "keyword": "use",
+              "density": 13.33,
+              "count": 2
+            },
+            {
+              "keyword": "example",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "domainthis",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "domain",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "documentation",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "examples",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "without",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "needing",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "permission",
+              "density": 6.67,
+              "count": 1
+            },
+            {
+              "keyword": "avoid",
+              "density": 6.67,
+              "count": 1
+            }
+          ],
+          "keywordRelevanceScore": 100
+        },
+        "thinContent": true,
+        "intent": "informational",
+        "h1TitleConsistency": {
+          "consistent": true,
+          "h1Text": "Example Domain",
+          "titleText": "Example Domain"
+        },
+        "recommendation": "Content too short (17 words). Recommended: minimum 300 words for good SEO."
+      },
+      "technical": {
+        "https": {
+          "present": true,
+          "valid": true,
+          "protocol": "https:",
+          "certificateValid": true
+        },
+        "mobileFriendly": {
+          "isMobileFriendly": true,
+          "viewportPresent": true,
+          "viewportValid": true,
+          "responsive": true
+        },
+        "sitemap": {
+          "present": false,
+          "accessible": false,
+          "recommendation": "Sitemap not found or inaccessible. Check common locations: /sitemap.xml, /sitemap_index.xml, /wp-sitemap.xml"
+        },
+        "structuredData": {
+          "jsonLd": false,
+          "microdata": false,
+          "rdfa": false,
+          "types": [],
+          "schemas": [],
+          "recommendation": "No structured data found. Add JSON-LD, Microdata or RDFa to improve SEO."
+        },
+        "amp": {
+          "present": false
+        },
+        "indexability": {
+          "indexable": true,
+          "reason": null,
+          "signals": {
+            "xRobotsTag": null,
+            "canonicalUrl": "https://example.com",
+            "canonicalStatusCode": 200
+          }
+        },
+        "rendering": {
+          "usesJavaScriptRendering": false,
+          "contentMissingWithoutJS": false,
+          "internalLinksMissingWithoutJS": false
+        },
+        "pagination": {
+          "isPaginated": false,
+          "hasNext": false,
+          "hasPrev": false
+        }
+      },
+      "crawlDepth": 0,
+      "performance": {
+        "timeToFirstByte": 25.399999998509884,
+        "pageLoadTime": 0,
+        "firstContentfulPaint": 200,
+        "totalBlockingTime": 0,
+        "cumulativeLayoutShift": 0,
+        "speedIndex": 255.5900000002235,
+        "coreWebVitals": {
+          "cls": 0
+        }
+      },
+      "links": {
+        "internal": {
+          "count": 0,
+          "unique": 0,
+          "sample": [],
+          "inNavigation": 0,
+          "inFooter": 0,
+          "inContent": 0
+        },
+        "external": {
+          "count": 1,
+          "nofollow": 0,
+          "dofollow": 1,
+          "sample": ["https://iana.org/domains/example"]
+        },
+        "broken": {
+          "count": 0,
+          "urls": [],
+          "verified": []
+        },
+        "redirects": {
+          "count": 1,
+          "urls": [
+            {
+              "url": "https://iana.org/domains/example",
+              "status": 301,
+              "redirectUrl": "http://www.iana.org/help/example-domains"
+            }
+          ]
+        },
+        "anchorTexts": {
+          "empty": 0,
+          "generic": 1,
+          "descriptive": 0
+        }
+      },
+      "images": {
+        "total": 0,
+        "withAlt": 0,
+        "withoutAlt": 0,
+        "withTitle": 0,
+        "optimized": 0,
+        "largeImages": 0,
+        "images": []
+      },
+      "accessibility": {
+        "ariaLabels": 0,
+        "langAttribute": true,
+        "skipLinks": false,
+        "colorContrast": {
+          "passed": true,
+          "issues": 0
+        }
+      }
+    }
+  },
+  {
+    "type": "site-summary",
+    "pagesCrawled": 1,
+    "averageScore": 52,
+    "categoryAverages": {
+      "metaTags": 25,
+      "headings": 100,
+      "content": 0,
+      "technical": 50,
+      "schema": 0,
+      "performance": 100,
+      "links": 100,
+      "images": 100,
+      "accessibility": 40
+    },
+    "topIssues": [
+      {
+        "issue": "Title tag length is 14 characters (optimal: 30-60)",
+        "count": 1,
+        "pages": ["https://example.com/"]
+      },
+      {
+        "issue": "Missing meta description",
+        "count": 1,
+        "pages": ["https://example.com/"]
+      },
+      {
+        "issue": "Missing canonical URL",
+        "count": 1,
+        "pages": ["https://example.com/"]
+      },
+      {
+        "issue": "Thin content: only 17 words (minimum recommended: 300)",
+        "count": 1,
+        "pages": ["https://example.com/"]
+      },
+      {
+        "issue": "No internal links found",
+        "count": 1,
+        "pages": ["https://example.com/"]
+      }
+    ],
+    "distribution": {
+      "excellent": 0,
+      "good": 0,
+      "needsImprovement": 1,
+      "poor": 0
+    },
+    "crawlCoverage": {
+      "pagesCrawled": 1,
+      "indexable": 1,
+      "nonIndexable": {
+        "noindex": 0,
+        "canonicalized": 0,
+        "errors4xx": 0,
+        "errors5xx": 0,
+        "redirects": 0
+      },
+      "maxDepth": 0
+    }
+  }
+]

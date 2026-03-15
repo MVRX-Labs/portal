@@ -1,0 +1,8 @@
+[
+  {
+    "startUrl": "https://example.com",
+    "url": "https://example.com/",
+    "screenshotUrl": "https://api.apify.com/v2/key-value-stores/ok7HsybNw0RNDGN3Z/records/screenshot_https___example_com_c984d06aafbecf6bc55569f964148ea3?signature=104Jc9VgvfNrMukplkUM3&disableRedirect=true",
+    "screenshotKey": "screenshot_https___example_com_c984d06aafbecf6bc55569f964148ea3"
+  }
+]

@@ -1,0 +1,78 @@
+[
+  {
+    "domain": "hubspot.com",
+    "inputDomain": "hubspot.com",
+    "title": "HubSpot | Software & Tools for your Business - Homepage",
+    "description": "HubSpot's customer platform includes all the marketing, sales, customer service, and CRM software you need to grow your business.",
+    "snapshotDate": "2026-02-01T00:00:00+00:00",
+    "category": "Business and Consumer Services > Online Marketing",
+    "globalRank": 579,
+    "topCountry": "US",
+    "topCountryRank": 373,
+    "categoryRank": 2,
+    "totalVisits": 38164943,
+    "bounceRate": 0.2233,
+    "pagesPerVisit": 17.17,
+    "timeOnSite": 970.7,
+    "estimatedMonthlyVisits": {
+      "2025-12-01": 33104192,
+      "2026-01-01": 38066652,
+      "2026-02-01": 38164943
+    },
+    "topCountryShares": {
+      "US": 0.3656,
+      "GB": 0.0956,
+      "FR": 0.0466,
+      "AU": 0.0456,
+      "JP": 0.0452
+    },
+    "trafficSources": {
+      "Direct": 0.7194,
+      "Search": 0.2044,
+      "Referrals": 0.0591,
+      "Paid Referrals": 0.0082,
+      "Social": 0.0077,
+      "Mail": 0.0012
+    },
+    "topKeywords": [
+      {
+        "name": "hubspot",
+        "volume": 1223770,
+        "cpc": 8.61,
+        "estimatedMonthlyValue": 950090
+      },
+      {
+        "name": "hubspot login",
+        "volume": 141890,
+        "cpc": 3.4,
+        "estimatedMonthlyValue": 172060
+      },
+      {
+        "name": "hubspot academy",
+        "volume": 111940,
+        "cpc": 2.15,
+        "estimatedMonthlyValue": 129390
+      },
+      {
+        "name": "hubspot crm",
+        "volume": 70770,
+        "cpc": 18.72,
+        "estimatedMonthlyValue": 57210
+      },
+      {
+        "name": "hubspot pricing",
+        "volume": 56800,
+        "cpc": 13.66,
+        "estimatedMonthlyValue": 50580
+      }
+    ],
+    "isSmallSite": false,
+    "isDataFromGoogleAnalytics": false,
+    "favicon": "https://site-images.similarcdn.com/image?url=hubspot.com&t=2&s=1&h=ead473ebec5efd666f067e4498a03078c97715f7e0c8aaf4fa2f3c83de5c67d8",
+    "mobileScreenshot": "https://site-images.similarcdn.com/image?url=hubspot.com&t=4&s=1&h=ead473ebec5efd666f067e4498a03078c97715f7e0c8aaf4fa2f3c83de5c67d8",
+    "desktopScreenshot": "https://site-images.similarcdn.com/image?url=hubspot.com&t=1&s=1&h=ead473ebec5efd666f067e4498a03078c97715f7e0c8aaf4fa2f3c83de5c67d8",
+    "similarSites": [],
+    "tags": [],
+    "scrapedAt": "2026-03-15T12:03:13.969706+00:00"
+  }
+]

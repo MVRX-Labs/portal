@@ -17,6 +17,7 @@ const SCHEDULED_TOOLS = [
   "weekly-analytics",
   "linkedin-sync-scheduler",
   "linkedin-sync-profile",
+  "linkedin-engagement-scrape",
   "post-categoriser-scheduler",
   "code-quality-scan",
   "idea-generator",

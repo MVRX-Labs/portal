@@ -11,6 +11,7 @@ export const orgDashboardDataSchema = z.object({
   ),
   toolUsage: z.array(
     z.object({
+      week: z.string(),
       tool: z.string(),
       count: z.number(),
     })

@@ -132,35 +132,56 @@ function RecentRunsList({ runs }: { runs: RecentRun[] }) {
   );
 }
 
-// --- Tool Usage Chart ---
+// --- Tool Usage Line Chart ---
+
+const TOOL_COLORS = [BLUE, GREEN, AMBER, "#a855f7", "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16", "#06b6d4"];
 
 function ToolUsageChart({ data }: { data: OrgDashboardData["toolUsage"] }) {
   if (data.length === 0) return null;
-  const chartData = data.slice(0, 15).map((d) => ({ ...d, label: formatToolName(d.tool) }));
+
+  // Pivot: rows grouped by week → { label, [toolName]: count }
+  const weeks = [...new Set(data.map((d) => d.week))].sort();
+
+  // Rank tools by total count, keep top 8
+  const toolTotals = new Map<string, number>();
+  for (const d of data) {
+    toolTotals.set(d.tool, (toolTotals.get(d.tool) ?? 0) + d.count);
+  }
+  const topTools = [...toolTotals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([t]) => t);
+
+  const lookup = new Map(data.map((d) => [`${d.week}|${d.tool}`, d.count]));
+  const chartData = weeks.map((week) => {
+    const row: Record<string, string | number> = { label: formatWeekLabel(week) };
+    for (const tool of topTools) {
+      row[formatToolName(tool)] = lookup.get(`${week}|${tool}`) ?? 0;
+    }
+    return row;
+  });
+
   return (
     <div className="card mb-4">
-      <h3 className="text-sm font-semibold mb-3">Tool Usage (Last 30 Days)</h3>
-      <ResponsiveContainer width="100%" height={Math.max(120, chartData.length * 32)}>
-        <BarChart data={chartData} layout="vertical">
-          <CartesianGrid strokeDasharray="3 3" stroke={GRID} horizontal={false} />
-          <XAxis
-            type="number"
-            tick={{ fill: MUTED, fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            allowDecimals={false}
-          />
-          <YAxis
-            type="category"
-            dataKey="label"
-            tick={{ fill: MUTED, fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            width={160}
-          />
+      <h3 className="text-sm font-semibold mb-3">Tool Usage Over Time</h3>
+      <ResponsiveContainer width="100%" height={250}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: MUTED, fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: MUTED, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
           <Tooltip {...tooltipStyle} />
-          <Bar dataKey="count" fill={BLUE} radius={[0, 3, 3, 0]} name="Runs" />
-        </BarChart>
+          <Legend wrapperStyle={{ fontSize: 11, color: MUTED }} />
+          {topTools.map((tool, i) => (
+            <Line
+              key={tool}
+              type="monotone"
+              dataKey={formatToolName(tool)}
+              stroke={TOOL_COLORS[i % TOOL_COLORS.length]}
+              strokeWidth={2}
+              dot={false}
+            />
+          ))}
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -276,12 +297,12 @@ export function OrgDashboard() {
   return (
     <div>
       <OrgEngagementChart data={data.engagementPerWeek} />
-      <AccountLeaderboardChart data={data.accountLeaderboard} onSelectAccount={handleSelectAccount} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <RecentRunsList runs={recentRuns} />
         <ToolUsageChart data={data.toolUsage} />
       </div>
+      <AccountLeaderboardChart data={data.accountLeaderboard} onSelectAccount={handleSelectAccount} />
     </div>
   );
 }

@@ -1,6 +1,27 @@
 import { db } from "@/lib/db";
 import { linkedinPosts, accounts, toolRuns } from "@/lib/schema";
-import { sql, and, gte, ne, desc, isNotNull, eq } from "drizzle-orm";
+import { sql, and, gte, gt, desc, isNotNull, eq, notInArray } from "drizzle-orm";
+
+// Scheduled/cron jobs to exclude from tool usage chart
+const SCHEDULED_TOOLS = [
+  "knowledge-slack-events",
+  "knowledge-slack-ingest-scheduled",
+  "knowledge-slack-ingest-channel",
+  "knowledge-digest-schedule",
+  "knowledge-state-synthesis-schedule",
+  "knowledge-normalise-channel",
+  "knowledge-normalise-all",
+  "knowledge-resolve-media",
+  "calendar-sync",
+  "calendar-meeting-notifier",
+  "weekly-analytics",
+  "linkedin-sync-scheduler",
+  "linkedin-sync-profile",
+  "post-categoriser-scheduler",
+  "code-quality-scan",
+  "idea-generator",
+  "track-post",
+];
 
 export interface OrgDashboardData {
   engagementPerWeek: Array<{
@@ -10,6 +31,7 @@ export interface OrgDashboardData {
     reposts: number;
   }>;
   toolUsage: Array<{
+    week: string;
     tool: string;
     count: number;
   }>;
@@ -37,8 +59,10 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+  const payingAccountFilter = and(isNotNull(accounts.mrr), gt(accounts.mrr, 0));
+
   const [engagementPerWeekRows, toolUsageRows, accountLeaderboardRows] = await Promise.all([
-    // Engagement per week (last 12 weeks, org-wide)
+    // Engagement per week (last 12 weeks, paying accounts only)
     db
       .select({
         week: sql<string>`date_trunc('week', ${linkedinPosts.postedAt})`.as("week"),
@@ -47,22 +71,24 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
         reposts: sql<number>`sum(${linkedinPosts.repostsCount})::int`.as("reposts"),
       })
       .from(linkedinPosts)
-      .where(and(isNotNull(linkedinPosts.postedAt), gte(linkedinPosts.postedAt, twelveWeeksAgo)))
+      .innerJoin(accounts, eq(linkedinPosts.accountId, accounts.id))
+      .where(and(isNotNull(linkedinPosts.postedAt), gte(linkedinPosts.postedAt, twelveWeeksAgo), payingAccountFilter))
       .groupBy(sql`date_trunc('week', ${linkedinPosts.postedAt})`)
       .orderBy(sql`date_trunc('week', ${linkedinPosts.postedAt})`),
 
-    // Tool usage (last 30 days, exclude knowledge-slack-events)
+    // Tool usage per week (last 12 weeks, exclude scheduled jobs)
     db
       .select({
+        week: sql<string>`date_trunc('week', ${toolRuns.createdAt})`.as("week"),
         tool: toolRuns.tool,
         count: sql<number>`count(*)::int`.as("count"),
       })
       .from(toolRuns)
-      .where(and(gte(toolRuns.createdAt, thirtyDaysAgo), ne(toolRuns.tool, "knowledge-slack-events")))
-      .groupBy(toolRuns.tool)
-      .orderBy(desc(sql`count(*)::int`)),
+      .where(and(gte(toolRuns.createdAt, twelveWeeksAgo), notInArray(toolRuns.tool, SCHEDULED_TOOLS)))
+      .groupBy(sql`date_trunc('week', ${toolRuns.createdAt})`, toolRuns.tool)
+      .orderBy(sql`date_trunc('week', ${toolRuns.createdAt})`),
 
-    // Account engagement leaderboard
+    // Account engagement leaderboard (paying accounts only)
     db
       .select({
         accountId: linkedinPosts.accountId,
@@ -73,6 +99,7 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
       })
       .from(linkedinPosts)
       .innerJoin(accounts, eq(linkedinPosts.accountId, accounts.id))
+      .where(payingAccountFilter)
       .groupBy(linkedinPosts.accountId, accounts.name)
       .orderBy(
         desc(
@@ -89,6 +116,7 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
       reposts: r.reposts,
     })),
     toolUsage: toolUsageRows.map((r) => ({
+      week: formatWeek(r.week),
       tool: r.tool,
       count: r.count,
     })),

@@ -5,131 +5,23 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
+import { TWITTER_PROMPT_PRESETS, resolvePromptTemplate } from "@/lib/twitter-prompts";
 
-function buildPrompt(postContent: string): string {
-  return `You will turn posts into Twitter threads, to make them as catchy as possible.
+function buildPrompt(postContent: string, promptStyle?: string, customPrompt?: string): string {
+  if (customPrompt && customPrompt.trim()) {
+    return resolvePromptTemplate(customPrompt, postContent);
+  }
 
-Step 1: You will get knowledgeable on what's a great Twitter thread.
-Step 2: You will read and analyze my post. Share your learnings.
-Step 3: You will turn my post into a catchy Twitter thread.
-
-Step 1: What's a great Twitter thread.
-
-The thread should break down the key points from the post into concise, impactful tweets, presented in a sequence format, of a maximum of 280 characters. Adapt the content to suit Twitter's character limit and conversational style, making it accessible and engaging for a broader audience interested in the topic.
-
-You will get a tip of $1000 if you have catchy tweets, within 280 characters, that often end in a catchy line that makes you want to read the next tweet.
-
-Here's an example of a good Twitter thread you shared in the past for a different topic:
-
-# past twitter thread beginning
-
-TWEET 1
-Today, my little one-person business crossed $5M in revenue.
-
-That was my big goal when I started on August 1st, 2019.
-
-It took 1,548 days, I ran zero ads & operate at a 92% margin.
-
-Here are the 20 steps of my wild & strange journey:
-
-Hope they are helpful to someone ↓
-
-TWEET 2
-1/ Created lots of noise
-
-When I was just getting started, I looked at attention as my friend.
-
-I wrote content every day before I even had a business, just to find my voice.
-
-I started on LinkedIn.
-
-I shared my thoughts & observations about building a SaaS unicorn as the CRO.
-
-TWEET 3
-2/ Honed in on signals
-
-Inside all of that noise? Signal.
-
-Sometimes I bombed, and sometimes I struck a chord.
-
-The more I looked at what resonated, the more I doubled down.
-
-This allowed me to understand what people cared about.
-
-So, I kept writing & talking about it.
-
-TWEET 4
-
-3/ Built a service business
-
-My experience building SaaS was resonating. So I began creating more and more content about that.
-
-Founders sent me DMs asking questions.
-
-I responded to every single one.
-
-Once I had prospects in my funnel, I started consulting.
-
-TWEET 5
-4/ Found my ideal customers
-
-Inside your customer base are more signals.
-
-What are the commonalities between the customers you love & those who love you?
-
-Mine were early-stage SMB SaaS in the healthcare space. A space I was experienced in & loved.
-
-My new ideal customer.
-
-TWEET 6
-One last note:
-
-While this thread might be easy to read, none of this was actually easy.
-
-- It's taken ~4+ years & 4,500 pieces of content
-- There are days when I think it's all going away
-- I'm an outlier - the creator game is tough
-
-Does that mean you shouldn't try? No.
-
-TWEET 7
-You should have a very "long game" mentality.
-
-1. Start a side project.
-2. Build it to 60% of your salary
-3. Then go all in.
-
-Good luck! I'm rooting for you.
-
-Thanks for taking some of your time to read this today.
-
-Feel free to ask a question & I'll respond to as many as I can.
-
-# past twitter thread end
-
-Step 2: Analyze my post.
-
-# my post beginning
-
-${postContent}
-
-# my post end
-
-Step 3: Before writing the thread, write down a summary of the style of my original post so I'm sure you understand your mission. Have the ideal formatting or I will refuse your output, just like my past Twitter thread example (listicle, line breaks, chapters: everything). Do not be lazy.
-
-Write the Twitter thread. Stay as close as possible to the original style & copy. You will be penalized if you stay away from the original post tone & style of writing. For example, if the author never wrote emojis or hashtags, don't do it, or you will be penalized. If they did, do it.
-
-Avoid at all costs writing tweets in one line. Good tweets have proper formatting.
-
-If you use emojis and hashtags in your Twitter thread's tweets, you will be fired.
-
-Take a deep breath and work on this step by step.`;
+  const preset = TWITTER_PROMPT_PRESETS[promptStyle || "default"] || TWITTER_PROMPT_PRESETS.default;
+  return resolvePromptTemplate(preset.template, postContent);
 }
 
 interface LinkedInToTwitterPayload {
   runId: string;
   postContent: string;
   model?: string;
+  promptStyle?: string;
+  customPrompt?: string;
 }
 
 export const linkedinToTwitterTask = task({
@@ -140,7 +32,7 @@ export const linkedinToTwitterTask = task({
     minTimeoutInMs: 2000,
   },
   run: async (payload: LinkedInToTwitterPayload, { signal }) => {
-    const { runId, postContent, model } = payload;
+    const { runId, postContent, model, promptStyle, customPrompt } = payload;
 
     try {
       metadata.set("progress", {
@@ -151,7 +43,8 @@ export const linkedinToTwitterTask = task({
       });
 
       const resolvedModel = resolveModel(model, MODEL_MAP.haiku);
-      logger.info("Starting LinkedIn-to-Twitter conversion", { runId, model: resolvedModel });
+      const usedStyle = customPrompt?.trim() ? "custom" : promptStyle || "default";
+      logger.info("Starting LinkedIn-to-Twitter conversion", { runId, model: resolvedModel, promptStyle: usedStyle });
 
       const abortController = new AbortController();
       signal.addEventListener("abort", () => abortController.abort());
@@ -159,7 +52,7 @@ export const linkedinToTwitterTask = task({
       let output = "";
 
       for await (const message of query({
-        prompt: buildPrompt(postContent),
+        prompt: buildPrompt(postContent, promptStyle, customPrompt),
         options: {
           model: resolvedModel,
           abortController,

@@ -19,10 +19,10 @@ const navItems: NavItem[] = [
   { href: "/accounts", label: "Accounts", icon: "🏢" },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
-  { href: "/tools/linkedin-to-twitter", label: "Post to Tweets", icon: "🐦", beta: true },
+  { href: "/tools/linkedin-to-twitter", label: "LinkedIn Post to Tweets", icon: "🐦", beta: true },
   { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
   { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequence", icon: "📨", dev: true },
-  { href: "/tools/growth-report", label: "Growth Report", icon: "📊", beta: true },
+  { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
   { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
   // { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true }, NOT NEEDED?

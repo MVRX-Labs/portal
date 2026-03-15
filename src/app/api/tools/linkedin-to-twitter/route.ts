@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       runId: run.id,
       postContent: inputs.postContent,
       model: inputs.model,
+      promptStyle: inputs.promptStyle,
+      customPrompt: inputs.customPrompt,
     });
 
     console.log(`[linkedin-to-twitter:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);

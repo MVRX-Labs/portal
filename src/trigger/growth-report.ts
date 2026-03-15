@@ -198,7 +198,7 @@ export const growthReportTask = task({
       const docxBuffer = await buildGrowthReportDocx(reportContent);
       const hostname = new URL(account.website.startsWith("http") ? account.website : `https://${account.website}`)
         .hostname;
-      const filename = `MVRX | ${hostname} | Complete SEO & Growth Report.docx`;
+      const filename = `MVRX | ${hostname} | SEO & Growth Report.docx`;
 
       const parentFolder = getGeneratedMaterialsFolderId();
       const accountFolder = account.name ? await findOrCreateFolder(account.name, parentFolder) : parentFolder;

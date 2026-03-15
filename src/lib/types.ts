@@ -13,10 +13,12 @@ export interface ToolConfig {
 export interface ToolField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "select" | "number" | "contact" | "checkbox";
+  type: "text" | "textarea" | "select" | "number" | "contact" | "checkbox" | "prompt-select";
   placeholder?: string;
   required?: boolean;
   options?: { label: string; value: string }[];
+  /** For prompt-select: key into the presets object from twitter-prompts.ts */
+  promptPresetsKey?: string;
 }
 
 export const TOOLS: ToolConfig[] = [
@@ -96,6 +98,12 @@ export const TOOLS: ToolConfig[] = [
         type: "textarea",
         placeholder: "Paste your LinkedIn post here...",
         required: true,
+      },
+      {
+        name: "customPrompt",
+        label: "Prompt",
+        type: "prompt-select",
+        promptPresetsKey: "twitter",
       },
     ],
   },
@@ -243,7 +251,7 @@ export const TOOLS: ToolConfig[] = [
   },
   {
     id: "growth-report",
-    name: "Complete Growth Report",
+    name: "SEO & Growth Report",
     description:
       "Generate a full SEO & growth strategy report with traffic analysis, competitive benchmarking, LinkedIn audit, AI visibility, and pricing — modelled on our golden client reports.",
     href: "/tools/growth-report",

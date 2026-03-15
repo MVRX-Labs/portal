@@ -11,6 +11,118 @@ import { apiFetch, apiMutate } from "@/lib/api-client";
 import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
 import { RunProgress } from "./run-progress";
+import { TWITTER_PROMPT_PRESETS, type PromptPreset } from "@/lib/twitter-prompts";
+
+const PROMPT_PRESETS_REGISTRY: Record<string, Record<string, PromptPreset>> = {
+  twitter: TWITTER_PROMPT_PRESETS,
+};
+
+function PromptSelectField({
+  value,
+  onChange,
+  presetsKey,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  presetsKey: string;
+}) {
+  const presets = PROMPT_PRESETS_REGISTRY[presetsKey];
+  const presetKeys = presets ? Object.keys(presets) : [];
+  const [selectedPreset, setSelectedPreset] = useState(presetKeys[0] || "");
+  const [expanded, setExpanded] = useState(false);
+  const [edited, setEdited] = useState(false);
+
+  // Initialize with the default preset on first render
+  useEffect(() => {
+    if (!value && presets && presetKeys.length > 0) {
+      onChange(presets[presetKeys[0]].template);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!presets) return null;
+
+  const handlePresetChange = (key: string) => {
+    setSelectedPreset(key);
+    setEdited(false);
+    onChange(presets[key].template);
+  };
+
+  const handleTextChange = (text: string) => {
+    setEdited(true);
+    onChange(text);
+  };
+
+  const handleReset = () => {
+    setEdited(false);
+    onChange(presets[selectedPreset].template);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2">
+        {presetKeys.map((key) => {
+          const preset = presets[key];
+          const isActive = selectedPreset === key && !edited;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handlePresetChange(key)}
+              className={`text-left p-3 rounded-md border transition-colors ${
+                isActive
+                  ? "border-(--accent) bg-[rgba(59,130,246,0.08)]"
+                  : selectedPreset === key && edited
+                    ? "border-(--border) bg-[rgba(59,130,246,0.04)] border-dashed"
+                    : "border-(--border) hover:border-(--accent)/50"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{preset.label}</span>
+                {isActive && <span className="text-xs text-(--accent)">Active</span>}
+                {selectedPreset === key && edited && <span className="text-xs text-(--muted)">Edited</span>}
+              </div>
+              <p className="text-xs text-(--muted) mt-0.5">{preset.description}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1.5 text-xs text-(--accent) hover:underline"
+        >
+          <span className={`transition-transform ${expanded ? "rotate-90" : ""}`}>&#9654;</span>
+          {expanded ? "Hide prompt" : "View & edit prompt"}
+        </button>
+
+        {expanded && (
+          <div className="mt-2 space-y-2">
+            <textarea
+              value={value}
+              onChange={(e) => handleTextChange(e.target.value)}
+              rows={16}
+              className="w-full text-xs font-mono"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-(--muted)">
+                Use <code className="bg-(--background) px-1 rounded">{"{{POST}}"}</code> as a placeholder for the
+                LinkedIn post content.
+              </p>
+              {edited && (
+                <button type="button" onClick={handleReset} className="text-xs text-(--accent) hover:underline">
+                  Reset to preset
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -211,6 +323,12 @@ export function ToolForm({ tool }: ToolFormProps) {
                     />
                     <span className="text-(--muted)">{field.label}</span>
                   </label>
+                ) : field.type === "prompt-select" && field.promptPresetsKey ? (
+                  <PromptSelectField
+                    value={values[field.name] || ""}
+                    onChange={(v) => setValues({ ...values, [field.name]: v })}
+                    presetsKey={field.promptPresetsKey}
+                  />
                 ) : field.type === "textarea" ? (
                   <textarea
                     value={values[field.name] || ""}

@@ -5,6 +5,7 @@ import type { ScreenshotTarget } from "./discovery";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB Claude limit
 const TARGET_WIDTH = 1280; // Final image width
+const MAX_HEIGHT = 1600; // Max output height — keeps ~16:10 aspect ratio for DOCX
 const DEVICE_SCALE = 2; // Retina capture for crisp text
 
 export interface CapturedScreenshot extends ScreenshotTarget {
@@ -95,15 +96,28 @@ async function dismissOverlays(page: Page): Promise<void> {
  * quality reduction if still over the limit.
  */
 async function optimizeScreenshot(rawPng: Buffer, url: string): Promise<Buffer> {
-  // First pass: resize to target width, JPEG quality 85
-  let result = await sharp(rawPng).resize({ width: TARGET_WIDTH }).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+  // Step 1: Resize to target width
+  let resized = await sharp(rawPng).resize({ width: TARGET_WIDTH }).png().toBuffer();
 
+  // Step 2: Crop height if it exceeds MAX_HEIGHT (top-anchored crop).
+  // This keeps the screenshot looking like a normal browser viewport in the DOCX
+  // and stays within Claude's 8000px dimension limit.
+  const meta = await sharp(resized).metadata();
+  if (meta.height && meta.height > MAX_HEIGHT) {
+    logger.info(`Cropping ${url} from ${meta.height}px to ${MAX_HEIGHT}px height`);
+    resized = await sharp(resized)
+      .extract({ left: 0, top: 0, width: meta.width!, height: MAX_HEIGHT })
+      .png()
+      .toBuffer();
+  }
+
+  // Step 3: Compress to JPEG
+  let result = await sharp(resized).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
   if (result.length <= MAX_IMAGE_BYTES) return result;
 
   // Progressively reduce quality
   for (const quality of [75, 65, 50]) {
-    result = await sharp(rawPng).resize({ width: TARGET_WIDTH }).jpeg({ quality, mozjpeg: true }).toBuffer();
-
+    result = await sharp(resized).jpeg({ quality, mozjpeg: true }).toBuffer();
     logger.info(`Recompressed ${url} at quality=${quality}: ${result.length} bytes`);
     if (result.length <= MAX_IMAGE_BYTES) return result;
   }
@@ -112,7 +126,7 @@ async function optimizeScreenshot(rawPng: Buffer, url: string): Promise<Buffer> 
   let width = TARGET_WIDTH;
   while (result.length > MAX_IMAGE_BYTES && width > 640) {
     width = Math.round(width * 0.75);
-    result = await sharp(rawPng).resize({ width }).jpeg({ quality: 50, mozjpeg: true }).toBuffer();
+    result = await sharp(resized).resize({ width }).jpeg({ quality: 50, mozjpeg: true }).toBuffer();
     logger.info(`Resized ${url} to width=${width}: ${result.length} bytes`);
   }
 

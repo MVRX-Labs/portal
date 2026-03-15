@@ -3,8 +3,11 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { logger } from "@trigger.dev/sdk/v3";
 import sizeOf from "image-size";
+import sharp from "sharp";
 import { MODEL_MAP } from "../audit-utils";
 import type { RawScreenshot } from "./scrapers";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB Claude limit
 
 const anthropic = new Anthropic();
 
@@ -26,6 +29,32 @@ interface EvalResult {
 }
 
 /**
+ * Shrink a PNG buffer until it's under the Claude 5 MB limit.
+ * Progressively reduces dimensions by 25% each pass.
+ */
+async function shrinkToLimit(buf: Buffer, url: string): Promise<Buffer> {
+  if (buf.length <= MAX_IMAGE_BYTES) return buf;
+
+  const meta = await sharp(buf).metadata();
+  let width = meta.width ?? 1280;
+  let result = buf;
+
+  while (result.length > MAX_IMAGE_BYTES && width > 400) {
+    width = Math.round(width * 0.75);
+    result = await sharp(buf).resize({ width }).png({ quality: 80 }).toBuffer();
+    logger.info(`Resized screenshot for ${url}: width=${width}, size=${result.length} bytes`);
+  }
+
+  if (result.length > MAX_IMAGE_BYTES) {
+    // Last resort: convert to JPEG
+    result = await sharp(buf).resize({ width }).jpeg({ quality: 70 }).toBuffer();
+    logger.info(`Converted screenshot to JPEG for ${url}: size=${result.length} bytes`);
+  }
+
+  return result;
+}
+
+/**
  * Download screenshot PNGs from Apify KV store URLs, send them to Claude
  * for multimodal evaluation, save approved ones to the session directory.
  */
@@ -36,7 +65,7 @@ export async function evaluateScreenshots(
 ): Promise<ApprovedScreenshot[]> {
   if (screenshots.length === 0) return [];
 
-  // Download all screenshot images in parallel
+  // Download all screenshot images in parallel, shrinking any that exceed 5 MB
   const downloads = await Promise.allSettled(
     screenshots.map(async (s) => {
       logger.info(`Downloading screenshot from ${s.screenshotUrl}`);
@@ -44,6 +73,10 @@ export async function evaluateScreenshots(
       if (!res.ok) throw new Error(`Download failed for ${s.url}: ${res.status} ${res.statusText}`);
       const buf = Buffer.from(await res.arrayBuffer());
       logger.info(`Downloaded screenshot for ${s.url}: ${buf.length} bytes`);
+      if (buf.length > MAX_IMAGE_BYTES) {
+        logger.warn(`Screenshot for ${s.url} exceeds 5 MB (${buf.length} bytes), resizing`);
+        return await shrinkToLimit(buf, s.url);
+      }
       return buf;
     })
   );
@@ -108,27 +141,41 @@ CRITICAL: Return ONLY the raw JSON array. No markdown fences, no explanation.`,
 
   logger.info(`Sending ${validIndices.length} screenshots to Claude for evaluation`);
 
-  const response = await anthropic.messages.create({
-    model: MODEL_MAP.sonnet,
-    max_tokens: 4096,
-    messages: [{ role: "user", content: contentBlocks }],
-  });
-
-  const responseText = response.content[0].type === "text" ? response.content[0].text : "";
-  logger.info("Screenshot evaluation response received", { length: responseText.length });
-
   let evaluations: EvalResult[];
   try {
-    evaluations = JSON.parse(responseText);
-  } catch {
-    logger.warn("Failed to parse screenshot evaluation response, including all screenshots", {
-      responsePreview: responseText.slice(0, 500),
+    const response = await anthropic.messages.create({
+      model: MODEL_MAP.sonnet,
+      max_tokens: 4096,
+      messages: [{ role: "user", content: contentBlocks }],
     });
-    // Fallback: include all with generic captions
+
+    const responseText = response.content[0].type === "text" ? response.content[0].text : "";
+    logger.info("Screenshot evaluation response received", { length: responseText.length });
+
+    try {
+      evaluations = JSON.parse(responseText);
+    } catch {
+      logger.warn("Failed to parse screenshot evaluation response, including all screenshots", {
+        responsePreview: responseText.slice(0, 500),
+      });
+      // Fallback: include all with generic captions
+      evaluations = validIndices.map((_, i) => ({
+        index: i + 1,
+        include: true,
+        reason: "Evaluation parse failed — included by default",
+        caption: `Screenshot of ${screenshots[validIndices[i]].context}`,
+      }));
+    }
+  } catch (claudeErr) {
+    const errMsg = claudeErr instanceof Error ? claudeErr.message : String(claudeErr);
+    logger.error("Claude screenshot evaluation failed — including all screenshots with generic captions", {
+      error: errMsg,
+    });
+    // Fallback: include all downloaded screenshots with generic captions
     evaluations = validIndices.map((_, i) => ({
       index: i + 1,
       include: true,
-      reason: "Evaluation parse failed — included by default",
+      reason: `Evaluation API failed — included by default`,
       caption: `Screenshot of ${screenshots[validIndices[i]].context}`,
     }));
   }

@@ -30,11 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Selected contact has no LinkedIn URL" }, { status: 400 });
   }
 
-  let companyName = "Unknown";
-  if (inputs.accountId) {
-    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
-    if (account) companyName = account.name;
-  }
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
+  const companyName = account?.name || "Unknown";
 
   const [run] = await db
     .insert(toolRuns)
@@ -43,7 +40,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs: { ...inputs, linkedinUrl, companyName, contactName: contact.name },
       userId,
-      accountId: inputs.accountId || null,
+      accountId: inputs.accountId,
     })
     .returning();
 
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
     const handle = await tasks.trigger<typeof linkedinAuditTask>("linkedin-audit-generation", {
       runId: run.id,
       linkedinUrl,
-      accountName: inputs.accountId ? companyName : undefined,
+      accountName: companyName,
       model: inputs.model,
     });
 

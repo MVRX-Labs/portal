@@ -36,18 +36,12 @@ export async function POST(request: NextRequest) {
   const useLinkedinProfile = inputs.useLinkedinProfile === true || inputs.useLinkedinProfile === "true";
   const contactLinkedinUrl = useLinkedinProfile ? await getContactLinkedinUrl(contact.id) : null;
   const linkedinUrl = contactLinkedinUrl ?? undefined;
-  const resolvedAccountId = (typeof inputs.accountId === "string" && inputs.accountId) || contact.accountId;
-
-  let accountName: string | undefined;
-  let accountContentVoiceGuidance: string | null = null;
-  if (resolvedAccountId) {
-    const [account] = await db
-      .select({ name: accounts.name, contentVoiceGuidance: accounts.contentVoiceGuidance })
-      .from(accounts)
-      .where(eq(accounts.id, resolvedAccountId));
-    accountName = account?.name;
-    accountContentVoiceGuidance = account?.contentVoiceGuidance ?? null;
-  }
+  const [account] = await db
+    .select({ name: accounts.name, contentVoiceGuidance: accounts.contentVoiceGuidance })
+    .from(accounts)
+    .where(eq(accounts.id, inputs.accountId));
+  const accountName = account?.name;
+  const accountContentVoiceGuidance = account?.contentVoiceGuidance ?? null;
 
   const resolvedVoiceContext = [
     accountContentVoiceGuidance ? `Account-level content voice guidance:\n${accountContentVoiceGuidance}` : null,
@@ -66,14 +60,14 @@ export async function POST(request: NextRequest) {
         ...inputs,
         contactName: contact.name,
         posterRole,
-        accountId: resolvedAccountId,
+        accountId: inputs.accountId,
         linkedinUrl: linkedinUrl ?? null,
         accountContentVoiceGuidance,
         contactContentVoiceGuidance: contact.contentVoiceGuidance ?? null,
         resolvedVoiceContext: resolvedVoiceContext || null,
       },
       userId,
-      accountId: resolvedAccountId,
+      accountId: inputs.accountId,
     })
     .returning();
 

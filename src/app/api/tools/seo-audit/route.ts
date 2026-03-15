@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
   const { data: inputs, error } = await parseBody(request, seoAuditBodySchema);
   if (error) return error;
 
-  let accountName: string | undefined;
-  if (inputs.accountId) {
-    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
-    if (account) accountName = account.name;
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
+  const accountName = account?.name;
+  if (!accountName) {
+    return NextResponse.json({ error: "Account not found" }, { status: 404 });
   }
 
   const includeCwv = inputs.includeCwv === true || inputs.includeCwv === "true";
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs: { ...inputs, accountName },
       userId,
-      accountId: inputs.accountId || null,
+      accountId: inputs.accountId,
     })
     .returning();
 

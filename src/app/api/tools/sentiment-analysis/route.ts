@@ -19,11 +19,8 @@ export async function POST(request: NextRequest) {
   const { data: inputs, error } = await parseBody(request, sentimentAnalysisBodySchema);
   if (error) return error;
 
-  let companyName = "Unknown";
-  if (inputs.accountId) {
-    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
-    if (account) companyName = account.name;
-  }
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
+  const companyName = account?.name || "Unknown";
 
   const sourceType = (inputs.sources || "all") as SourceType;
   const additionalUrls = (inputs.urls || "")
@@ -39,7 +36,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs: { ...inputs, companyName },
       userId,
-      accountId: inputs.accountId || null,
+      accountId: inputs.accountId,
     })
     .returning();
 
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
       runId: run.id,
       productName: inputs.productName,
       companyName,
-      accountName: inputs.accountId ? companyName : undefined,
+      accountName: companyName,
       sources: sourceType,
       additionalUrls,
       keywords,

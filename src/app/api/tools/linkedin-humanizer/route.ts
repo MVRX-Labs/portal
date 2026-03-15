@@ -18,8 +18,6 @@ export async function POST(request: NextRequest) {
   const { data: inputs, error } = await parseBody(request, linkedinHumanizerBodySchema);
   if (error) return error;
 
-  const accountId = typeof inputs.accountId === "string" ? inputs.accountId : null;
-
   const [run] = await db
     .insert(toolRuns)
     .values({
@@ -27,7 +25,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs,
       userId,
-      accountId,
+      accountId: inputs.accountId,
     })
     .returning();
 

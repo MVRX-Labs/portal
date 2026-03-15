@@ -18,10 +18,12 @@ export const toolTriggerErrorResponseSchema = z.object({
 
 export type ToolTriggerErrorResponse = z.infer<typeof toolTriggerErrorResponseSchema>;
 
+const requiredAccountId = z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first"));
+
 // POST /api/tools/linkedin-audit
 export const linkedinAuditBodySchema = z.object({
   contactId: z.string().min(1, "A contact is required"),
-  accountId: z.string().nullable().optional(),
+  accountId: requiredAccountId,
   model: z.string().optional(),
 });
 
@@ -33,7 +35,7 @@ export const linkedinHumanizerBodySchema = z.object({
   tone: z.string().optional(),
   writingExamples: z.string().optional(),
   model: z.string().optional(),
-  accountId: z.string().optional(),
+  accountId: requiredAccountId,
 });
 
 export type LinkedinHumanizerBody = z.infer<typeof linkedinHumanizerBodySchema>;
@@ -44,7 +46,7 @@ export const linkedinToTwitterBodySchema = z.object({
   promptStyle: z.enum(["default", "human", "viral"]).optional(),
   customPrompt: z.string().optional(),
   model: z.string().optional(),
-  accountId: z.string().nullable().optional(),
+  accountId: requiredAccountId,
 });
 
 export type LinkedinToTwitterBody = z.infer<typeof linkedinToTwitterBodySchema>;
@@ -56,14 +58,14 @@ export const linkedinPostGeneratorBodySchema = z.object({
   sourceMaterial: z.string().min(1, "sourceMaterial is required"),
   voiceContext: z.string().optional(),
   model: z.string().optional(),
-  accountId: z.string().optional(),
+  accountId: requiredAccountId,
 });
 
 export type LinkedinPostGeneratorBody = z.infer<typeof linkedinPostGeneratorBodySchema>;
 
 // POST /api/tools/gtm-strategy
 export const gtmStrategyBodySchema = z.object({
-  accountId: z.string().nullable().optional(),
+  accountId: requiredAccountId,
   industry: z.string().min(1, "industry is required"),
   targetAudience: z.string().min(1, "targetAudience is required"),
   productDescription: z.string().min(1, "productDescription is required"),
@@ -75,7 +77,7 @@ export type GtmStrategyBody = z.infer<typeof gtmStrategyBodySchema>;
 // POST /api/tools/sentiment-analysis
 export const sentimentAnalysisBodySchema = z.object({
   productName: z.string().min(1, "productName is required"),
-  accountId: z.string().nullable().optional(),
+  accountId: requiredAccountId,
   sources: z.string().optional(),
   urls: z.string().optional(),
   keywords: z.string().optional(),
@@ -98,7 +100,7 @@ export const seoAuditBodySchema = z.object({
   crawlMode: z.enum(["single", "crawl-20", "crawl-50", "crawl-100"]),
   categories: z.string().optional(),
   includeCwv: z.union([z.boolean(), z.string()]).optional(),
-  accountId: z.string().nullable().optional(),
+  accountId: requiredAccountId,
   model: z.string().optional(),
 });
 
@@ -106,7 +108,7 @@ export type SeoAuditBody = z.infer<typeof seoAuditBodySchema>;
 
 // POST /api/tools/outbound-sequence
 export const outboundSequenceBodySchema = z.object({
-  accountId: z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first")),
+  accountId: requiredAccountId,
   senderContactId: z.string().optional(),
   targetIcp: z.string().min(1, "Target ICP is required"),
   valueProp: z.string().min(1, "Value proposition is required"),
@@ -118,7 +120,7 @@ export type OutboundSequenceBody = z.infer<typeof outboundSequenceBodySchema>;
 
 // POST /api/tools/growth-report
 export const growthReportBodySchema = z.object({
-  accountId: z.preprocess((v) => v ?? "", z.string().min(1, "Please select an account first")),
+  accountId: requiredAccountId,
   model: z.string().optional(),
 });
 

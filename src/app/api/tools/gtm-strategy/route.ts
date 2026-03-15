@@ -18,11 +18,8 @@ export async function POST(request: NextRequest) {
   const { data: inputs, error } = await parseBody(request, gtmStrategyBodySchema);
   if (error) return error;
 
-  let companyName = "Unknown";
-  if (inputs.accountId) {
-    const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
-    if (account) companyName = account.name;
-  }
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
+  const companyName = account?.name || "Unknown";
 
   const [run] = await db
     .insert(toolRuns)
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
       status: "running",
       inputs: { ...inputs, companyName },
       userId,
-      accountId: inputs.accountId || null,
+      accountId: inputs.accountId,
     })
     .returning();
 
@@ -41,7 +38,7 @@ export async function POST(request: NextRequest) {
     const handle = await tasks.trigger<typeof gtmStrategyTask>("gtm-strategy-generation", {
       runId: run.id,
       companyName,
-      accountName: inputs.accountId ? companyName : undefined,
+      accountName: companyName,
       industry: inputs.industry,
       targetAudience: inputs.targetAudience,
       productDescription: inputs.productDescription,

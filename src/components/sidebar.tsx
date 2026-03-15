@@ -110,10 +110,10 @@ export function Sidebar() {
 
   return (
     <aside className="flex flex-col w-56 min-h-screen border-r border-(--border) bg-black">
-      <div className="p-4 border-b border-(--border)">
+      <Link href="/dashboard" className="block p-4 border-b border-(--border) hover:bg-(--input) transition-colors">
         <h1 className="text-lg font-bold tracking-tight">MVRX Labs</h1>
         <p className="text-xs text-(--muted)">Internal Portal</p>
-      </div>
+      </Link>
 
       <AccountSelector highlight={highlightSelector > 0 ? true : undefined} key={highlightSelector} />
 

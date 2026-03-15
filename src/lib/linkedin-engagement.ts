@@ -1,6 +1,5 @@
-import { sendSlackNotification } from "@/lib/slack";
+import { runApifyActor, runApifyActorPaginated } from "@/lib/apify";
 
-const APIFY_BASE = "https://api.apify.com/v2";
 const POSTS_ACTOR_ID = "Wpp1BZ6yGWjySadk3";
 const REACTIONS_ACTOR_ID = "apimaestro~linkedin-post-reactions";
 const COMMENTS_ACTOR_ID = "apimaestro~linkedin-post-comments-replies-engagements-scraper-no-cookies";
@@ -8,76 +7,6 @@ const RESHARES_ACTOR_ID = "apimaestro~linkedin-post-reshares";
 
 function log(message: string) {
   console.log(`[linkedin-engagement] ${message}`);
-}
-
-function requiredEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) throw new Error(`Missing environment variable: ${name}`);
-  return val;
-}
-
-async function runApifyActor(actorId: string, input: unknown, signal?: AbortSignal): Promise<unknown[]> {
-  const token = requiredEnv("APIFY_API_TOKEN");
-  const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
-
-  log(`Starting Apify actor ${actorId}...`);
-  const start = Date.now();
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-    signal,
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`);
-  }
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(`Apify actor ${actorId} completed in ${elapsed}s`);
-
-  return (await res.json()) as unknown[];
-}
-
-/**
- * Run a paginated Apify actor, fetching all pages.
- * Assumes 100 items per page and the input field `page_number`.
- */
-async function runApifyActorPaginated(
-  actorId: string,
-  baseInput: Record<string, unknown>,
-  signal?: AbortSignal,
-  maxPages = 5, // Note this is a cost-safety feature. We don't want to run forever.
-  runId?: string
-): Promise<unknown[]> {
-  const allResults: unknown[] = [];
-  let page = 1;
-
-  while (page <= maxPages) {
-    const results = await runApifyActor(actorId, { ...baseInput, page_number: page }, signal);
-
-    log(`Page ${page}: ${results.length} results`);
-    if (results.length === 0) break;
-
-    allResults.push(...results);
-
-    // If fewer than 100, we've reached the last page
-    if (results.length < 100) break;
-    page++;
-  }
-
-  log(`Total fetched: ${allResults.length} (${page} page(s))`);
-  if (allResults.length === 500) {
-    sendSlackNotification({
-      tool: "linkedin-engagement",
-      userName: "trigger-task",
-      error: "Paginated actor returned 500 results. Nice post Tarun.",
-      runId: runId ?? "unknown",
-    });
-  }
-  return allResults;
 }
 
 export interface EngagedPerson {
@@ -209,15 +138,11 @@ export async function scrapeRecentPosts(
   hoursBack = 25,
   hoursBackMin = 0
 ): Promise<ScrapedPost[]> {
-  const results = await runApifyActor(
+  const results = (await runApifyActor(
     POSTS_ACTOR_ID,
-    {
-      urls: [linkedinUrl],
-      limitPerSource: 20,
-      deepScrape: true,
-    },
-    signal
-  );
+    { urls: [linkedinUrl], limitPerSource: 20, deepScrape: true },
+    { signal, label: `LI Posts: ${linkedinUrl}`, log }
+  )) as unknown[];
 
   log(`Posts actor returned ${results.length} total items`);
 
@@ -292,7 +217,11 @@ export async function scrapePostReactions(
   runId?: string,
   engagedAt?: Date
 ): Promise<EngagedPerson[]> {
-  const allResults = await runApifyActorPaginated(REACTIONS_ACTOR_ID, { post_urls: [postUrl] }, signal, 5, runId);
+  const allResults = await runApifyActorPaginated(
+    REACTIONS_ACTOR_ID,
+    { post_urls: [postUrl] },
+    { signal, maxPages: 5, runId, log }
+  );
 
   if (allResults.length > 0) {
     for (let i = 0; i < Math.min(3, allResults.length); i++) {
@@ -312,7 +241,11 @@ export async function scrapePostComments(
   signal?: AbortSignal,
   runId?: string
 ): Promise<ScrapedComment[]> {
-  const allResults = await runApifyActorPaginated(COMMENTS_ACTOR_ID, { postIds: [postUrl] }, signal, 5, runId);
+  const allResults = await runApifyActorPaginated(
+    COMMENTS_ACTOR_ID,
+    { postIds: [postUrl] },
+    { signal, maxPages: 5, runId, log }
+  );
 
   if (allResults.length > 0) {
     const sample = allResults[0] as Record<string, unknown>;
@@ -419,7 +352,11 @@ export async function scrapePostReshares(
   runId?: string,
   engagedAt?: Date
 ): Promise<EngagedPerson[]> {
-  const allResults = await runApifyActorPaginated(RESHARES_ACTOR_ID, { post_urls: [postUrl] }, signal, 5, runId);
+  const allResults = await runApifyActorPaginated(
+    RESHARES_ACTOR_ID,
+    { post_urls: [postUrl] },
+    { signal, maxPages: 5, runId, log }
+  );
 
   if (allResults.length > 0) {
     for (let i = 0; i < Math.min(3, allResults.length); i++) {

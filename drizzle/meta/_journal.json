@@ -197,6 +197,13 @@
       "when": 1773496175617,
       "tag": "0027_flimsy_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1773591857693,
+      "tag": "0028_thick_marvex",
+      "breakpoints": true
     }
   ]
 }

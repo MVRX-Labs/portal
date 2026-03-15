@@ -1,127 +1,77 @@
 import { logger } from "@trigger.dev/sdk/v3";
+import { runApifyActor } from "@/lib/apify";
 import type { DiscoveryResult, ScreenshotTarget } from "./discovery";
 import { AI_BOTS } from "./constants";
 
-const APIFY_BASE = "https://api.apify.com/v2";
-
-// Screenshot actor
 const SCREENSHOT_ACTOR = "apify/screenshot-url";
-
-// Existing actor IDs (already in codebase)
 const LI_PROFILE_ACTOR = "VhxlqQXRwhW8H5hNV";
 const LI_POSTS_ACTOR = "Wpp1BZ6yGWjySadk3";
 const GOOGLE_SERP_ACTOR = "nFJndFXA5zjCTuudP";
 const REDDIT_ACTOR = "trudax/reddit-scraper-lite";
-
-// New actor IDs
 const SIMILARWEB_ACTOR = "ecomdate/similarweb-scraper";
 const AHREFS_ACTOR = "radeance/ahrefs-scraper";
 const SEO_AUDIT_ACTOR = "UFSUQD7pWNwN3jExC";
 const IG_PROFILE_ACTOR = "apify/instagram-profile-scraper";
 const TIKTOK_PROFILE_ACTOR = "clockworks/tiktok-profile-scraper";
 
-function token(): string {
-  const t = process.env.APIFY_API_TOKEN;
-  if (!t) throw new Error("Missing APIFY_API_TOKEN");
-  return t;
-}
-
-async function apify(
-  actorId: string,
-  input: unknown,
-  label: string,
-  retries = 2,
-  timeoutSecs?: number
-): Promise<unknown> {
-  const encodedId = actorId.includes("/") ? actorId.replace("/", "~") : actorId;
-  const timeoutParam = timeoutSecs ? `&timeout=${timeoutSecs}` : "";
-  const url = `${APIFY_BASE}/acts/${encodedId}/run-sync-get-dataset-items?token=${token()}${timeoutParam}`;
-  logger.info(`Scraper start: ${label}`, { actorId });
-  const start = Date.now();
-
-  let lastError: Error | undefined;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      if (attempt > 0) {
-        const delay = attempt * 5000;
-        logger.info(`Scraper retry ${attempt}/${retries}: ${label} (waiting ${delay}ms)`, { actorId });
-        await new Promise((r) => setTimeout(r, delay));
-      }
-      // Client-side timeout: Apify timeout + 30s buffer (default 5 min + 30s)
-      const fetchTimeoutMs = ((timeoutSecs ?? 300) + 30) * 1000;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-        signal: AbortSignal.timeout(fetchTimeoutMs),
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`${label} failed (${res.status}): ${body.slice(0, 300)}`);
-      }
-      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-      logger.info(`Scraper done: ${label} (${elapsed}s)`, { actorId });
-      return res.json();
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      const isNetworkError = lastError.message.includes("fetch failed") || lastError.message.includes("ECONNREFUSED");
-      if (!isNetworkError || attempt >= retries) {
-        logger.error(`Scraper failed: ${label}`, { attempt, error: lastError.message, actorId });
-        throw lastError;
-      }
-      logger.warn(`Scraper network error: ${label}`, { attempt, error: lastError.message, actorId });
-    }
-  }
-  throw lastError!;
-}
+const log = (message: string) => logger.info(message);
 
 // --- Individual scrapers ---
 
 export function scrapeSimilarWeb(domains: string[]) {
-  // ecomdate/similarweb-scraper expects bare domains (no protocol)
   const cleaned = domains.map((d) => d.replace(/^https?:\/\//, "").replace(/\/$/, ""));
-  return apify(SIMILARWEB_ACTOR, { domains: cleaned }, "SimilarWeb");
+  return runApifyActor(SIMILARWEB_ACTOR, { domains: cleaned }, { label: "SimilarWeb", log });
 }
 
 export function scrapeAhrefs(urls: string[]) {
-  // radeance/ahrefs-scraper returns backlinks, authority, and traffic data
   const withProtocol = urls.map((u) => (u.startsWith("http") ? u : `https://${u}`));
-  return apify(AHREFS_ACTOR, { urls: withProtocol, searchMode: "domain_overview" }, "Ahrefs");
+  return runApifyActor(AHREFS_ACTOR, { urls: withProtocol, searchMode: "domain_overview" }, { label: "Ahrefs", log });
 }
 
 export function scrapeSeoAudit(websiteUrl: string) {
   const fullUrl = websiteUrl.startsWith("http") ? websiteUrl : `https://${websiteUrl}`;
-  return apify(SEO_AUDIT_ACTOR, { startUrls: [{ url: fullUrl }], maxPagesPerCrawl: 20 }, "SEO Audit");
+  return runApifyActor(
+    SEO_AUDIT_ACTOR,
+    { startUrls: [{ url: fullUrl }], maxPagesPerCrawl: 20 },
+    { label: "SEO Audit", log }
+  );
 }
 
 export function scrapeLinkedInProfile(url: string) {
   const match = url.match(/linkedin\.com\/(?:in|company)\/([^/?#]+)/);
   const slug = match?.[1] || url;
   return Promise.all([
-    apify(LI_PROFILE_ACTOR, { username: slug }, `LI Profile: ${slug}`),
-    apify(LI_POSTS_ACTOR, { urls: [url], limitPerSource: 20, deepScrape: true }, `LI Posts: ${slug}`),
+    runApifyActor(LI_PROFILE_ACTOR, { username: slug }, { label: `LI Profile: ${slug}`, log }),
+    runApifyActor(
+      LI_POSTS_ACTOR,
+      { urls: [url], limitPerSource: 20, deepScrape: true },
+      { label: `LI Posts: ${slug}`, log }
+    ),
   ]).then(([profile, posts]) => ({ profile, posts }));
 }
 
 export function scrapeInstagram(handle: string) {
-  return apify(IG_PROFILE_ACTOR, { usernames: [handle] }, `Instagram: ${handle}`);
+  return runApifyActor(IG_PROFILE_ACTOR, { usernames: [handle] }, { label: `Instagram: ${handle}`, log });
 }
 
 export function scrapeTikTok(handle: string) {
-  return apify(TIKTOK_PROFILE_ACTOR, { profiles: [handle] }, `TikTok: ${handle}`);
+  return runApifyActor(TIKTOK_PROFILE_ACTOR, { profiles: [handle] }, { label: `TikTok: ${handle}`, log });
 }
 
 export function scrapeGoogleSerp(queries: string[]) {
-  return apify(GOOGLE_SERP_ACTOR, { queries: queries.join("\n"), maxPagesPerQuery: 1, resultsPerPage: 10 }, "SERP");
+  return runApifyActor(
+    GOOGLE_SERP_ACTOR,
+    { queries: queries.join("\n"), maxPagesPerQuery: 1, resultsPerPage: 10 },
+    { label: "SERP", log }
+  );
 }
 
-// Trustpilot/Crunchbase/Tracxn scrapers removed — Apify actors are
-// broken, expired, or require paid subscriptions. This data is now
-// gathered by the Claude discovery phase via web research.
-
 export function scrapeReddit(brandName: string) {
-  // trudax/reddit-scraper-lite — lightweight, no rental required
-  return apify(REDDIT_ACTOR, { searches: [brandName], maxItems: 50, sort: "relevance", time: "all" }, "Reddit");
+  return runApifyActor(
+    REDDIT_ACTOR,
+    { searches: [brandName], maxItems: 50, sort: "relevance", time: "all" },
+    { label: "Reddit", log }
+  );
 }
 
 // --- Direct fetches (no Apify) ---
@@ -165,10 +115,9 @@ export interface RawScreenshot extends ScreenshotTarget {
 export async function screenshotPages(targets: ScreenshotTarget[]): Promise<RawScreenshot[]> {
   logger.info(`Taking screenshots for ${targets.length} pages (individual calls)`);
 
-  // Make separate Apify calls for each URL so one slow page doesn't block all others
   const settled = await Promise.allSettled(
     targets.map((target) =>
-      apify(
+      runApifyActor(
         SCREENSHOT_ACTOR,
         {
           urls: [{ url: target.url }],
@@ -176,9 +125,13 @@ export async function screenshotPages(targets: ScreenshotTarget[]): Promise<RawS
           delay: 2000,
           viewportWidth: 1280,
         },
-        `Screenshot: ${target.url}`,
-        1, // single retry per screenshot
-        600 // 10 minute timeout
+        {
+          label: `Screenshot: ${target.url}`,
+          retries: 1,
+          timeoutSecs: 600,
+          skipCache: true,
+          log,
+        }
       ).then((items) => {
         const arr = items as Array<{ url?: string; screenshotUrl?: string }>;
         const screenshotUrl = arr[0]?.screenshotUrl;

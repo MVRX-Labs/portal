@@ -2,31 +2,20 @@
 // Apify scraping
 // ---------------------------------------------------------------------------
 
-const APIFY_BASE = "https://api.apify.com/v2";
+import { runApifyActor } from "@/lib/apify";
+
 const APIFY_ACTOR_ID = "supreme_coder/linkedin-post";
 
 export async function scrapeProfilePosts(
   linkedinUrl: string,
-  maxPosts = 10,
+  maxPosts = 10
 ): Promise<{ runId: string; rawPosts: Record<string, unknown>[] }> {
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) throw new Error("APIFY_API_TOKEN not set");
-
-  const url = `${APIFY_BASE}/acts/${encodeURIComponent(APIFY_ACTOR_ID)}/run-sync-get-dataset-items?token=${token}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ urls: [linkedinUrl], limitPerSource: maxPosts }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Apify actor failed (${res.status}): ${text}`);
-  }
-
-  const items = (await res.json()) as Record<string, unknown>[];
-  const runId = res.headers.get("x-apify-run-id") || "";
-  return { runId, rawPosts: items };
+  const items = (await runApifyActor(
+    APIFY_ACTOR_ID,
+    { urls: [linkedinUrl], limitPerSource: maxPosts },
+    { label: `Engagement Bot: ${linkedinUrl}` }
+  )) as Record<string, unknown>[];
+  return { runId: "", rawPosts: items };
 }
 
 function parseDateTime(value: unknown): Date | null {
@@ -53,19 +42,12 @@ export interface NormalizedPost {
 
 export function normalizePost(raw: Record<string, unknown>): NormalizedPost {
   return {
-    apifyPostId:
-      (raw.id as string) ||
-      (raw.postId as string) ||
-      (raw.urn as string) ||
-      (raw.shareUrn as string) ||
-      "",
+    apifyPostId: (raw.id as string) || (raw.postId as string) || (raw.urn as string) || (raw.shareUrn as string) || "",
     content: (raw.text as string) || (raw.commentary as string) || "",
     postUrl: (raw.postUrl as string) || (raw.url as string) || "",
     likesCount: (raw.numLikes as number) || (raw.likeCount as number) || 0,
     commentsCount: (raw.numComments as number) || (raw.commentCount as number) || 0,
-    postedAt: parseDateTime(
-      raw.postedAt ?? raw.postedAtTimestamp ?? raw.postedAtISO ?? raw.publishedAt,
-    ),
+    postedAt: parseDateTime(raw.postedAt ?? raw.postedAtTimestamp ?? raw.postedAtISO ?? raw.publishedAt),
   };
 }
 
@@ -73,11 +55,7 @@ export function extractAuthorName(raw: Record<string, unknown>): string {
   const author = raw.author;
   const authorDict = typeof author === "object" && author !== null ? (author as Record<string, unknown>) : {};
 
-  const name =
-    (raw.authorName as string) ||
-    (raw.authorFullName as string) ||
-    (authorDict.name as string) ||
-    "";
+  const name = (raw.authorName as string) || (raw.authorFullName as string) || (authorDict.name as string) || "";
   if (name) return name.trim();
 
   const first = (raw.authorFirstName as string) || (authorDict.firstName as string) || "";
@@ -119,7 +97,7 @@ function buildButton(label: string, action: string, postId: string, style?: stri
 export function buildPostCard(
   post: PostForCard,
   profile: ProfileForCard,
-  decision?: string,
+  decision?: string
 ): Record<string, unknown>[] {
   const blocks: Record<string, unknown>[] = [];
   const name = profile.displayName || "LinkedIn Post";
@@ -136,9 +114,7 @@ export function buildPostCard(
 
   blocks.push({
     type: "context",
-    elements: [
-      { type: "mrkdwn", text: `:thumbsup: ${post.likesCount}  :speech_balloon: ${post.commentsCount}` },
-    ],
+    elements: [{ type: "mrkdwn", text: `:thumbsup: ${post.likesCount}  :speech_balloon: ${post.commentsCount}` }],
   });
 
   if (decision) {
@@ -205,11 +181,7 @@ async function slackApi(method: string, body: Record<string, unknown>): Promise<
   return data;
 }
 
-export async function sendPostToSlack(
-  channelId: string,
-  post: PostForCard,
-  profile: ProfileForCard,
-): Promise<string> {
+export async function sendPostToSlack(channelId: string, post: PostForCard, profile: ProfileForCard): Promise<string> {
   const blocks = buildPostCard(post, profile);
   const data = await slackApi("chat.postMessage", {
     channel: channelId,
@@ -226,7 +198,7 @@ export async function updateSlackCard(
   messageTs: string,
   post: PostForCard,
   profile: ProfileForCard,
-  decision: string,
+  decision: string
 ): Promise<void> {
   const blocks = buildPostCard(post, profile, decision);
   await slackApi("chat.update", { channel: channelId, ts: messageTs, blocks });

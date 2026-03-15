@@ -21,13 +21,6 @@ export interface ApprovedScreenshot {
   height: number;
 }
 
-interface EvalResult {
-  index: number;
-  include: boolean;
-  reason: string;
-  caption: string;
-}
-
 /**
  * Shrink a PNG buffer until it's under the Claude 5 MB limit.
  * Progressively reduces dimensions by 25% each pass.
@@ -81,10 +74,8 @@ export async function evaluateScreenshots(
     })
   );
 
-  // Build the multimodal message — all images in one call for efficiency
-  const contentBlocks: Anthropic.Messages.ContentBlockParam[] = [];
-  const validIndices: number[] = [];
-
+  // Filter to successfully downloaded screenshots
+  const downloaded: Array<{ index: number; screenshot: RawScreenshot; buffer: Buffer }> = [];
   downloads.forEach((result, i) => {
     if (result.status !== "fulfilled") {
       logger.warn(`Screenshot download failed for ${screenshots[i].url}`, {
@@ -92,112 +83,98 @@ export async function evaluateScreenshots(
       });
       return;
     }
-
-    validIndices.push(i);
-    contentBlocks.push({
-      type: "text",
-      text: `Screenshot ${i + 1}: ${screenshots[i].url}\nContext: ${screenshots[i].context}\nTarget section: ${screenshots[i].section}`,
-    });
-    contentBlocks.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/png",
-        data: result.value.toString("base64"),
-      },
-    });
+    downloaded.push({ index: i, screenshot: screenshots[i], buffer: result.value });
   });
 
-  const downloadsFailed = downloads.filter((r) => r.status === "rejected").length;
-  logger.info(`Screenshot downloads: ${validIndices.length} succeeded, ${downloadsFailed} failed`);
+  const downloadsFailed = downloads.length - downloaded.length;
+  logger.info(`Screenshot downloads: ${downloaded.length} succeeded, ${downloadsFailed} failed`);
 
-  if (validIndices.length === 0) {
+  if (downloaded.length === 0) {
     logger.warn("All screenshot downloads failed — skipping evaluation");
     return [];
   }
 
-  contentBlocks.push({
-    type: "text",
-    text: `You are evaluating ${validIndices.length} screenshots for inclusion in a professional SEO & Growth Strategy Report for "${companyName}".
+  // Evaluate each screenshot individually so one failure doesn't block the rest
+  logger.info(`Evaluating ${downloaded.length} screenshots individually via Claude`);
 
-For each screenshot, decide whether to INCLUDE or EXCLUDE it.
+  const evalResults = await Promise.allSettled(
+    downloaded.map(async ({ screenshot, buffer }) => {
+      const response = await anthropic.messages.create({
+        model: MODEL_MAP.sonnet,
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Screenshot: ${screenshot.url}\nContext: ${screenshot.context}\nTarget section: ${screenshot.section}`,
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: buffer.toString("base64"),
+                },
+              },
+              {
+                type: "text",
+                text: `You are evaluating this screenshot for inclusion in a professional SEO & Growth Strategy Report for "${companyName}".
 
-EXCLUDE a screenshot only if it is clearly broken:
+Decide whether to INCLUDE or EXCLUDE it.
+
+EXCLUDE only if it is clearly broken:
 - The page failed to render (blank white/grey page, browser error)
 - The screenshot was captured mid-JavaScript-rendering so the content is incomplete or garbled
 - The image is corrupted or unreadable
 - The page shows a generic server error (500, 503, etc.)
 
-INCLUDE screenshots even if they show cookie banners, login pages, consent walls, popups, or unexpected content — these can be valuable observations in the report. Write the caption to describe what is actually visible, including any notable issues.
+INCLUDE even if it shows cookie banners, login pages, consent walls, popups, or unexpected content — these can be valuable observations in the report.
 
-Return a JSON array with one entry per screenshot (in order):
-[
-  { "index": 1, "include": true, "reason": "Page rendered correctly", "caption": "A one-sentence professional caption describing what the screenshot shows" },
-  { "index": 2, "include": false, "reason": "Page is blank — JavaScript failed to render", "caption": "" }
-]
+Return a single JSON object:
+{ "include": true, "reason": "Page rendered correctly", "caption": "A one-sentence professional caption describing what the screenshot shows" }
 
-CRITICAL: Return ONLY the raw JSON array. No markdown fences, no explanation.`,
-  });
-
-  logger.info(`Sending ${validIndices.length} screenshots to Claude for evaluation`);
-
-  let evaluations: EvalResult[];
-  try {
-    const response = await anthropic.messages.create({
-      model: MODEL_MAP.sonnet,
-      max_tokens: 4096,
-      messages: [{ role: "user", content: contentBlocks }],
-    });
-
-    const responseText = response.content[0].type === "text" ? response.content[0].text : "";
-    logger.info("Screenshot evaluation response received", { length: responseText.length });
-
-    try {
-      evaluations = JSON.parse(responseText);
-    } catch {
-      logger.warn("Failed to parse screenshot evaluation response, including all screenshots", {
-        responsePreview: responseText.slice(0, 500),
+CRITICAL: Return ONLY the raw JSON object. No markdown fences, no explanation.`,
+              },
+            ],
+          },
+        ],
       });
-      // Fallback: include all with generic captions
-      evaluations = validIndices.map((_, i) => ({
-        index: i + 1,
-        include: true,
-        reason: "Evaluation parse failed — included by default",
-        caption: `Screenshot of ${screenshots[validIndices[i]].context}`,
-      }));
-    }
-  } catch (claudeErr) {
-    const errMsg = claudeErr instanceof Error ? claudeErr.message : String(claudeErr);
-    logger.error("Claude screenshot evaluation failed — including all screenshots with generic captions", {
-      error: errMsg,
-    });
-    // Fallback: include all downloaded screenshots with generic captions
-    evaluations = validIndices.map((_, i) => ({
-      index: i + 1,
-      include: true,
-      reason: `Evaluation API failed — included by default`,
-      caption: `Screenshot of ${screenshots[validIndices[i]].context}`,
-    }));
-  }
+
+      const responseText = response.content[0].type === "text" ? response.content[0].text : "";
+      return JSON.parse(responseText) as { include: boolean; reason: string; caption: string };
+    })
+  );
 
   // Save approved screenshots and build metadata
   const approved: ApprovedScreenshot[] = [];
 
-  for (let evalIdx = 0; evalIdx < evaluations.length; evalIdx++) {
-    const eval_ = evaluations[evalIdx];
-    const sourceIdx = validIndices[evalIdx];
-    if (sourceIdx === undefined) continue;
+  for (let i = 0; i < downloaded.length; i++) {
+    const { screenshot, buffer } = downloaded[i];
+    const evalResult = evalResults[i];
 
-    const screenshot = screenshots[sourceIdx];
-    const downloadResult = downloads[sourceIdx];
-    if (downloadResult.status !== "fulfilled") continue;
+    let include = true;
+    let caption = `Screenshot of ${screenshot.context}`;
+    let reason = "default";
 
-    if (!eval_.include) {
-      logger.info(`Screenshot excluded: ${screenshot.url} — ${eval_.reason}`);
+    if (evalResult.status === "fulfilled") {
+      include = evalResult.value.include;
+      caption = evalResult.value.caption || caption;
+      reason = evalResult.value.reason;
+    } else {
+      const errMsg = evalResult.reason instanceof Error ? evalResult.reason.message : String(evalResult.reason);
+      logger.error(`Claude evaluation failed for ${screenshot.url} — including with generic caption`, {
+        error: errMsg,
+      });
+      reason = "Evaluation API failed — included by default";
+    }
+
+    if (!include) {
+      logger.info(`Screenshot excluded: ${screenshot.url} — ${reason}`);
       continue;
     }
 
-    const buffer = downloadResult.value;
     const filename = `screenshot-${approved.length}.png`;
     await writeFile(join(sessionDir, filename), buffer);
 
@@ -206,7 +183,7 @@ CRITICAL: Return ONLY the raw JSON array. No markdown fences, no explanation.`,
       url: screenshot.url,
       section: screenshot.section,
       context: screenshot.context,
-      caption: eval_.caption,
+      caption,
       filename,
       width: dimensions.width ?? 1280,
       height: dimensions.height ?? 800,
@@ -215,13 +192,8 @@ CRITICAL: Return ONLY the raw JSON array. No markdown fences, no explanation.`,
     logger.info(`Screenshot approved: ${screenshot.url} → ${filename}`);
   }
 
-  const excluded = evaluations.filter((e) => !e.include);
-  logger.info(`Screenshot evaluation complete: ${approved.length} approved, ${excluded.length} excluded`, {
-    excluded: excluded.map((e, i) => ({
-      url: screenshots[validIndices[i]]?.url,
-      reason: e.reason,
-    })),
-  });
+  const excludedCount = downloaded.length - approved.length;
+  logger.info(`Screenshot evaluation complete: ${approved.length} approved, ${excludedCount} excluded`);
 
   return approved;
 }

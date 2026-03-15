@@ -1,40 +1,10 @@
-const APIFY_BASE = "https://api.apify.com/v2";
+import { runApifyActor } from "@/lib/apify";
+
 const POSTS_ACTOR_ID = "Wpp1BZ6yGWjySadk3";
 const PROFILE_ACTOR_ID = "VhxlqQXRwhW8H5hNV";
 
 function log(message: string) {
   console.log(`[linkedin-audit:scrape] ${message}`);
-}
-
-function requiredEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) throw new Error(`Missing environment variable: ${name}`);
-  return val;
-}
-
-async function runApifyActor(actorId: string, input: unknown, signal?: AbortSignal): Promise<unknown> {
-  const token = requiredEnv("APIFY_API_TOKEN");
-  const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
-
-  log(`Starting Apify actor ${actorId}...`);
-  const start = Date.now();
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-    signal,
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`);
-  }
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(`Apify actor ${actorId} completed in ${elapsed}s`);
-
-  return res.json();
 }
 
 export function extractSlug(linkedinUrl: string): string {
@@ -57,15 +27,11 @@ export async function scrapeLinkedInProfile(linkedinUrl: string, signal?: AbortS
   const start = Date.now();
 
   const [profileData, postsData] = await Promise.all([
-    runApifyActor(PROFILE_ACTOR_ID, { username: slug }, signal),
+    runApifyActor(PROFILE_ACTOR_ID, { username: slug }, { signal, label: `LI Audit Profile: ${slug}`, log }),
     runApifyActor(
       POSTS_ACTOR_ID,
-      {
-        urls: [linkedinUrl],
-        limitPerSource: 100,
-        deepScrape: true,
-      },
-      signal
+      { urls: [linkedinUrl], limitPerSource: 100, deepScrape: true },
+      { signal, label: `LI Audit Posts: ${slug}`, log }
     ),
   ]);
 

@@ -1,44 +1,12 @@
-const APIFY_BASE = "https://api.apify.com/v2";
+import { runApifyActor } from "@/lib/apify";
 
-// Apify actor IDs
-const GOOGLE_SEARCH_ACTOR = "nFJndFXA5zjCTuudP"; // Google Search Results Scraper
-const REDDIT_SCRAPER_ACTOR = "oKbfaRlpOJ4bubyBN"; // Reddit Scraper Lite
-const GOOGLE_MAPS_ACTOR = "compass/Google-Maps-Reviews-Scraper"; // Google Maps Reviews
-const WEB_SCRAPER_ACTOR = "aYG0l9s7dbB7j3gbS"; // Cheerio Scraper (web pages)
+const GOOGLE_SEARCH_ACTOR = "nFJndFXA5zjCTuudP";
+const REDDIT_SCRAPER_ACTOR = "oKbfaRlpOJ4bubyBN";
+const GOOGLE_MAPS_ACTOR = "compass/Google-Maps-Reviews-Scraper";
+const WEB_SCRAPER_ACTOR = "aYG0l9s7dbB7j3gbS";
 
 function log(message: string) {
   console.log(`[sentiment-scraper] ${message}`);
-}
-
-function requiredEnv(name: string): string {
-  const val = process.env[name];
-  if (!val) throw new Error(`Missing environment variable: ${name}`);
-  return val;
-}
-
-async function runApifyActor(actorId: string, input: unknown, signal?: AbortSignal): Promise<unknown> {
-  const token = requiredEnv("APIFY_API_TOKEN");
-  const url = `${APIFY_BASE}/acts/${actorId}/run-sync-get-dataset-items?token=${token}`;
-
-  log(`Starting Apify actor ${actorId}...`);
-  const start = Date.now();
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-    signal,
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Apify actor ${actorId} failed (${res.status}): ${body.slice(0, 500)}`);
-  }
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  log(`Apify actor ${actorId} completed in ${elapsed}s`);
-
-  return res.json();
 }
 
 export type SourceType = "all" | "reddit" | "reviews" | "google" | "web";
@@ -67,12 +35,8 @@ async function scrapeGoogleSearch(
 
   const data = await runApifyActor(
     GOOGLE_SEARCH_ACTOR,
-    {
-      queries: queries.join("\n"),
-      maxPagesPerQuery: 1,
-      resultsPerPage: 10,
-    },
-    signal
+    { queries: queries.join("\n"), maxPagesPerQuery: 1, resultsPerPage: 10 },
+    { signal, label: "Sentiment: Google Search", log }
   );
 
   return { platform: "google-search", data };
@@ -87,7 +51,7 @@ async function scrapeReddit(productName: string, signal?: AbortSignal): Promise<
       sort: "relevance",
       time: "year",
     },
-    signal
+    { signal, label: "Sentiment: Reddit", log }
   );
 
   return { platform: "reddit", data };
@@ -100,12 +64,8 @@ async function scrapeGoogleReviews(
 ): Promise<ScrapedSource> {
   const data = await runApifyActor(
     GOOGLE_MAPS_ACTOR,
-    {
-      searchStringsArray: [`${productName} ${companyName}`],
-      maxReviews: 50,
-      language: "en",
-    },
-    signal
+    { searchStringsArray: [`${productName} ${companyName}`], maxReviews: 50, language: "en" },
+    { signal, label: "Sentiment: Google Reviews", log }
   );
 
   return { platform: "google-reviews", data };
@@ -116,12 +76,8 @@ async function scrapeWebUrls(urls: string[], signal?: AbortSignal): Promise<Scra
 
   const data = await runApifyActor(
     WEB_SCRAPER_ACTOR,
-    {
-      startUrls,
-      maxCrawlingDepth: 0,
-      maxPagesPerCrawl: urls.length,
-    },
-    signal
+    { startUrls, maxCrawlingDepth: 0, maxPagesPerCrawl: urls.length },
+    { signal, label: "Sentiment: Web Scrape", log }
   );
 
   return { platform: "web", data };

@@ -625,6 +625,27 @@ export const knowledgeDigestMessages = pgTable(
   })
 );
 
+// --- Apify cache ---
+
+export const apifyCache = pgTable(
+  "apify_cache",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("acache")),
+    cacheKey: text("cache_key").notNull().unique(),
+    cacheKeyHuman: text("cache_key_human").notNull(),
+    actorId: text("actor_id").notNull(),
+    input: jsonb("input").notNull(),
+    response: jsonb("response").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => ({
+    expiresAtIdx: index("apify_cache_expires_idx").on(table.expiresAt),
+  })
+);
+
 // --- Secrets tables ---
 
 export const secretTypes = pgTable("secret_types", {

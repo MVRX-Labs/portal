@@ -24,6 +24,12 @@ import {
   getLinkedinProfilesResponseSchema,
   patchLinkedinProfileResponseSchema,
 } from "@/lib/api-schemas/linkedin-profiles";
+import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
+import {
+  getIcpDefinitionsResponseSchema,
+  createIcpDefinitionResponseSchema,
+  patchIcpDefinitionResponseSchema,
+} from "@/lib/api-schemas/icp-definitions";
 
 function formatMrr(cents: number, currency: string = "$"): string {
   const locale = currency === "£" ? "en-GB" : "en-US";
@@ -101,6 +107,18 @@ function ExpandedView({
   const [linkedinProfiles, setLinkedinProfiles] = useState<LinkedinProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
 
+  // ICP definitions
+  const [icpDefs, setIcpDefs] = useState<IcpDefinition[]>([]);
+  const [loadingIcps, setLoadingIcps] = useState(true);
+  const [showCreateIcp, setShowCreateIcp] = useState(false);
+  const [newIcpName, setNewIcpName] = useState("");
+  const [newIcpDescription, setNewIcpDescription] = useState("");
+  const [newIcpTitles, setNewIcpTitles] = useState("");
+  const [newIcpIndustries, setNewIcpIndustries] = useState("");
+  const [newIcpCompanySizes, setNewIcpCompanySizes] = useState("");
+  const [newIcpSignals, setNewIcpSignals] = useState("");
+  const [creatingIcp, setCreatingIcp] = useState(false);
+
   // Contact editing
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactEdits, setContactEdits] = useState<Partial<Contact>>({});
@@ -170,11 +188,24 @@ function ExpandedView({
     }
   }, [account.id]);
 
+  const fetchIcpDefs = useCallback(async () => {
+    setLoadingIcps(true);
+    try {
+      const data = await apiFetch(`/api/accounts/${account.id}/icp-definitions`, getIcpDefinitionsResponseSchema);
+      setIcpDefs(data.icpDefinitions);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingIcps(false);
+    }
+  }, [account.id]);
+
   useEffect(() => {
     fetchContacts();
     fetchActions();
     fetchProfiles();
-  }, [fetchContacts, fetchActions, fetchProfiles]);
+    fetchIcpDefs();
+  }, [fetchContacts, fetchActions, fetchProfiles, fetchIcpDefs]);
 
   const handleToggleFlag = async (
     profileId: string,
@@ -310,6 +341,53 @@ function ExpandedView({
       // ignore
     } finally {
       setSavingContact(false);
+    }
+  };
+
+  const handleToggleIcp = async (icpId: string, active: boolean) => {
+    setIcpDefs((prev) => prev.map((d) => (d.id === icpId ? { ...d, active } : d)));
+    try {
+      await apiMutate(`/api/accounts/${account.id}/icp-definitions/${icpId}`, patchIcpDefinitionResponseSchema, {
+        method: "PATCH",
+        body: { active },
+      });
+    } catch {
+      setIcpDefs((prev) => prev.map((d) => (d.id === icpId ? { ...d, active: !active } : d)));
+    }
+  };
+
+  const handleCreateIcp = async () => {
+    if (!newIcpName.trim() || !newIcpDescription.trim() || creatingIcp) return;
+    setCreatingIcp(true);
+    try {
+      const splitCsv = (s: string) =>
+        s
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+      await apiMutate(`/api/accounts/${account.id}/icp-definitions`, createIcpDefinitionResponseSchema, {
+        method: "POST",
+        body: {
+          name: newIcpName.trim(),
+          description: newIcpDescription.trim(),
+          targetTitles: splitCsv(newIcpTitles),
+          targetIndustries: splitCsv(newIcpIndustries),
+          targetCompanySizes: splitCsv(newIcpCompanySizes),
+          targetSignals: splitCsv(newIcpSignals),
+        },
+      });
+      setNewIcpName("");
+      setNewIcpDescription("");
+      setNewIcpTitles("");
+      setNewIcpIndustries("");
+      setNewIcpCompanySizes("");
+      setNewIcpSignals("");
+      setShowCreateIcp(false);
+      await fetchIcpDefs();
+    } catch {
+      // ignore
+    } finally {
+      setCreatingIcp(false);
     }
   };
 
@@ -597,6 +675,157 @@ function ExpandedView({
           </div>
         </div>
       )}
+
+      {/* ICP Definitions */}
+      <div className="border-t border-(--border) pt-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide">
+            ICP Definitions ({loadingIcps ? "..." : icpDefs.length})
+          </h3>
+          <button
+            onClick={() => setShowCreateIcp(!showCreateIcp)}
+            className="text-xs text-(--muted) hover:text-(--foreground) hover:underline"
+          >
+            {showCreateIcp ? "Cancel" : "+ New ICP"}
+          </button>
+        </div>
+        {loadingIcps ? (
+          <p className="text-sm text-(--muted)">Loading...</p>
+        ) : icpDefs.length === 0 && !showCreateIcp ? (
+          <p className="text-sm text-(--muted)">No ICP definitions yet — create one to start scoring leads.</p>
+        ) : (
+          <div className="space-y-2">
+            {icpDefs.map((icp) => (
+              <div
+                key={icp.id}
+                className={`py-2 px-3 rounded bg-(--input) border border-(--border) ${!icp.active ? "opacity-50" : ""}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      {icp.name}
+                      <span className={`badge ${icp.active ? "badge-completed" : "badge-neutral"}`}>
+                        {icp.active ? "Active" : "Paused"}
+                      </span>
+                    </p>
+                    <p className="text-xs text-(--muted) mt-0.5">{icp.description}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleIcp(icp.id, !icp.active)}
+                    className={`text-xs hover:underline shrink-0 ml-3 ${icp.active ? "text-(--warning)" : "text-(--success)"}`}
+                  >
+                    {icp.active ? "Pause" : "Resume"}
+                  </button>
+                </div>
+                {(icp.targetTitles.length > 0 ||
+                  icp.targetIndustries.length > 0 ||
+                  icp.targetCompanySizes.length > 0 ||
+                  icp.targetSignals.length > 0) && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {icp.targetTitles.map((t) => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-(--accent)/20 text-(--accent)">
+                        {t}
+                      </span>
+                    ))}
+                    {icp.targetIndustries.map((t) => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                        {t}
+                      </span>
+                    ))}
+                    {icp.targetCompanySizes.map((t) => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                        {t} employees
+                      </span>
+                    ))}
+                    {icp.targetSignals.map((t) => (
+                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {showCreateIcp && (
+          <div className="mt-3 p-3 rounded bg-(--card) border border-(--border) space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-(--muted) mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newIcpName}
+                  onChange={(e) => setNewIcpName(e.target.value)}
+                  placeholder="e.g. Enterprise SaaS"
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-(--muted) mb-1">Target Titles (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newIcpTitles}
+                  onChange={(e) => setNewIcpTitles(e.target.value)}
+                  placeholder="VP Marketing, Head of Growth, CMO"
+                  className="w-full text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-(--muted) mb-1">Description *</label>
+              <textarea
+                value={newIcpDescription}
+                onChange={(e) => setNewIcpDescription(e.target.value)}
+                placeholder="B2B SaaS companies with 50-500 employees, Series A-C, with a marketing leader who owns outbound..."
+                rows={2}
+                className="w-full text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs text-(--muted) mb-1">Industries (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newIcpIndustries}
+                  onChange={(e) => setNewIcpIndustries(e.target.value)}
+                  placeholder="SaaS, Fintech, Healthcare"
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-(--muted) mb-1">Company Sizes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newIcpCompanySizes}
+                  onChange={(e) => setNewIcpCompanySizes(e.target.value)}
+                  placeholder="20-200, 200-1000"
+                  className="w-full text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-(--muted) mb-1">Signals (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newIcpSignals}
+                  onChange={(e) => setNewIcpSignals(e.target.value)}
+                  placeholder="Recently funded, Hiring SDRs"
+                  className="w-full text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={handleCreateIcp}
+                disabled={!newIcpName.trim() || !newIcpDescription.trim() || creatingIcp}
+                className="btn-primary text-sm"
+              >
+                {creatingIcp ? "Creating..." : "Create ICP"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Editable fields — only shown in edit mode */}
       {editMode && (

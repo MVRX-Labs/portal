@@ -223,6 +223,12 @@ export const TOOLS: ToolConfig[] = [
         placeholder:
           "Style guide, past LinkedIn posts, or a description of the tone they want. The more examples, the better the voice match.",
       },
+      {
+        name: "customPrompt",
+        label: "Post Style",
+        type: "prompt-select",
+        promptPresetsKey: "linkedin-post",
+      },
     ],
   },
   {

@@ -29,6 +29,133 @@ function extractLinkedinSlug(url: string): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Extract company name from a LinkedIn headline.
+ * Handles patterns like: "VP Marketing at Acme Corp", "CEO | Acme", "Founder @ Startup Inc"
+ */
+export function parseCompanyFromHeadline(headline: string | null): string | null {
+  if (!headline) return null;
+
+  // Try "at Company" (most common LinkedIn pattern)
+  const atMatch = headline.match(/\bat\s+(.+?)(?:\s*[|·•–—/]|$)/i);
+  if (atMatch) {
+    const company = atMatch[1].trim();
+    if (company && company.length > 1 && company.length < 100) return company;
+  }
+
+  // Try "Title | Company" or "Title - Company" or "Title · Company"
+  const separatorMatch = headline.match(/[|·•–—]\s*(.+?)(?:\s*[|·•–—]|$)/);
+  if (separatorMatch) {
+    const candidate = separatorMatch[1].trim();
+    // Heuristic: if the candidate starts with a verb or looks like a tagline, skip it
+    if (
+      candidate &&
+      candidate.length > 1 &&
+      candidate.length < 100 &&
+      !/^(helping|building|empowering|passionate|driven)/i.test(candidate)
+    ) {
+      return candidate;
+    }
+  }
+
+  // Try "Title @ Company"
+  const atSignMatch = headline.match(/@\s*(.+?)(?:\s*[|·•–—/]|$)/);
+  if (atSignMatch) {
+    const company = atSignMatch[1].trim();
+    if (company && company.length > 1 && company.length < 100) return company;
+  }
+
+  return null;
+}
+
+/**
+ * Extract a clean job title from a LinkedIn headline.
+ * Returns the portion before "at", "|", etc.
+ */
+export function parseTitleFromHeadline(headline: string | null): string | null {
+  if (!headline) return null;
+
+  // Take content before "at Company", "| Company", "@ Company"
+  const beforeAt = headline.match(/^(.+?)\s+at\s+/i);
+  if (beforeAt) {
+    const title = beforeAt[1].trim();
+    if (title && title.length > 1) return title;
+  }
+
+  const beforeSep = headline.match(/^(.+?)\s*[|·•–—@]/);
+  if (beforeSep) {
+    const title = beforeSep[1].trim();
+    if (title && title.length > 1) return title;
+  }
+
+  // If no separator, the whole headline might be a title (e.g. "Software Engineer")
+  const trimmed = headline.trim();
+  if (trimmed.length > 1 && trimmed.length < 80) return trimmed;
+
+  return null;
+}
+
+const DIVISION_KEYWORDS: Record<string, string[]> = {
+  Engineering: [
+    "engineer",
+    "developer",
+    "software",
+    "devops",
+    "sre",
+    "platform",
+    "infrastructure",
+    "backend",
+    "frontend",
+    "fullstack",
+    "cto",
+    "vp engineering",
+    "head of engineering",
+    "architect",
+  ],
+  Marketing: [
+    "marketing",
+    "growth",
+    "brand",
+    "content",
+    "demand gen",
+    "seo",
+    "cmo",
+    "vp marketing",
+    "head of marketing",
+  ],
+  Sales: [
+    "sales",
+    "account executive",
+    "sdr",
+    "bdr",
+    "business development",
+    "revenue",
+    "cro",
+    "vp sales",
+    "head of sales",
+  ],
+  Product: ["product", "cpo", "vp product", "head of product", "product manager", "product owner"],
+  Design: ["design", "ux", "ui", "creative"],
+  Operations: ["operations", "ops", "coo", "chief operating"],
+  Finance: ["finance", "cfo", "accounting", "controller"],
+  "People/HR": ["people", "human resources", "talent", "recruiting", "hr"],
+  "C-Suite": ["ceo", "founder", "co-founder", "managing director", "president", "chief executive"],
+};
+
+/**
+ * Map a job title to an organizational division/department.
+ */
+export function parseDivisionFromTitle(title: string | null): string | null {
+  if (!title) return null;
+  const lower = title.toLowerCase();
+
+  for (const [division, keywords] of Object.entries(DIVISION_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) return division;
+  }
+
+  return null;
+}
+
 /** Returns true if the URL is a URN-style LinkedIn URL (e.g. /in/ACoAAA...) */
 function isUrnUrl(url: string): boolean {
   return /\/in\/ACo[A-Z]/i.test(url);
@@ -459,14 +586,18 @@ export function normalizeEngagers(
     const urn = isUrnUrl(profileUrl);
     const slug = urn ? null : extractLinkedinSlug(profileUrl);
 
+    const headline = pickString(r, "headline", "title", "tagline", "occupation");
+    const company =
+      pickString(r, "company", "companyName", "company_name", "organization") || parseCompanyFromHeadline(headline);
+
     people.push({
       firstName,
       lastName,
       linkedinUrl: profileUrl,
       linkedinUrnUrl: urn ? profileUrl : null,
       linkedinSlug: slug,
-      headline: pickString(r, "headline", "title", "tagline", "occupation"),
-      company: pickString(r, "company", "companyName", "company_name", "organization"),
+      headline,
+      company,
       profileImageUrl: pickString(
         r,
         "profileImageUrl",

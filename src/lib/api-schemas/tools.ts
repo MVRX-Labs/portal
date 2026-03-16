@@ -59,6 +59,8 @@ export const linkedinPostGeneratorBodySchema = z.object({
   useLinkedinProfile: z.union([z.boolean(), z.string()]).optional(),
   sourceMaterial: z.string().min(1, "sourceMaterial is required"),
   voiceContext: z.string().optional(),
+  promptStyle: z.enum(["default", "narrative", "analytical"]).optional(),
+  customPrompt: z.string().optional(),
   model: z.string().optional(),
   accountId: requiredAccountId,
 });

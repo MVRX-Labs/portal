@@ -21,13 +21,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       linkedinUrl: leads.linkedinUrl,
       headline: leads.headline,
       company: leads.company,
+      title: leads.title,
+      division: leads.division,
+      region: leads.region,
+      email: leads.email,
+      phone: leads.phone,
+      tier: leads.tier,
+      conversionPct: leads.conversionPct,
+      rationale: leads.rationale,
     })
     .from(leads)
     .where(and(...conditions))
     .orderBy(desc(leads.lastSeenAt));
 
   // Build CSV in HeyReach-compatible format
-  const headers = ["firstName", "lastName", "LinkedInProfileUrl", "headline", "company"];
+  const headers = [
+    "firstName",
+    "lastName",
+    "LinkedInProfileUrl",
+    "email",
+    "phone",
+    "headline",
+    "title",
+    "company",
+    "division",
+    "region",
+    "tier",
+    "conversionPct",
+    "rationale",
+  ];
   const csvRows = [headers.join(",")];
 
   for (const row of rows) {
@@ -35,8 +57,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       escapeCsv(row.firstName),
       escapeCsv(row.lastName || ""),
       escapeCsv(row.linkedinUrl),
+      escapeCsv(row.email || ""),
+      escapeCsv(row.phone || ""),
       escapeCsv(row.headline || ""),
+      escapeCsv(row.title || ""),
       escapeCsv(row.company || ""),
+      escapeCsv(row.division || ""),
+      escapeCsv(row.region || ""),
+      escapeCsv(row.tier != null ? String(row.tier) : ""),
+      escapeCsv(row.conversionPct != null ? String(row.conversionPct) : ""),
+      escapeCsv(row.rationale || ""),
     ];
     csvRows.push(values.join(","));
   }

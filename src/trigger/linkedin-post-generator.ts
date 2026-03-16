@@ -12,6 +12,7 @@ import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, createGoogleDoc } from "@/lib/gdrive";
 import { getRandomHookTemplates, formatHookTemplatesForPrompt } from "./linkedin-hook-templates";
+import { LINKEDIN_POST_PROMPT_PRESETS, resolveLinkedInPromptTemplate } from "@/lib/linkedin-post-prompts";
 
 interface LinkedInPostGeneratorPayload {
   runId: string;
@@ -23,6 +24,8 @@ interface LinkedInPostGeneratorPayload {
   useLinkedinProfile?: boolean;
   model?: string;
   accountName?: string;
+  promptStyle?: string;
+  customPrompt?: string;
 }
 
 const URL_REGEX = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
@@ -39,7 +42,9 @@ function buildPrompt(
   posterRole: string,
   hasScrapedData: boolean,
   hasVoiceContext: boolean,
-  sourceUrls: string[]
+  sourceUrls: string[],
+  promptStyle?: string,
+  customPrompt?: string
 ): string {
   const randomHooks = getRandomHookTemplates(5);
   const hookInspiration = formatHookTemplatesForPrompt(randomHooks);
@@ -57,6 +62,45 @@ function buildPrompt(
   ]
     .filter(Boolean)
     .join("\n");
+
+  // --- Resolve the style template (presets or custom) ---
+
+  let styleTemplate: string;
+  if (customPrompt && customPrompt.trim()) {
+    styleTemplate = customPrompt;
+  } else {
+    const preset = LINKEDIN_POST_PROMPT_PRESETS[promptStyle || "default"] || LINKEDIN_POST_PROMPT_PRESETS.default;
+    styleTemplate = preset.template;
+  }
+
+  const hookInspirationSection = `### HOOK TEMPLATE INSPIRATION
+
+Below are ${hookCount} hook structures chosen at random for inspiration. Use them as structural starting points, not fill-in-the-blanks. Adapt the patterns to fit THIS specific story and ${posterName}'s voice. Do not use any template verbatim.
+
+${hookInspiration}
+
+After reviewing these templates, generate your 3 hooks. At least one hook should draw structural inspiration from one of the templates above, but rewritten to feel original and specific to this story.`;
+
+  const bodyACta = hasSourceUrls
+    ? `- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
+- Include the source URL naturally as "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
+- Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.`
+    : `- The post should deliver the full insight within the post itself. The reader should walk away feeling they got something valuable without needing to click anywhere.
+- Do NOT fabricate or invent a link. There is no linked article for this post.
+- End with a CTA that invites conversation or reflection (not "What do you think?" which is overused). Ask a specific question tied to the post's insight, invite people to share a related experience, or end on a provocative open question. The CTA should feel like a peer starting a conversation, not a brand asking for engagement.`;
+
+  const bodyBLink = hasSourceUrls
+    ? `- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.`
+    : `- There is no linked article for this post. Do NOT invent or fabricate a link. Let the post's insight stand on its own.`;
+
+  const resolvedStyle = resolveLinkedInPromptTemplate(styleTemplate, {
+    posterName,
+    hookInspirationSection,
+    bodyACta,
+    bodyBLink,
+  });
+
+  // --- Assemble: shared prefix + resolved style + shared suffix ---
 
   return `You are an expert LinkedIn ghostwriter. You write posts for senior figures at client organisations. Your job is to produce content that sounds like it was written by the person posting, not by an agency, not by AI. Every post should feel lived-in, specific, and human.
 
@@ -165,99 +209,7 @@ Never use: delve, tapestry, moreover, furthermore, comprehensive, robust, utiliz
 
 Also banned: "something shifted", "the weight of it", "a need he/she couldn't name", "for a moment", "and then, something changed".
 
-### HOOK REQUIREMENTS
-
-Write 3 hook variations. Each hook:
-- Is exactly 2 lines
-- Maximum 12 words per line
-- Uses a different angle or pattern (don't repeat structure across all 3)
-- Sounds like ${posterName} wrote it, not a copywriter
-- Takes a firm, slightly uncomfortable stance (contrarian edge)
-- Starts mid-conflict or mid-scene, never with meta-commentary ("Here's why", "I've noticed", "Let's talk about")
-- Uses strong, non-neutral verbs: kills, guts, breaks, fakes, buries, exposes
-- Names concrete, visceral consequences, not abstract ones ("losing the deal in the final five minutes" not "enterprise readiness")
-- Hooks the reader with an IDEA, TENSION, or QUESTION they personally relate to. Never hook with a company name, product name, or announcement. The reader should think "that's interesting, tell me more" not "this person is promoting something."
-
-Hook structure to aim for (Bite and Twist):
-- Line 1 (The Bite): Short, aggressive reaction or observation. Under 7 words. Sounds like someone calling it out in real time.
-- Line 2 (The Twist): Visceral consequence that makes the reader feel the risk physically. Names the actor, not just the consequence.
-
-### HOOK TEMPLATE INSPIRATION
-
-Below are ${hookCount} hook structures chosen at random for inspiration. Use them as structural starting points, not fill-in-the-blanks. Adapt the patterns to fit THIS specific story and ${posterName}'s voice. Do not use any template verbatim.
-
-${hookInspiration}
-
-After reviewing these templates, generate your 3 hooks. At least one hook should draw structural inspiration from one of the templates above, but rewritten to feel original and specific to this story.
-
-### BODY A: LinkedIn Optimised (150-300 words)
-
-Pick any of the 3 hooks to open with. Then write the body:
-- Short paragraphs (1-3 sentences max), generous white space
-- One idea per paragraph, building momentum line by line
-- Include a "disruption" moment mid-post (a shift, twist, or unexpected detail)
-- Narrative arc: setup, tension, resolution/insight
-- Reference specific details from the source material (names, numbers, timeframes, quotes)
-- Write from first person as ${posterName}. This is YOUR experience, YOUR insight, YOUR story. You lived it.
-${
-  hasSourceUrls
-    ? `- The post should give away enough of the insight to be valuable on its own, but leave the full story, data, or methodology in the linked article. Create an "information gap" where the reader feels they got 60% of something fascinating and needs the other 40%.
-- Include the source URL naturally as "I wrote more about this here" or "full breakdown is here" near the end. Frame it as sharing your own writing, not promoting a company page.
-- Clear CTA at the end that invites the reader to read the linked article or engage with the idea (not "What do you think?" which is overused). The CTA should feel like a peer sharing something they wrote, not a brand asking for attention.`
-    : `- The post should deliver the full insight within the post itself. The reader should walk away feeling they got something valuable without needing to click anywhere.
-- Do NOT fabricate or invent a link. There is no linked article for this post.
-- End with a CTA that invites conversation or reflection (not "What do you think?" which is overused). Ask a specific question tied to the post's insight, invite people to share a related experience, or end on a provocative open question. The CTA should feel like a peer starting a conversation, not a brand asking for engagement.`
-}
-- 3-5 relevant hashtags at the end
-- Never start with "I'm" or "We're"
-- No generic corporate phrases ("thrilled to announce", "excited to share", "proud to")
-- No company-pitching language. The company is backdrop, not the main character. (See Rule 7.)
-
-### BODY B: Humanised (150-250 words)
-
-Pick any of the 3 hooks to open with (can be the same or different from Body A). Then:
-
-**ONE-THREAD RULE**: The entire post follows a single thread: one moment, one insight, one takeaway. Every sentence must serve that thread. If you remove a sentence and the post still makes the same point, cut it. Human writing is focused; rambling is not authentic, it is unfocused.
-
-- Write entirely in first person as ${posterName}. This is you reflecting on your own experience and your own writing.
-- Start from a specific moment (a conversation, a decision, a mistake), then land the insight within 2-3 short paragraphs. Get to the point faster than Body A, not slower.
-- Use 1-2 soft qualifiers ("I think", "in my experience", "I'm probably biased here, but") but only where they add genuine nuance, not as filler.
-- One aside or parenthetical maximum. It must earn its place by adding texture that makes the moment more vivid.
-- Let the ending be quieter. End on a specific detail, an open question, or a soft invitation. Not a polished takeaway.
-${
-  hasSourceUrls
-    ? `- If there's a source link, drop it in casually as your own work: "I tried to unpack this properly here" or "wrote my thinking up in full." Never frame it as "check out our latest post" or any promotional language.`
-    : `- There is no linked article for this post. Do NOT invent or fabricate a link. Let the post's insight stand on its own.`
-}
-- The company name should appear at most once, and only if it's natural to the story. The reader should not feel marketed to at any point.
-- Fewer or no hashtags.
-- Soft CTA or none.
-
-**LENGTH CHECK**: If Body B exceeds 250 words, cut from the middle. The opening moment and the closing insight are sacred. Everything between must justify its presence.
-
-### WHAT HUMAN WRITING LOOKS LIKE (positive guidance)
-
-- Anchor in a particular moment, not a general principle. Direction: particular to general.
-- Use unexpectedly specific word choices. "Killed the deal" not "prevented adoption." "Clunky" not "suboptimal."
-- Vary sentence rhythm dramatically. Very short. Then one that runs longer because the thought kept going. Jolting distribution: 7, 22, 6, 14 words.
-- Let logic be slightly imperfect. One or two moments of genuine hedging per post.
-- Include at least one throwaway detail that only someone who was there would mention.
-- Use dry, observational humour sparingly (not puns, not enthusiasm, just a small aside that signals experience).
-
-### DRY WIT (use sparingly, max 1-2 instances across the whole post)
-
-- One sardonic side-eye about the gap between what people say in meetings and what's actually happening.
-- Low-stakes analogies for high-stakes tech (e.g. "like that one kitchen drawer" instead of "complex legacy system").
-- Self-deprecating expertise that undermines the author's own seniority to build trust.
-- No exclamation marks for humour. No industry puns. No rhetorical "Right?" No emojis as laugh cues. No "I'll see myself out."
-
-### STRUCTURAL VARIANCE
-
-- Open with 2 punchy sentences (under 8 words each), then a medium sentence (12-15 words) for context.
-- Include at least one parenthetical interjection or non-essential detail for texture.
-- When describing something chaotic, use a long multi-clause sentence (25+ words). Follow with a very short declarative sentence (under 7 words).
-- Avoid bridge conjunctions ("and," "but," "so") connecting two independent thoughts. Use a full stop instead.
-- A paragraph should never have three sentences of similar length in a row.
+${resolvedStyle}
 
 ## STEP 4: SELF-EDIT PROTOCOL (MANDATORY before presenting output)
 
@@ -350,6 +302,8 @@ export const linkedinPostGeneratorTask = task({
       useLinkedinProfile,
       model,
       accountName,
+      promptStyle,
+      customPrompt,
     } = payload;
 
     try {
@@ -367,6 +321,7 @@ export const linkedinPostGeneratorTask = task({
         runId,
         posterName,
         model: resolvedModel,
+        promptStyle: customPrompt?.trim() ? "custom" : promptStyle || "default",
         hasLinkedinUrl: !!linkedinUrl,
         useLinkedinProfile: !!useLinkedinProfile,
         hasVoiceContext: !!voiceContext,
@@ -415,7 +370,15 @@ export const linkedinPostGeneratorTask = task({
         }
       }
 
-      const prompt = buildPrompt(posterName, posterRole, hasScrapedData, !!voiceContext, sourceUrls);
+      const prompt = buildPrompt(
+        posterName,
+        posterRole,
+        hasScrapedData,
+        !!voiceContext,
+        sourceUrls,
+        promptStyle,
+        customPrompt
+      );
 
       const genStep = hasLinkedinScrape ? 2 : 1;
       metadata.set("progress", {

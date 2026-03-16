@@ -34,3 +34,6 @@ next-env.d.ts
 .env.vercel
 .env.production
 .trigger
+
+# script output
+scripts/output/

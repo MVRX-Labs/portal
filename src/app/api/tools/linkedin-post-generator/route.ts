@@ -86,6 +86,8 @@ export async function POST(request: NextRequest) {
       useLinkedinProfile,
       model: inputs.model,
       accountName,
+      promptStyle: inputs.promptStyle,
+      customPrompt: inputs.customPrompt,
     });
 
     console.log(`[linkedin-post-generator:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);

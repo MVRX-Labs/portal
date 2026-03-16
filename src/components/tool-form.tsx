@@ -12,9 +12,11 @@ import { ContactPicker } from "./contact-picker";
 import { useAccount } from "./account-provider";
 import { RunProgress } from "./run-progress";
 import { TWITTER_PROMPT_PRESETS, type PromptPreset } from "@/lib/twitter-prompts";
+import { LINKEDIN_POST_PROMPT_PRESETS } from "@/lib/linkedin-post-prompts";
 
 const PROMPT_PRESETS_REGISTRY: Record<string, Record<string, PromptPreset>> = {
   twitter: TWITTER_PROMPT_PRESETS,
+  "linkedin-post": LINKEDIN_POST_PROMPT_PRESETS,
 };
 
 function PromptSelectField({
@@ -108,8 +110,24 @@ function PromptSelectField({
             />
             <div className="flex items-center justify-between">
               <p className="text-xs text-(--muted)">
-                Use <code className="bg-(--background) px-1 rounded">{"{{POST}}"}</code> as a placeholder for the
-                LinkedIn post content.
+                {presetsKey === "linkedin-post" ? (
+                  <>
+                    Placeholders:{" "}
+                    {["{{POSTER_NAME}}", "{{HOOK_INSPIRATION_SECTION}}", "{{BODY_A_CTA}}", "{{BODY_B_LINK}}"].map(
+                      (ph, i, arr) => (
+                        <span key={ph}>
+                          <code className="bg-(--background) px-1 rounded">{ph}</code>
+                          {i < arr.length - 1 ? " " : ""}
+                        </span>
+                      )
+                    )}
+                  </>
+                ) : (
+                  <>
+                    Use <code className="bg-(--background) px-1 rounded">{"{{POST}}"}</code> as a placeholder for the
+                    LinkedIn post content.
+                  </>
+                )}
               </p>
               {edited && (
                 <button type="button" onClick={handleReset} className="text-xs text-(--accent) hover:underline">

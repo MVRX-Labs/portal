@@ -12,6 +12,7 @@ import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, le
 import { eq, and, inArray } from "drizzle-orm";
 import { sendSlackNotification, sendSlackFile } from "@/lib/slack";
 import { escapeCsv } from "@/lib/csv";
+import { parseCompanyFromHeadline, parseTitleFromHeadline, parseDivisionFromTitle } from "@/lib/linkedin-engagement";
 
 const leadUpsertQueue = queue({
   name: "linkedin-lead-upsert",
@@ -165,14 +166,15 @@ export const linkedinLeadUpsertTask = task({
         if (!c.authorLinkedinUrl) continue;
         const nameParts = (c.authorName || "").split(/\s+/);
         const slug = c.authorLinkedinUrl.match(/\/in\/([^/?#]+)/i)?.[1]?.toLowerCase() ?? null;
+        const commentHeadline = c.authorHeadline ?? null;
         allEngagers.push({
           firstName: nameParts[0] || "",
           lastName: nameParts.slice(1).join(" ") || null,
           linkedinUrl: c.authorLinkedinUrl,
           linkedinUrnUrl: /\/in\/ACo[A-Z]/i.test(c.authorLinkedinUrl) ? c.authorLinkedinUrl : null,
           linkedinSlug: slug,
-          headline: c.authorHeadline ?? null,
-          company: null,
+          headline: commentHeadline,
+          company: parseCompanyFromHeadline(commentHeadline),
           profileImageUrl: null,
           engagementType: "comment",
           postUrl: postUrlMap.get(c.postId) || "",
@@ -288,6 +290,9 @@ export const linkedinLeadUpsertTask = task({
             const lastSeenAt =
               existing.lastSeenAt > engager.lastEngagedAt ? existing.lastSeenAt : engager.lastEngagedAt;
 
+            const updatedHeadline = engager.headline || existing.headline;
+            const updatedTitle = existing.title || parseTitleFromHeadline(updatedHeadline);
+
             await tx
               .update(leads)
               .set({
@@ -295,14 +300,17 @@ export const linkedinLeadUpsertTask = task({
                 engagementPosts: mergedPosts,
                 firstSeenAt,
                 lastSeenAt,
-                headline: engager.headline || existing.headline,
+                headline: updatedHeadline,
                 company: engager.company || existing.company,
+                title: updatedTitle,
+                division: existing.division || parseDivisionFromTitle(updatedTitle),
                 profileImageUrl: engager.profileImageUrl || existing.profileImageUrl,
                 linkedinUrnUrl: engager.linkedinUrnUrl || existing.linkedinUrnUrl,
                 updatedAt: now,
               })
               .where(eq(leads.id, existing.id));
           } else {
+            const parsedTitle = parseTitleFromHeadline(engager.headline);
             const [inserted] = await tx
               .insert(leads)
               .values({
@@ -315,6 +323,8 @@ export const linkedinLeadUpsertTask = task({
                 lastName: engager.lastName,
                 headline: engager.headline,
                 company: engager.company,
+                title: parsedTitle,
+                division: parseDivisionFromTitle(parsedTitle),
                 profileImageUrl: engager.profileImageUrl,
                 engagementTypes: engager.engagementTypes,
                 engagementPosts: engager.engagementPosts,

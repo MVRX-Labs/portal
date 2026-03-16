@@ -74,9 +74,19 @@ export const leads = pgTable(
     lastName: text("last_name"),
     headline: text("headline"),
     company: text("company"),
+    title: text("title"), // Clean job title parsed from headline
+    division: text("division"), // Department (e.g. "Engineering", "Marketing")
+    region: text("region"), // Geographic region (from profile enrichment)
+    email: text("email"), // From enrichment provider (e.g. Apollo)
+    phone: text("phone"), // From enrichment provider
     profileImageUrl: text("profile_image_url"),
     engagementTypes: jsonb("engagement_types").$type<string[]>().default([]),
     engagementPosts: jsonb("engagement_posts").$type<string[]>().default([]),
+    // Scoring & qualification
+    tier: integer("tier"), // 1 (highest priority), 2, or 3 (lowest)
+    conversionPct: integer("conversion_pct"), // 0–100 estimated conversion likelihood
+    rationale: text("rationale"), // AI-generated explanation of why this lead is ranked here
+    enrichedAt: timestamp("enriched_at"), // When enrichment last ran
     // Based on the post date, not the scrape date. Represents the earliest/latest
     // post where this person was seen engaging.
     firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
@@ -105,6 +115,24 @@ export const leadCsvs = pgTable("lead_csvs", {
   leadCount: integer("lead_count").notNull(),
   postUrls: jsonb("post_urls").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const icpDefinitions = pgTable("icp_definitions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("icp")),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  name: text("name").notNull(), // e.g. "Enterprise SaaS", "SMB Fintech"
+  description: text("description").notNull(), // Natural language ICP description
+  targetTitles: jsonb("target_titles").$type<string[]>().default([]),
+  targetIndustries: jsonb("target_industries").$type<string[]>().default([]),
+  targetCompanySizes: jsonb("target_company_sizes").$type<string[]>().default([]), // e.g. ["20-200", "200-1000"]
+  targetSignals: jsonb("target_signals").$type<string[]>().default([]), // e.g. ["Series A-C", "recently funded"]
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const toolRuns = pgTable("tool_runs", {

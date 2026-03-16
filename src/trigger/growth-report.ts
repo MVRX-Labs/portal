@@ -13,7 +13,7 @@ import { uploadFile, findOrCreateFolder, getGeneratedMaterialsFolderId } from "@
 import { sendSlackNotification } from "@/lib/slack";
 import { runDiscovery } from "@/lib/growth-report/discovery";
 import { collectAllData, takeScreenshots } from "@/lib/growth-report/scrapers";
-import { evaluateScreenshots } from "@/lib/growth-report/screenshots";
+import { evaluateScreenshots, recaptionScreenshots } from "@/lib/growth-report/screenshots";
 import { buildAnalysisPrompt } from "@/lib/growth-report/analysis-prompt";
 import { buildReviewPrompt } from "@/lib/growth-report/review-prompt";
 import { buildGrowthReportDocx } from "@/lib/growth-report/builder";
@@ -229,6 +229,21 @@ export const growthReportTask = task({
         logger.warn("Review parsing failed, using original analysis", {
           error: reviewErr instanceof Error ? reviewErr.message : String(reviewErr),
         });
+      }
+
+      // --- Step 5.5: Re-caption screenshots with section context ---
+      if (approvedScreenshots.length > 0) {
+        approvedScreenshots = await recaptionScreenshots(approvedScreenshots, reportContent, sessionDir);
+        // Update report content with re-captioned (and possibly filtered) screenshots
+        reportContent.screenshots = approvedScreenshots.map((s) => ({
+          url: s.url,
+          section: s.section,
+          caption: s.caption,
+          filename: s.filename,
+          width: s.width,
+          height: s.height,
+        }));
+        logger.info(`After re-captioning: ${approvedScreenshots.length} screenshots remain`);
       }
 
       // --- Step 6: Final build & upload ---

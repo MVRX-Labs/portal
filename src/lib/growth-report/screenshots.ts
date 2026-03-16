@@ -1,11 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { logger } from "@trigger.dev/sdk/v3";
 import { MODEL_MAP } from "../audit-utils";
 import type { CapturedScreenshot } from "./take-screenshots";
+import type { GrowthReportContent } from "./schema";
 
 const anthropic = new Anthropic();
+
+/** Detect media type from buffer header (JPEG starts with FF D8) */
+function mediaType(buf: Buffer): "image/jpeg" | "image/png" {
+  return buf[0] === 0xff && buf[1] === 0xd8 ? "image/jpeg" : "image/png";
+}
 
 export interface ApprovedScreenshot {
   url: string;
@@ -29,11 +35,6 @@ export async function evaluateScreenshots(
   if (screenshots.length === 0) return [];
 
   logger.info(`Evaluating ${screenshots.length} screenshots individually via Claude`);
-
-  // Detect media type from buffer header (JPEG starts with FF D8)
-  function mediaType(buf: Buffer): "image/jpeg" | "image/png" {
-    return buf[0] === 0xff && buf[1] === 0xd8 ? "image/jpeg" : "image/png";
-  }
 
   const evalResults = await Promise.allSettled(
     screenshots.map(async (s) => {
@@ -134,4 +135,143 @@ CRITICAL: Return ONLY the raw JSON object. No markdown fences, no explanation.`,
   logger.info(`Screenshot evaluation complete: ${approved.length} approved, ${excludedCount} excluded`);
 
   return approved;
+}
+
+/**
+ * Extract the key text from a report section (findings, overview, etc.)
+ * to give context for re-captioning screenshots.
+ */
+function extractSectionText(content: GrowthReportContent, sectionName: string): string | null {
+  const section = content[sectionName as keyof GrowthReportContent];
+  if (!section || typeof section !== "object") return null;
+
+  const parts: string[] = [];
+  const s = section as Record<string, unknown>;
+
+  // Most sections have findings
+  if (Array.isArray(s.findings)) parts.push(...(s.findings as string[]));
+  // Executive summary
+  if (typeof s.overview === "string") parts.push(s.overview);
+  if (typeof s.keyConclusion === "string") parts.push(s.keyConclusion);
+  // Some sections have recommendations
+  if (Array.isArray(s.recommendations)) parts.push(...(s.recommendations as string[]));
+  // Reddit/social have coreProblem
+  if (typeof s.coreProblem === "string") parts.push(s.coreProblem);
+
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+/**
+ * Re-caption screenshots using the actual report section text for context.
+ * Sends each screenshot + its section's commentary to Claude to generate
+ * a caption that ties the image to the surrounding analysis.
+ * Screenshots that don't add value to their section are omitted.
+ *
+ * Returns the updated screenshots array (with new captions, minus omitted ones).
+ */
+export async function recaptionScreenshots(
+  screenshots: ApprovedScreenshot[],
+  content: GrowthReportContent,
+  sessionDir: string
+): Promise<ApprovedScreenshot[]> {
+  if (screenshots.length === 0) return [];
+
+  logger.info(`Re-captioning ${screenshots.length} screenshots with section context`);
+
+  const results = await Promise.allSettled(
+    screenshots.map(async (s) => {
+      const sectionText = extractSectionText(content, s.section);
+
+      if (!sectionText) {
+        logger.info(`No section text for "${s.section}" — keeping original caption for ${s.url}`);
+        return { ...s, keep: true };
+      }
+
+      const buf = await readFile(join(sessionDir, s.filename));
+
+      const response = await anthropic.messages.create({
+        model: MODEL_MAP.sonnet,
+        max_tokens: 512,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `You are writing a caption for a screenshot in a professional SEO & Growth Strategy Report.
+
+The screenshot appears in the "${s.section}" section. Here is the surrounding analysis text from that section:
+
+---
+${sectionText}
+---
+
+The screenshot is of: ${s.url}
+Original context: ${s.context}`,
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType(buf),
+                  data: buf.toString("base64"),
+                },
+              },
+              {
+                type: "text",
+                text: `Write a 1-sentence caption that ties what is visible in the screenshot to the analysis above. The caption should help the reader understand WHY this screenshot is included — what it illustrates or evidences from the analysis.
+
+If the screenshot does NOT meaningfully relate to the section analysis (e.g. it's a generic page that doesn't illustrate any of the findings), respond with OMIT instead.
+
+Return a single JSON object:
+{ "keep": true, "caption": "The caption text" }
+or
+{ "keep": false, "reason": "Why it doesn't fit" }
+
+CRITICAL: Return ONLY the raw JSON object. No markdown fences, no explanation.`,
+              },
+            ],
+          },
+        ],
+      });
+
+      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      return JSON.parse(text) as { keep: boolean; caption?: string; reason?: string };
+    })
+  );
+
+  const recaptioned: ApprovedScreenshot[] = [];
+
+  for (let i = 0; i < screenshots.length; i++) {
+    const s = screenshots[i];
+    const result = results[i];
+
+    if (result.status !== "fulfilled") {
+      const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      logger.warn(`Re-captioning failed for ${s.url} — keeping original caption`, { error: errMsg });
+      recaptioned.push(s);
+      continue;
+    }
+
+    const { keep, caption, reason } = result.value;
+
+    if (!keep) {
+      logger.info(`Screenshot omitted during re-captioning: ${s.url} — ${reason}`);
+      continue;
+    }
+
+    recaptioned.push({
+      ...s,
+      caption: caption || s.caption,
+    });
+
+    logger.info(`Re-captioned: ${s.url} → "${caption}"`);
+  }
+
+  const omitted = screenshots.length - recaptioned.length;
+  if (omitted > 0) {
+    logger.info(`Re-captioning: ${recaptioned.length} kept, ${omitted} omitted`);
+  }
+
+  return recaptioned;
 }

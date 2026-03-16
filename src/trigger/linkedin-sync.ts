@@ -23,8 +23,9 @@ import { scrapePostReactions, scrapePostReshares, scrapePostComments } from "@/l
 import { extractLinkedinSlug } from "@/lib/linkedin-profiles";
 import { sendSlackNotification, sendAnalyticsSlackMessage } from "@/lib/slack";
 import { linkedinLeadUpsertTask } from "./linkedin-lead-upsert";
-import { accounts } from "@/lib/schema";
+import { accounts, contacts } from "@/lib/schema";
 import { isNull } from "drizzle-orm";
+import { generateReplySuggestions, type ReplySuggestion } from "@/lib/comment-reply-suggestions";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -579,6 +580,7 @@ async function sendUnrepliedCommentAlerts(
       postId: linkedinPostComments.postId,
       authorName: linkedinPostComments.authorName,
       authorLinkedinUrl: linkedinPostComments.authorLinkedinUrl,
+      authorHeadline: linkedinPostComments.authorHeadline,
       commentText: linkedinPostComments.commentText,
       commentUrl: linkedinPostComments.commentUrl,
       commentedAt: linkedinPostComments.commentedAt,
@@ -598,15 +600,36 @@ async function sendUnrepliedCommentAlerts(
 
   if (recent.length === 0) return 0;
 
-  // Get the analytics Slack channel for this account
+  // Get the analytics Slack channel and voice guidance for this account
   const [account] = await db
-    .select({ analyticsSlackChannel: accounts.analyticsSlackChannel })
+    .select({
+      analyticsSlackChannel: accounts.analyticsSlackChannel,
+      contentVoiceGuidance: accounts.contentVoiceGuidance,
+    })
     .from(accounts)
     .where(eq(accounts.id, accountId))
     .limit(1);
 
   const channelId = account?.analyticsSlackChannel;
   if (!channelId) return 0;
+
+  // Try to get contact-level voice guidance (more specific than account-level)
+  let voiceGuidance = account.contentVoiceGuidance;
+  const [profile] = await db
+    .select({ contactId: linkedinProfiles.contactId })
+    .from(linkedinProfiles)
+    .where(eq(linkedinProfiles.id, profileId))
+    .limit(1);
+  if (profile?.contactId) {
+    const [contact] = await db
+      .select({ contentVoiceGuidance: contacts.contentVoiceGuidance })
+      .from(contacts)
+      .where(eq(contacts.id, profile.contactId))
+      .limit(1);
+    if (contact?.contentVoiceGuidance) {
+      voiceGuidance = contact.contentVoiceGuidance;
+    }
+  }
 
   // Group by post
   const byPost = new Map<string, typeof recent>();
@@ -625,6 +648,31 @@ async function sendUnrepliedCommentAlerts(
   const postMap = new Map(
     allProfilePosts.filter((p) => postIds.includes(p.id)).map((p) => [p.id, { content: p.content, postUrl: p.postUrl }])
   );
+
+  // Generate AI reply suggestions (graceful degradation on failure)
+  let replySuggestions = new Map<string, ReplySuggestion>();
+  try {
+    replySuggestions = await generateReplySuggestions(
+      {
+        profileDisplayName,
+        contentVoiceGuidance: voiceGuidance ?? null,
+        comments: recent.map((c) => ({
+          id: c.id,
+          postId: c.postId,
+          authorName: c.authorName,
+          authorHeadline: c.authorHeadline ?? null,
+          commentText: c.commentText,
+        })),
+        posts: new Map(Array.from(postMap.entries()).map(([id, p]) => [id, { id, content: p.content }])),
+      },
+      logger
+    );
+    logger.info(`Generated ${replySuggestions.size} reply suggestions for ${recent.length} comments`);
+  } catch (err) {
+    logger.warn(
+      `Failed to generate reply suggestions, sending alert without them: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 
   // Build Slack blocks
   const blocks: Record<string, unknown>[] = [
@@ -652,7 +700,15 @@ async function sendUnrepliedCommentAlerts(
           ? ` — "${c.commentText.slice(0, 60)}${c.commentText.length > 60 ? "..." : ""}"`
           : "";
         const commentLink = c.commentUrl ? ` (<${c.commentUrl}|view>)` : "";
-        return `  ${link}${preview}${commentLink}`;
+        let line = `  ${link}${preview}${commentLink}`;
+
+        const suggestion = replySuggestions.get(c.id);
+        if (suggestion) {
+          const replyText = suggestion.reply.length > 300 ? suggestion.reply.slice(0, 297) + "..." : suggestion.reply;
+          line += `\n      _Suggested reply:_ "${replyText}"`;
+        }
+
+        return line;
       })
       .join("\n");
 

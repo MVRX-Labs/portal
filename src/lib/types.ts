@@ -280,9 +280,9 @@ export const TOOLS: ToolConfig[] = [
   },
   {
     id: "outbound-sequence",
-    name: "LinkedIn Outbound Sequences",
+    name: "LinkedIn Outbound Sequence Playbook",
     description:
-      "Generate HeyReach-ready LinkedIn outbound sequences — 3 structures × 2 A/B variants with human-sounding copy.",
+      "Generate a full LinkedIn outbound playbook — audience-segmented sequences with A/B/C variants, testing methodology, capacity planning, and rollout strategy.",
     href: "/tools/outbound-sequence",
     fields: [
       {
@@ -313,6 +313,29 @@ export const TOOLS: ToolConfig[] = [
         label: "Tone / Style Notes",
         type: "textarea",
         placeholder: "Optional: any specific tone guidance, phrases to include, or style preferences for the sender",
+        required: false,
+      },
+      {
+        name: "audienceSegments",
+        label: "Audience Segments (Optional)",
+        type: "textarea",
+        placeholder:
+          "Define your audience segments, one per line. e.g.:\nCold VCs from Pitchbook export\nVC influencers with large LinkedIn audiences\nCompetitor platform users (Companies House data)",
+        required: false,
+      },
+      {
+        name: "leadListDescription",
+        label: "Lead Lists (Optional)",
+        type: "textarea",
+        placeholder:
+          "Describe your available lead lists — names, approximate sizes, sources, LinkedIn match rates. The more detail, the better the capacity and rollout planning.",
+        required: false,
+      },
+      {
+        name: "senderAccountCount",
+        label: "Sender Accounts",
+        type: "number",
+        placeholder: "Number of LinkedIn sender accounts (default: 2)",
         required: false,
       },
     ],

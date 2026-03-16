@@ -22,6 +22,9 @@ interface OutboundSequencePayload {
   targetIcp: string;
   valueProp: string;
   toneNotes?: string;
+  audienceSegments?: string;
+  leadListDescription?: string;
+  senderAccountCount?: number;
   model?: string;
 }
 
@@ -132,6 +135,14 @@ Return ONLY a JSON object. No explanation.`;
       progress("Generating outbound sequences", 3);
 
       const resolvedModel = resolveModel(payload.model, MODEL_MAP.opus);
+      // Parse audience segments from newline-separated string
+      const audienceSegments = payload.audienceSegments
+        ? payload.audienceSegments
+            .split("\n")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined;
+
       const generationPrompt = buildGenerationPrompt({
         senderName,
         senderOrg: account.name,
@@ -144,6 +155,9 @@ Return ONLY a JSON object. No explanation.`;
         targetIcp,
         valueProp,
         toneNotes,
+        audienceSegments,
+        leadListSummary: payload.leadListDescription,
+        senderAccountCount: payload.senderAccountCount,
       });
 
       const genResult = await runClaudeAgent(generationPrompt, sessionDir, {
@@ -183,7 +197,7 @@ Return ONLY a JSON object. No explanation.`;
         const reviewedJson = extractJSON(reviewResult.output);
         const reviewed = JSON.parse(reviewedJson) as OutboundSequenceContent;
         // Sanity check: make sure the reviewed version has core fields
-        if (reviewed.sequences?.length === 3 && reviewed.senderName && reviewed.targetIcp) {
+        if (reviewed.sequences?.length >= 1 && reviewed.senderName && reviewed.targetIcp) {
           sequenceContent = reviewed;
           logger.info("Review applied — sequences cleaned up");
         } else {
@@ -199,7 +213,7 @@ Return ONLY a JSON object. No explanation.`;
       progress("Building document and uploading", 5);
 
       const docxBuffer = await buildOutboundSequenceDocx(sequenceContent);
-      const filename = `MVRX | ${account.name} | LinkedIn Outbound Sequences.docx`;
+      const filename = `MVRX | ${account.name} | LinkedIn Outbound Sequence Playbook.docx`;
 
       const parentFolder = getGeneratedMaterialsFolderId();
       const accountFolder = account.name ? await findOrCreateFolder(account.name, parentFolder) : parentFolder;

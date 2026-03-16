@@ -117,6 +117,9 @@ export const outboundSequenceBodySchema = z.object({
   targetIcp: z.string().min(1, "Target ICP is required"),
   valueProp: z.string().min(1, "Value proposition is required"),
   toneNotes: z.string().optional(),
+  audienceSegments: z.string().optional(),
+  leadListDescription: z.string().optional(),
+  senderAccountCount: z.coerce.number().int().min(1).optional(),
   model: z.string().optional(),
 });
 

@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
       targetIcp: inputs.targetIcp,
       valueProp: inputs.valueProp,
       toneNotes: inputs.toneNotes || undefined,
+      audienceSegments: inputs.audienceSegments || undefined,
+      leadListDescription: inputs.leadListDescription || undefined,
+      senderAccountCount: inputs.senderAccountCount || undefined,
       model: inputs.model,
     });
 

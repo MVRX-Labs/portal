@@ -22,7 +22,7 @@ const accountItems: NavItem[] = [
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
   { href: "/tools/linkedin-to-twitter", label: "LinkedIn Post to Tweets", icon: "🐦", beta: true },
   { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
-  { href: "/tools/outbound-sequence", label: "LinkedIn Outbound Sequences", icon: "📨", beta: true },
+  { href: "/tools/outbound-sequence", label: "Outbound Sequence Playbook", icon: "📨", beta: true },
   { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
   { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },

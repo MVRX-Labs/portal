@@ -38,7 +38,7 @@ function progress(step: string, num: number) {
 
 export const outboundSequenceTask = task({
   id: "outbound-sequence-generation",
-  maxDuration: 1800,
+  maxDuration: 3600,
   retry: { maxAttempts: 2, minTimeoutInMs: 5000 },
 
   run: async (payload: OutboundSequencePayload) => {

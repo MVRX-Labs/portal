@@ -19,6 +19,7 @@ import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
 import { NotesField } from "@/components/notes-field";
 import { CreateAccountModal } from "@/components/create-account-modal";
 import { CreateContactModal } from "@/components/create-contact-modal";
+import { TimelinePanel } from "@/components/timeline-panel";
 import type { LinkedinProfile } from "@/lib/api-schemas/linkedin-profiles";
 import {
   getLinkedinProfilesResponseSchema,
@@ -530,6 +531,9 @@ function ExpandedView({
           onClose={() => setShowCreateContact(false)}
         />
       )}
+
+      {/* Activity Timeline */}
+      <TimelinePanel accountId={account.id} />
 
       {/* LinkedIn Profiles */}
       {linkedinProfiles.length > 0 && (

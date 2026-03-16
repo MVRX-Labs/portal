@@ -1,5 +1,6 @@
-import { readdir, readFile, mkdir } from "fs/promises";
+import { readdir, readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { runClaudeAgent } from "@/lib/claude-agent";
 
 export const OUTPUT_DIR = "/Users/danny/Google Drive/Shared drives/Shared Drive - MVRX/Generated materials";
 
@@ -36,6 +37,46 @@ export function extractJSON(raw: string): string {
   const bare = raw.match(/\{[\s\S]*\}/);
   if (bare) return bare[0];
   throw new Error("No JSON object found in Claude output");
+}
+
+/**
+ * Attempts to repair malformed JSON by invoking Claude Code, which can
+ * read the broken file, edit it, run `node -e JSON.parse(...)` to validate,
+ * and loop until the JSON is valid.
+ */
+export async function repairJSON(
+  raw: string,
+  parseError: string,
+  sessionDir: string,
+  logger: { info: (msg: string, meta?: Record<string, unknown>) => void }
+): Promise<string> {
+  const brokenPath = join(sessionDir, "review-output-broken.json");
+  const fixedPath = join(sessionDir, "review-output-fixed.json");
+  await writeFile(brokenPath, raw);
+
+  const prompt = `\
+review-output-broken.json failed to parse with: ${parseError}
+
+Read the file, extract the JSON object (stripping any markdown fences or surrounding commentary), fix all syntax errors, and write valid JSON to review-output-fixed.json. Validate with: node -e "JSON.parse(require('fs').readFileSync('review-output-fixed.json','utf-8'))"
+
+If validation fails, read the error, fix the file, and retry until it passes.`;
+
+  const result = await runClaudeAgent(prompt, sessionDir, {
+    allowedTools: ["Read", "Edit", "Write", "Bash"],
+    maxTurns: 20,
+    model: "claude-opus-4-6",
+  });
+
+  logger.info("JSON repair via Claude Code completed", {
+    costUsd: result.costUsd.toFixed(4),
+    turns: result.turns,
+    durationMs: result.durationMs,
+  });
+
+  const fixed = await readFile(fixedPath, "utf-8");
+  // Final validation — will throw if still broken
+  JSON.parse(fixed);
+  return fixed;
 }
 
 export async function extractJSONFromSessionDir(dir: string): Promise<string> {

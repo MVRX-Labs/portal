@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { toolRuns, accounts, contacts, linkedinProfiles } from "@/lib/schema";
 import { getAccountCompanyLinkedinUrl } from "@/lib/linkedin-profiles";
 import { runClaudeAgent } from "@/lib/claude-agent";
-import { extractJSON, resolveModel, MODEL_MAP } from "@/lib/audit-utils";
+import { extractJSON, repairJSON, resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { uploadFile, findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { sendSlackNotification } from "@/lib/slack";
 import { runDiscovery } from "@/lib/growth-report/discovery";
@@ -200,8 +200,25 @@ export const growthReportTask = task({
         turns: reviewResult.turns,
       });
 
+      let reviewedJson: string | null = null;
       try {
-        const reviewedJson = extractJSON(reviewResult.output);
+        reviewedJson = extractJSON(reviewResult.output);
+        JSON.parse(reviewedJson); // validate
+      } catch (extractErr) {
+        const errMsg = extractErr instanceof Error ? extractErr.message : String(extractErr);
+        logger.warn("Review JSON extraction failed, attempting repair via Claude Code", { error: errMsg });
+        try {
+          reviewedJson = await repairJSON(reviewResult.output, errMsg, sessionDir, logger);
+          logger.info("JSON repair succeeded");
+        } catch (repairErr) {
+          logger.warn("JSON repair also failed, using original analysis", {
+            error: repairErr instanceof Error ? repairErr.message : String(repairErr),
+          });
+          reviewedJson = null;
+        }
+      }
+
+      if (reviewedJson) {
         const reviewed = JSON.parse(reviewedJson) as GrowthReportContent;
         // Sanity check: make sure the reviewed version has core fields
         if (reviewed.companyName && reviewed.executiveSummary && reviewed.keyMetrics) {
@@ -225,10 +242,6 @@ export const growthReportTask = task({
         } else {
           logger.warn("Review output missing core fields, using original analysis");
         }
-      } catch (reviewErr) {
-        logger.warn("Review parsing failed, using original analysis", {
-          error: reviewErr instanceof Error ? reviewErr.message : String(reviewErr),
-        });
       }
 
       // --- Step 5.5: Re-caption screenshots with section context ---

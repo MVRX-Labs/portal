@@ -37,6 +37,7 @@ function progress(step: string, num: number) {
 
 export const growthReportTask = task({
   id: "growth-report-generation",
+  machine: "medium-2x",
   maxDuration: 3600,
   retry: { maxAttempts: 2, minTimeoutInMs: 5000 },
 

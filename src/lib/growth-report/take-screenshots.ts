@@ -22,13 +22,16 @@ export interface CapturedScreenshot extends ScreenshotTarget {
 async function capturePage(page: Page, target: ScreenshotTarget): Promise<CapturedScreenshot> {
   logger.info(`Navigating to ${target.url}`);
 
+  // Use domcontentloaded (fast, reliable) then wait for visual stability.
+  // networkidle often times out on sites with analytics/chat widgets that keep polling.
   await page.goto(target.url, {
-    waitUntil: "networkidle",
-    timeout: 30_000,
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
   });
 
-  // Extra wait for lazy-loaded content and animations
-  await page.waitForTimeout(2000);
+  // Wait for the page to be visually ready — images loaded, fonts rendered, lazy content in
+  await page.waitForLoadState("load").catch(() => {});
+  await page.waitForTimeout(3000);
 
   // Dismiss common overlays: cookie banners, popups
   await dismissOverlays(page);

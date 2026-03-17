@@ -43,6 +43,18 @@ function formatWeekLabel(week: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function formatWeekRangeLabel(week: string): string {
+  const start = new Date(week + "T00:00:00Z");
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const sMonth = start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const eMonth = end.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const sDay = start.getUTCDate();
+  const eDay = end.getUTCDate();
+  if (sMonth === eMonth) return `${sMonth} ${sDay}-${eDay}`;
+  return `${sMonth} ${sDay} - ${eMonth} ${eDay}`;
+}
+
 // --- Tool name formatting ---
 
 function formatToolName(tool: string): string {
@@ -154,7 +166,7 @@ function ToolUsageChart({ data }: { data: OrgDashboardData["toolUsage"] }) {
 
   const lookup = new Map(data.map((d) => [`${d.week}|${d.tool}`, d.count]));
   const chartData = weeks.map((week) => {
-    const row: Record<string, string | number> = { label: formatWeekLabel(week) };
+    const row: Record<string, string | number> = { label: formatWeekRangeLabel(week) };
     for (const tool of topTools) {
       row[formatToolName(tool)] = lookup.get(`${week}|${tool}`) ?? 0;
     }

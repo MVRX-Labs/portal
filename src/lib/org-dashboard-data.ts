@@ -78,16 +78,18 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
       .orderBy(sql`date_trunc('week', ${linkedinPosts.postedAt})`),
 
     // Tool usage per week (last 12 weeks, exclude scheduled jobs)
+    // Bucket into 7-day windows going backwards from today so the most recent
+    // bucket always covers a full period ending on the current date.
     db
       .select({
-        week: sql<string>`date_trunc('week', ${toolRuns.createdAt})`.as("week"),
+        week: sql<string>`(current_date - ((current_date - ${toolRuns.createdAt}::date) / 7) * 7 - 6)::text`.as("week"),
         tool: toolRuns.tool,
         count: sql<number>`count(*)::int`.as("count"),
       })
       .from(toolRuns)
       .where(and(gte(toolRuns.createdAt, twelveWeeksAgo), notInArray(toolRuns.tool, SCHEDULED_TOOLS)))
-      .groupBy(sql`date_trunc('week', ${toolRuns.createdAt})`, toolRuns.tool)
-      .orderBy(sql`date_trunc('week', ${toolRuns.createdAt})`),
+      .groupBy(sql`current_date - ((current_date - ${toolRuns.createdAt}::date) / 7) * 7 - 6`, toolRuns.tool)
+      .orderBy(sql`current_date - ((current_date - ${toolRuns.createdAt}::date) / 7) * 7 - 6`),
 
     // Account engagement leaderboard (paying accounts only)
     db

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { accountActions } from "@/lib/schema";
+import { accountActions, knowledgeUnits } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
 import { updateActionBodySchema } from "@/lib/api-schemas/actions";
@@ -25,6 +25,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   if (!action) {
     return NextResponse.json({ error: "Action not found" }, { status: 404 });
+  }
+
+  // Bidirectional sync: action status → linked knowledge unit status
+  if (data.status && action.knowledgeUnitId) {
+    const unitStatus = data.status === "completed" ? "done" : "open";
+    await db
+      .update(knowledgeUnits)
+      .set({ status: unitStatus })
+      .where(eq(knowledgeUnits.id, action.knowledgeUnitId));
   }
 
   return NextResponse.json({ action });

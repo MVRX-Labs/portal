@@ -547,6 +547,9 @@ function ExpandedView({
                     className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
                   >
                     <span className="text-sm flex-1 truncate">{action.title}</span>
+                    {action.knowledgeUnitId && (
+                      <span className="badge badge-slack whitespace-nowrap">From Slack</span>
+                    )}
                     {action.dueDate && (
                       <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
                         Due {relativeDate(action.dueDate)}

@@ -6,3 +6,4 @@
 - 2026-03-11 09:00:00: Add account health score with color-coded indicators on Accounts page
 - 2026-03-12 09:00:00: Add assignee picker and display for account actions
 - 2026-03-13 09:00:00: Replace static Dashboard with a cross-account operational command center
+- 2026-03-17 09:00:00: Auto-create account actions from Knowledge Hub extracted tasks

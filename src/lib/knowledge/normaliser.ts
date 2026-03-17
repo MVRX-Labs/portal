@@ -28,6 +28,7 @@ import {
   resolveAccountSlug,
   dedup,
 } from "./validation";
+import { createActionFromUnit, ACTIONABLE_UNIT_TYPES } from "./action-bridge";
 
 type Logger = { info: (msg: string) => void; error: (msg: string) => void };
 
@@ -232,11 +233,31 @@ async function runExtractionWithRetry(
       if (dropped > 0) logger.info(`Deduped ${dropped} units (${kept.length} kept)`);
 
       if (kept.length > 0) {
-        await db.insert(knowledgeUnits).values(kept).onConflictDoNothing();
+        const inserted = await db.insert(knowledgeUnits).values(kept).onConflictDoNothing().returning({
+          id: knowledgeUnits.id,
+          accountId: knowledgeUnits.accountId,
+          unitType: knowledgeUnits.unitType,
+          content: knowledgeUnits.content,
+          assignee: knowledgeUnits.assignee,
+          status: knowledgeUnits.status,
+          dueDate: knowledgeUnits.dueDate,
+        });
         for (const u of kept) {
           extractedSoFar.push({ type: u.unitType, content: u.content, assignee: u.assignee, status: u.status });
           // Don't push to existingForDedup here — it should remain the DB snapshot.
           // Dedup across retries works via extractedSoFar, which is included in the combined array.
+        }
+
+        // Auto-create account actions from actionable knowledge units
+        const actionableTypes = new Set<string>(ACTIONABLE_UNIT_TYPES);
+        for (const row of inserted) {
+          if (actionableTypes.has(row.unitType) && row.accountId) {
+            try {
+              await createActionFromUnit(row, logger);
+            } catch (err) {
+              logger.error(`Failed to create action from unit ${row.id}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          }
         }
       }
 

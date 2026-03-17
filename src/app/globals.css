@@ -136,6 +136,11 @@ button {
   color: var(--muted);
 }
 
+.badge-slack {
+  background: rgba(129, 90, 213, 0.15);
+  color: #8b5cf6;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

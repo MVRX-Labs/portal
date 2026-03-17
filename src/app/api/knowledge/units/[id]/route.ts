@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { knowledgeUnits, knowledgeChannels } from "@/lib/schema";
+import { knowledgeUnits, knowledgeChannels, accountActions } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
 import { patchUnitBodySchema } from "@/lib/api-schemas/knowledge";
@@ -47,6 +47,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (!updated) {
     return NextResponse.json({ error: "Unit not found" }, { status: 404 });
+  }
+
+  // Bidirectional sync: knowledge unit status → linked account action status
+  if (data.status) {
+    const effectiveStatus = updates.status as string; // "done" for both done & dismissed
+    const actionStatus = effectiveStatus === "done" ? "completed" : "pending";
+    await db
+      .update(accountActions)
+      .set({ status: actionStatus, updatedAt: new Date() })
+      .where(eq(accountActions.knowledgeUnitId, id));
   }
 
   // Re-fetch with channel name for response

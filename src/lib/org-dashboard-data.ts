@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { linkedinPosts, accounts, toolRuns } from "@/lib/schema";
-import { sql, and, gte, gt, desc, isNotNull, eq, notInArray } from "drizzle-orm";
+import { linkedinPosts, accounts, toolRuns, users } from "@/lib/schema";
+import { sql, and, gte, gt, desc, isNotNull, eq, notInArray, or, isNull } from "drizzle-orm";
 
 // Scheduled/cron jobs to exclude from tool usage chart
 const SCHEDULED_TOOLS = [
@@ -87,7 +87,19 @@ export async function getOrgDashboardData(): Promise<OrgDashboardData> {
         count: sql<number>`count(*)::int`.as("count"),
       })
       .from(toolRuns)
-      .where(and(gte(toolRuns.createdAt, twelveWeeksAgo), notInArray(toolRuns.tool, SCHEDULED_TOOLS)))
+      .where(
+        and(
+          gte(toolRuns.createdAt, twelveWeeksAgo),
+          notInArray(toolRuns.tool, SCHEDULED_TOOLS),
+          or(
+            isNull(toolRuns.userId),
+            notInArray(
+              toolRuns.userId,
+              db.select({ id: users.id }).from(users).where(eq(users.email, "danny@mvrxlabs.com"))
+            )
+          )
+        )
+      )
       .groupBy(sql`current_date - ((current_date - ${toolRuns.createdAt}::date) / 7) * 7 - 6`, toolRuns.tool)
       .orderBy(sql`current_date - ((current_date - ${toolRuns.createdAt}::date) / 7) * 7 - 6`),
 

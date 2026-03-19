@@ -6,9 +6,9 @@
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { leads, leadCsvs, accounts } from "../src/lib/schema";
+import { leads, leadCsvs, accounts } from "../../src/lib/schema";
 import { eq, isNull, desc, inArray } from "drizzle-orm";
-import { escapeCsv } from "../src/lib/csv";
+import { escapeCsv } from "../../src/lib/csv";
 
 config({ path: ".env.local" });
 

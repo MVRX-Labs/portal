@@ -7,12 +7,14 @@
  */
 
 import { task, logger, queue } from "@trigger.dev/sdk";
+import { tasks } from "@trigger.dev/sdk/v3";
 import { db } from "@/lib/db";
-import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, leadCsvs, accounts } from "@/lib/schema";
+import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, leadCsvs, accounts, icpDefinitions } from "@/lib/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { sendSlackNotification, sendSlackFile } from "@/lib/slack";
 import { escapeCsv } from "@/lib/csv";
 import { parseCompanyFromHeadline, parseTitleFromHeadline, parseDivisionFromTitle } from "@/lib/linkedin-engagement";
+import type { leadScoringBatchTask } from "@/trigger/lead-scoring";
 
 const leadUpsertQueue = queue({
   name: "linkedin-lead-upsert",
@@ -434,6 +436,29 @@ export const linkedinLeadUpsertTask = task({
         } catch (slackErr) {
           logger.error("Failed to send new leads Slack notification", {
             error: slackErr instanceof Error ? slackErr.message : String(slackErr),
+          });
+        }
+      }
+
+      // Trigger lead scoring for new leads if account has active ICP definitions
+      if (newLeads.length > 0 && newLeadIds.length > 0) {
+        try {
+          const activeIcps = await db
+            .select({ id: icpDefinitions.id })
+            .from(icpDefinitions)
+            .where(and(eq(icpDefinitions.accountId, accountId), eq(icpDefinitions.active, true)))
+            .limit(1);
+
+          if (activeIcps.length > 0) {
+            await tasks.trigger<typeof leadScoringBatchTask>("lead-scoring-batch", {
+              accountId,
+              leadIds: newLeadIds,
+            });
+            logger.info(`Triggered lead scoring for ${newLeadIds.length} new leads`);
+          }
+        } catch (scoringErr) {
+          logger.error("Failed to trigger lead scoring", {
+            error: scoringErr instanceof Error ? scoringErr.message : String(scoringErr),
           });
         }
       }

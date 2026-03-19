@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leads, contacts } from "@/lib/schema";
-import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
+import { eq, and, desc, ilike, or, isNull, sql } from "drizzle-orm";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
   const q = searchParams.get("q") || "";
   const contactId = searchParams.get("contactId") || null;
+  const tier = searchParams.get("tier") || null;
 
   const offset = (page - 1) * limit;
 
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   if (contactId) {
     conditions.push(eq(leads.contactId, contactId));
+  }
+
+  if (tier === "unscored") {
+    conditions.push(isNull(leads.tier));
+  } else if (tier && ["1", "2", "3"].includes(tier)) {
+    conditions.push(eq(leads.tier, parseInt(tier, 10)));
   }
 
   if (q) {
@@ -31,6 +38,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const where = and(...conditions);
+
+  // Sort by tier (ascending, nulls last) when scores exist, then by lastSeenAt
+  const orderClauses = [
+    sql`${leads.tier} ASC NULLS LAST`,
+    desc(leads.lastSeenAt),
+  ];
 
   const [rows, countResult] = await Promise.all([
     db
@@ -57,7 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       })
       .from(leads)
       .where(where)
-      .orderBy(desc(leads.lastSeenAt))
+      .orderBy(...orderClauses)
       .limit(limit)
       .offset(offset),
     db

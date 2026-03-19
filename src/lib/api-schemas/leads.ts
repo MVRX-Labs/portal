@@ -81,3 +81,12 @@ export const getLeadCsvsResponseSchema = z.object({
 });
 
 export type GetLeadCsvsResponse = z.infer<typeof getLeadCsvsResponseSchema>;
+
+// POST /api/accounts/[id]/leads/score
+export const scoreLeadsResponseSchema = z.object({
+  runId: z.string(),
+  triggerRunId: z.string(),
+  icpCount: z.number(),
+});
+
+export type ScoreLeadsResponse = z.infer<typeof scoreLeadsResponseSchema>;

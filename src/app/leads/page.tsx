@@ -2,7 +2,12 @@
 
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import type { GetLeadsResponse, LeadCsv, GetLeadCsvsResponse } from "@/lib/api-schemas/leads";
-import { getLeadsResponseSchema, scrapeLeadsResponseSchema, getLeadCsvsResponseSchema } from "@/lib/api-schemas/leads";
+import {
+  getLeadsResponseSchema,
+  scrapeLeadsResponseSchema,
+  getLeadCsvsResponseSchema,
+  scoreLeadsResponseSchema,
+} from "@/lib/api-schemas/leads";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAccount } from "@/components/account-provider";
@@ -16,6 +21,9 @@ interface Lead {
   company: string | null;
   profileImageUrl: string | null;
   engagementTypes: string[];
+  tier: number | null;
+  conversionPct: number | null;
+  rationale: string | null;
   contactId: string | null;
   contactName: string | null;
   firstSeenAt: string;
@@ -33,6 +41,20 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+function TierBadge({ tier }: { tier: number | null }) {
+  if (tier === null) return <span className="text-[10px] text-(--muted)">--</span>;
+  const styles: Record<number, string> = {
+    1: "bg-green-500/20 text-green-400",
+    2: "bg-amber-500/20 text-amber-400",
+    3: "bg-zinc-500/20 text-zinc-400",
+  };
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${styles[tier] || styles[3]}`}>
+      T{tier}
+    </span>
+  );
+}
+
 function LeadsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -44,10 +66,13 @@ function LeadsContent() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [contactFilter, setContactFilter] = useState(searchParams.get("contactId") || "");
+  const [tierFilter, setTierFilter] = useState(searchParams.get("tier") || "");
   const [scraping, setScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
   const [daysBack, setDaysBack] = useState(1);
   const scrapingRef = useRef(false);
+  const [scoring, setScoring] = useState(false);
+  const [scoreStatus, setScoreStatus] = useState<string | null>(null);
   const [tab, setTab] = useState<"leads" | "csvs">("leads");
   const [csvs, setCsvs] = useState<LeadCsv[]>([]);
   const [csvPagination, setCsvPagination] = useState<Pagination | null>(null);
@@ -67,6 +92,7 @@ function LeadsContent() {
     params.set("limit", "50");
     if (search) params.set("q", search);
     if (contactFilter) params.set("contactId", contactFilter);
+    if (tierFilter) params.set("tier", tierFilter);
 
     try {
       const data = await apiFetch(`/api/accounts/${account.id}/leads?${params}`, getLeadsResponseSchema);
@@ -77,7 +103,7 @@ function LeadsContent() {
     } finally {
       setLoading(false);
     }
-  }, [account, page, search, contactFilter]);
+  }, [account, page, search, contactFilter, tierFilter]);
 
   useEffect(() => {
     fetchLeads();
@@ -139,6 +165,24 @@ function LeadsContent() {
     }
   };
 
+  const handleScoreLeads = async () => {
+    if (!account || scoring) return;
+    setScoring(true);
+    setScoreStatus(null);
+
+    try {
+      const data = await apiMutate(`/api/accounts/${account.id}/leads/score`, scoreLeadsResponseSchema, {
+        method: "POST",
+        body: {},
+      });
+      setScoreStatus(`Scoring triggered (run ${data.runId}). Scores will update shortly.`);
+    } catch (err) {
+      setScoreStatus(err instanceof Error ? err.message : "Failed to trigger scoring");
+    } finally {
+      setScoring(false);
+    }
+  };
+
   if (!account) {
     return (
       <div>
@@ -163,6 +207,9 @@ function LeadsContent() {
           <button onClick={handleScrape} disabled={scraping} className="btn-secondary text-sm">
             {scraping ? "Triggering..." : "Run Scrape"}
           </button>
+          <button onClick={handleScoreLeads} disabled={scoring} className="btn-secondary text-sm">
+            {scoring ? "Scoring..." : "Score Leads"}
+          </button>
           <button onClick={handleExport} className="btn-primary text-sm">
             Export CSV
           </button>
@@ -175,6 +222,9 @@ function LeadsContent() {
 
       {scrapeStatus && (
         <div className="text-sm px-3 py-2 mb-4 rounded bg-(--input) border border-(--border)">{scrapeStatus}</div>
+      )}
+      {scoreStatus && (
+        <div className="text-sm px-3 py-2 mb-4 rounded bg-(--input) border border-(--border)">{scoreStatus}</div>
       )}
 
       <div className="flex gap-1 mb-4 border-b border-(--border)">
@@ -214,37 +264,55 @@ function LeadsContent() {
                 </option>
               ))}
             </select>
+            <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className="w-36">
+              <option value="">All Tiers</option>
+              <option value="1">Tier 1</option>
+              <option value="2">Tier 2</option>
+              <option value="3">Tier 3</option>
+              <option value="unscored">Unscored</option>
+            </select>
           </div>
 
           <div className="card overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-(--border) text-left text-(--muted)">
+                  <th className="px-3 py-2 font-medium">Tier</th>
                   <th className="px-3 py-2 font-medium">Name</th>
                   <th className="px-3 py-2 font-medium">Headline</th>
                   <th className="px-3 py-2 font-medium">Company</th>
+                  <th className="px-3 py-2 font-medium">Conv %</th>
                   <th className="px-3 py-2 font-medium">Engagement</th>
                   <th className="px-3 py-2 font-medium">Source</th>
-                  <th className="px-3 py-2 font-medium">First Seen</th>
                   <th className="px-3 py-2 font-medium">Last Seen</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    <td colSpan={8} className="py-8 text-center text-(--muted)">
                       Loading...
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    <td colSpan={8} className="py-8 text-center text-(--muted)">
                       No leads found
                     </td>
                   </tr>
                 ) : (
                   leads.map((lead) => (
                     <tr key={lead.id} className="border-b border-(--border) last:border-0">
+                      <td className="px-3 py-1.5">
+                        <div className="relative group inline-block">
+                          <TierBadge tier={lead.tier} />
+                          {lead.rationale && (
+                            <div className="absolute z-10 hidden group-hover:block left-0 top-full mt-1 w-64 p-2 rounded bg-zinc-800 border border-(--border) text-xs text-(--muted) shadow-lg">
+                              {lead.rationale}
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-1.5">
                         <a
                           href={lead.linkedinUrl}
@@ -258,6 +326,9 @@ function LeadsContent() {
                       </td>
                       <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
                       <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
+                      <td className="px-3 py-1.5 text-(--muted)">
+                        {lead.conversionPct !== null ? `${lead.conversionPct}%` : "\u2014"}
+                      </td>
                       <td className="px-3 py-1.5">
                         <div className="flex gap-1 flex-wrap">
                           {(lead.engagementTypes || []).map((type) => (
@@ -271,7 +342,6 @@ function LeadsContent() {
                         </div>
                       </td>
                       <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
                       <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
                     </tr>
                   ))

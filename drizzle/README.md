@@ -4,10 +4,10 @@ This project uses [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL. Ther
 
 ## Environments
 
-| Environment | Database | Config source |
-|-------------|----------|---------------|
-| Local | `localhost:5432` (Docker) | `.env.local` |
-| Production | Neon (pooled) | `.env.production` (pulled from Vercel) |
+| Environment | Database                  | Config source                          |
+| ----------- | ------------------------- | -------------------------------------- |
+| Local       | `localhost:5432` (Docker) | `.env.local`                           |
+| Production  | Neon (pooled)             | `.env.production` (pulled from Vercel) |
 
 The Drizzle config (`drizzle.config.ts`) hardcodes `.env.local`, so all `drizzle-kit` commands target the **local** database by default.
 
@@ -26,11 +26,13 @@ This uses `drizzle-kit push` which applies the schema directly without migration
 1. **Edit the schema** in `src/lib/schema.ts`.
 
 2. **Generate a migration file:**
+
    ```bash
    npm run db:generate    # creates a new SQL file in drizzle/
    ```
 
 3. **Apply the migration locally:**
+
    ```bash
    npm run db:migrate     # runs drizzle-kit migrate against local DB
    ```
@@ -54,16 +56,19 @@ Production uses `drizzle-kit push` to apply schema changes directly (no migratio
 ### Steps
 
 1. **Pull production env vars from Vercel:**
+
    ```bash
    npx vercel env pull .env.production --environment=production
    ```
 
 2. **Push the schema to production:**
+
    ```bash
    npx drizzle-kit push --config drizzle-prod.config.ts
    ```
 
    Or, if you don't have a separate prod config, temporarily swap the env file:
+
    ```bash
    # Backup and swap
    cp .env.local .env.local.bak
@@ -79,13 +84,13 @@ Production uses `drizzle-kit push` to apply schema changes directly (no migratio
 
 ## npm scripts reference
 
-| Script | Command | Purpose |
-|--------|---------|---------|
+| Script        | Command                | Purpose                                           |
+| ------------- | ---------------------- | ------------------------------------------------- |
 | `db:generate` | `drizzle-kit generate` | Generate a migration SQL file from schema changes |
-| `db:migrate` | `drizzle-kit migrate` | Apply pending migration files to local DB |
-| `db:push` | `drizzle-kit push` | Apply schema diff directly (no migration file) |
-| `db:seed` | `tsx scripts/seed.ts` | Seed the database with initial data |
-| `setup` | Docker + push + seed | Full local environment setup |
+| `db:migrate`  | `drizzle-kit migrate`  | Apply pending migration files to local DB         |
+| `db:push`     | `drizzle-kit push`     | Apply schema diff directly (no migration file)    |
+| `db:seed`     | `tsx scripts/seed.ts`  | Seed the database with initial data               |
+| `setup`       | Docker + push + seed   | Full local environment setup                      |
 
 ## Troubleshooting
 

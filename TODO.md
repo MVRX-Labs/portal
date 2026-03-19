@@ -1,10 +1,12 @@
+Actual TODOs:
+
+- Organise the trigger jobs a bit more. It needs to be easy to know what they all are.
+- Organise paid APIs or Claude process to do specific enrichment activities eg linkedin url <-> email <-> company
+
 This looked a bit scary:
 
 ````Note: One thing to watch — your db.ts uses the postgres (pg-native) driver. Vercel's Neon Postgres works with this, but if you hit connection issues in serverless, you
 may need to switch to Neon's serverless driver (@neondatabase/serverless). Cross that bridge if you get there.```
-
-To consider:
-Using an external service for email address -> linkedin profile + company lookup
 
 extruct.ai looks a bit interesting
 so does https://getlate.dev/

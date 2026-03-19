@@ -55,6 +55,7 @@ export async function runWeeklyReportForProfile(
       .filter(Boolean);
     const msg = buildAnalyticsSlackMessage(report);
     for (const ch of channelIds) {
+      // TODO: suss? Can a channel be in there more than once
       await sendAnalyticsSlackMessage(ch, msg.text, msg.blocks, {
         unfurl_links: msg.unfurl_links,
         unfurl_media: msg.unfurl_media,

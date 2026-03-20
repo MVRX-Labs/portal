@@ -132,3 +132,13 @@ export const growthReportBodySchema = z.object({
 });
 
 export type GrowthReportBody = z.infer<typeof growthReportBodySchema>;
+
+// POST /api/tools/geo-audit
+export const geoAuditBodySchema = z.object({
+  accountId: requiredAccountId,
+  websiteUrl: z.string().min(1, "Website URL is required"),
+  brandName: z.string().optional(),
+  model: z.string().optional(),
+});
+
+export type GeoAuditBody = z.infer<typeof geoAuditBodySchema>;

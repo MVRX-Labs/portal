@@ -341,6 +341,28 @@ export const TOOLS: ToolConfig[] = [
     ],
   },
   {
+    id: "geo-audit",
+    name: "GEO Audit",
+    description:
+      "Audit a website's optimization for AI search engines (ChatGPT, Perplexity, Gemini, Google AI Overviews) — scoring citability, brand authority, E-E-A-T, technical SEO, schema, and platform optimization.",
+    href: "/tools/geo-audit",
+    fields: [
+      {
+        name: "websiteUrl",
+        label: "Website URL",
+        type: "text",
+        placeholder: "https://example.com",
+        required: true,
+      },
+      {
+        name: "brandName",
+        label: "Brand Name (Optional)",
+        type: "text",
+        placeholder: "Leave blank to auto-detect from the website",
+      },
+    ],
+  },
+  {
     id: "ingest-skill",
     name: "Ingest Skill",
     description:

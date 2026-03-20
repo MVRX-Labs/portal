@@ -24,6 +24,7 @@ const accountItems: NavItem[] = [
   { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
   { href: "/tools/outbound-sequence", label: "Outbound Sequence Playbook", icon: "📨", beta: true },
   { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊", beta: true },
+  { href: "/tools/geo-audit", label: "GEO Audit", icon: "🤖", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
   { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
   // { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true }, NOT NEEDED?

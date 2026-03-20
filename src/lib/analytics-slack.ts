@@ -28,7 +28,9 @@ export function buildAnalyticsSlackMessage(report: WeeklyReportData): {
   blocks: Record<string, unknown>[];
   unfurl_links: boolean;
   unfurl_media: boolean;
-} {
+} | null {
+  // Don't send a report if there were no posts this week
+  if (report.summary.newPostsThisWeek === 0) return null;
   const s = report.summary;
   const period = `${fmtDate(report.weekStart)} — ${fmtDate(report.weekEnd)}`;
 
@@ -48,24 +50,26 @@ export function buildAnalyticsSlackMessage(report: WeeklyReportData): {
 
   blocks.push({ type: "divider" });
 
-  // KPIs
-  const cadence = s.hasComparison
-    ? `${s.newPostsThisWeek} posts (${s.postsLastWeek} last week)`
-    : `${s.newPostsThisWeek} posts`;
+  // KPIs — skip when only 1 post (best post section already covers it)
+  if (s.newPostsThisWeek > 1) {
+    const cadence = s.hasComparison
+      ? `${s.newPostsThisWeek} posts (${s.postsLastWeek} last week)`
+      : `${s.newPostsThisWeek} posts`;
 
-  const engLine = s.hasComparison
-    ? `*${s.engagementThisWeek.toLocaleString()}*  (${fmtDelta(s.deltaEngagement)} WoW)`
-    : `*${s.engagementThisWeek.toLocaleString()}*`;
+    const engLine = s.hasComparison
+      ? `*${s.engagementThisWeek.toLocaleString()}*  (${fmtDelta(s.deltaEngagement)} WoW)`
+      : `*${s.engagementThisWeek.toLocaleString()}*`;
 
-  blocks.push({
-    type: "section",
-    fields: [
-      { type: "mrkdwn", text: `*Posts Published*\n${cadence}` },
-      { type: "mrkdwn", text: `*Avg Eng / Post*\n${s.avgEngagementPerPost.toLocaleString()}` },
-      { type: "mrkdwn", text: `*This Week*\n${engLine}` },
-      { type: "mrkdwn", text: `*All-Time*\n${s.totalPosts} posts · ${s.totalEngagement.toLocaleString()} eng` },
-    ],
-  });
+    blocks.push({
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Posts Published*\n${cadence}` },
+        { type: "mrkdwn", text: `*Avg Eng / Post*\n${s.avgEngagementPerPost.toLocaleString()}` },
+        { type: "mrkdwn", text: `*This Week*\n${engLine}` },
+        // { type: "mrkdwn", text: `*All-Time*\n${s.totalPosts} posts · ${s.totalEngagement.toLocaleString()} eng` },
+      ],
+    });
+  }
 
   // Best post — just stats + link, no snippet
   if (report.bestPostThisWeek) {
@@ -74,7 +78,10 @@ export function buildAnalyticsSlackMessage(report: WeeklyReportData): {
     blocks.push({ type: "divider" });
     blocks.push({
       type: "section",
-      text: { type: "mrkdwn", text: `*Best Post This Week*\n${bp.likes} likes · ${bp.comments} comments · ${bp.reposts} reposts · *${bp.engagement} total*${link}` },
+      text: {
+        type: "mrkdwn",
+        text: `*Best Post This Week*\n${bp.likes} likes · ${bp.comments} comments · ${bp.reposts} reposts · *${bp.engagement} total*${link}`,
+      },
     });
   }
 
@@ -91,17 +98,17 @@ export function buildAnalyticsSlackMessage(report: WeeklyReportData): {
     });
   }
 
-  // Cumulative summary
-  if (s.hasComparison) {
-    blocks.push({ type: "divider" });
-    blocks.push({
-      type: "context",
-      elements: [{
-        type: "mrkdwn",
-        text: `All-time: ${s.totalLikes.toLocaleString()} likes (${fmtDelta(s.deltaLikes)}) · ${s.totalComments.toLocaleString()} comments (${fmtDelta(s.deltaComments)}) · ${s.totalReposts.toLocaleString()} reposts (${fmtDelta(s.deltaReposts)})`,
-      }],
-    });
-  }
+  // Cumulative summary — commented out until we clarify what "all-time" should mean
+  // if (s.hasComparison) {
+  //   blocks.push({ type: "divider" });
+  //   blocks.push({
+  //     type: "context",
+  //     elements: [{
+  //       type: "mrkdwn",
+  //       text: `All-time: ${s.totalLikes.toLocaleString()} likes (${fmtDelta(s.deltaLikes)}) · ${s.totalComments.toLocaleString()} comments (${fmtDelta(s.deltaComments)}) · ${s.totalReposts.toLocaleString()} reposts (${fmtDelta(s.deltaReposts)})`,
+  //     }],
+  //   });
+  // }
 
   const fallbackText = `Weekly Report — ${report.displayName} (${period}): ${s.newPostsThisWeek} posts, ${s.engagementThisWeek.toLocaleString()} engagement`;
 

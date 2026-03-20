@@ -49,19 +49,21 @@ export async function runWeeklyReportForProfile(
     channelId = acct?.analyticsSlackChannel ?? null;
   }
   if (channelId) {
-    const channelIds = channelId
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
     const msg = buildAnalyticsSlackMessage(report);
-    for (const ch of channelIds) {
-      // TODO: suss? Can a channel be in there more than once
-      await sendAnalyticsSlackMessage(ch, msg.text, msg.blocks, {
-        unfurl_links: msg.unfurl_links,
-        unfurl_media: msg.unfurl_media,
-      });
+    if (msg) {
+      const channelIds = channelId
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      for (const ch of channelIds) {
+        // TODO: suss? Can a channel be in there more than once
+        await sendAnalyticsSlackMessage(ch, msg.text, msg.blocks, {
+          unfurl_links: msg.unfurl_links,
+          unfurl_media: msg.unfurl_media,
+        });
+      }
+      slackSent = true;
     }
-    slackSent = true;
   }
 
   return { report, slackSent };

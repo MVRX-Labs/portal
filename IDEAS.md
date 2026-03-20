@@ -7,3 +7,5 @@
 - 2026-03-12 09:00:00: Add assignee picker and display for account actions
 - 2026-03-13 09:00:00: Replace static Dashboard with a cross-account operational command center
 - 2026-03-17 09:00:00: Auto-create account actions from Knowledge Hub extracted tasks
+- 2026-03-18 09:00:00: Add daily cross-system account risk alerts via Slack
+- 2026-03-19 09:00:00: AI-powered lead scoring pipeline with ICP qualification, tier badges, and Slack alerts

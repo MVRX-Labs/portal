@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, Header, Footer, TableOfContents, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, Table, Header, Footer, AlignmentType } from "docx";
 import type { GrowthReportContent } from "./schema";
 import {
   PAGE_WIDTH,
@@ -81,19 +81,37 @@ export async function buildGrowthReportDocx(
   // --- Body children (Section 1) ---
   const body: (Paragraph | Table)[] = [];
 
-  // Table of Contents
+  // Static Table of Contents (works in Google Docs unlike auto-generated TOC fields)
+  const tocSections: string[] = ["Executive Summary"];
+  if (content.trafficAnalysis) tocSections.push("Traffic & Audience Analysis");
+  if (content.domainAuthority) tocSections.push("Domain Authority & Backlink Profile");
+  if (content.siteAudit) tocSections.push("On-Site SEO Audit");
+  if (content.competitiveBenchmarking) tocSections.push("Competitive Benchmarking");
+  if (content.contentAudit) tocSections.push("Content & Blog Audit");
+  if (content.linkedinAudit) tocSections.push("LinkedIn Audit");
+  if (content.socialSeo) tocSections.push("Social SEO");
+  if (content.aiVisibility) tocSections.push("AI Visibility & Technical AI Seeding");
+  if (content.entitySeo) tocSections.push("Local Entity SEO");
+  if (content.redditAudit) tocSections.push("Reddit Presence Audit");
+  if (content.linkedinStrategy) tocSections.push("LinkedIn Content Strategy");
+  if (content.masterStrategy) tocSections.push("Master Strategy");
+  if (content.measurementFramework) tocSections.push("Measurement Framework");
+  tocSections.push("Case Studies", "Statement of Work", "Pricing Proposal");
+
   body.push(
     new Paragraph({
-      spacing: { after: 200 },
+      spacing: { after: 300 },
       children: [tr("Contents", { bold: true, size: SZ.sectionH, color: C.brand })],
     })
   );
-  body.push(
-    new TableOfContents("Table of Contents", {
-      hyperlink: true,
-      headingStyleRange: "1-2",
-    })
-  );
+  for (let i = 0; i < tocSections.length; i++) {
+    body.push(
+      new Paragraph({
+        spacing: { after: 80 },
+        children: [tr(`${i + 1}.  `, { size: SZ.body, color: C.gray }), tr(tocSections[i], { size: SZ.body })],
+      })
+    );
+  }
 
   // Executive Summary (includes KPI cards) — sectionH has pageBreakBefore
   body.push(sectionH("Executive Summary"), ...executiveSummary(content), ...insertScreenshots("executiveSummary"));
@@ -137,7 +155,6 @@ export async function buildGrowthReportDocx(
 
   const doc = new Document({
     numbering: numbering(),
-    features: { updateFields: true },
     styles: {
       default: {
         heading1: {

@@ -7,6 +7,10 @@
  * All templates use {{POST}} as a placeholder for the LinkedIn post content.
  */
 
+import { AI_TELL_VOCABULARY } from "@/lib/humanisation";
+
+const AI_TELL_LIST = AI_TELL_VOCABULARY.join(", ");
+
 const THREAD_EXAMPLE = `TWEET 1
 Today, my little one-person business crossed $5M in revenue.
 
@@ -135,6 +139,9 @@ Avoid at all costs writing tweets in one line. Good tweets have proper formattin
 
 If you use emojis and hashtags in your Twitter thread's tweets, you will be fired.
 
+NEVER use em dashes (\u2014). Use commas, periods, or colons instead.
+NEVER use these AI-flagged words: ${AI_TELL_LIST}
+
 Take a deep breath and work on this step by step.`,
   },
 
@@ -152,7 +159,7 @@ Take a deep breath and work on this step by step.`,
 - Add personal reactions and opinions: "this blew my mind", "I was dead wrong about this", "honestly?"
 - Use specific concrete details instead of vague abstractions
 - Start sentences with "And" or "But" sometimes. Use fragments. Real people do this.
-- NEVER use these AI-flagged words: delve, tapestry, landscape, comprehensive, multifaceted, cutting-edge, revolutionary, leverage (as verb), navigate (metaphorical), "it's important to note", "in today's ever-evolving", "in summary", "in conclusion", "furthermore", "moreover", "additionally", "testament to", "underscore"
+- NEVER use these AI-flagged words: ${AI_TELL_LIST}
 - Avoid perfectly parallel structure — real humans don't write in perfectly balanced lists
 - No corporate-speak. No LinkedIn-speak. No "I'm excited to share" or "I'm thrilled to announce"
 - Absolutely no emojis or hashtags unless the original author used them
@@ -219,7 +226,8 @@ CLOSE (Final tweet):
 # Anti-patterns to avoid
 - No emojis or hashtags (unless the original author used them)
 - No "I'm excited to share" or LinkedIn-speak
-- No AI words: delve, leverage, navigate, comprehensive, cutting-edge, revolutionary, landscape, multifaceted
+- No AI words: ${AI_TELL_LIST}
+- NEVER use em dashes (\u2014). Use commas, periods, or colons instead.
 - Never write a tweet as a single long sentence. Use line breaks and formatting.
 - Don't be balanced and neutral — have a point of view. Mild controversy drives replies.
 

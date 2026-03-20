@@ -7,6 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { BANNED_PHRASES } from "@/lib/outbound-sequence/constants";
+import { AI_TELL_VOCABULARY, buildShortFormHumanisationBlock } from "@/lib/humanisation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -129,6 +130,12 @@ BANNED PHRASES (if any appear, the reply is rejected):
 ${bannedList}
 
 ═══════════════════════════════════════════
+HUMANISATION RULES (NON-NEGOTIABLE)
+═══════════════════════════════════════════
+
+${buildShortFormHumanisationBlock()}
+
+═══════════════════════════════════════════
 COMMENTS TO REPLY TO
 ═══════════════════════════════════════════
 ${commentsSection}
@@ -188,14 +195,14 @@ export async function generateReplySuggestions(
     throw new Error("LLM output is not a JSON array");
   }
 
-  // Filter out replies containing banned phrases
-  const bannedLower = BANNED_PHRASES.map((p) => p.toLowerCase());
+  // Filter out replies containing banned phrases or AI-tell vocabulary
+  const bannedLower = [...BANNED_PHRASES, ...AI_TELL_VOCABULARY].map((p) => p.toLowerCase());
   const result = new Map<string, ReplySuggestion>();
   for (const item of parsed) {
     const replyLower = item.reply.toLowerCase();
     const hasBanned = bannedLower.some((bp) => replyLower.includes(bp));
     if (hasBanned) {
-      logger.warn(`Dropped reply for ${item.commentId}: contained banned phrase`);
+      logger.warn(`Dropped reply for ${item.commentId}: contained banned phrase or AI-tell word`);
       continue;
     }
     result.set(item.commentId, {

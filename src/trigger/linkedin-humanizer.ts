@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { toolRuns } from "@/lib/schema";
 import { sendSlackNotification } from "@/lib/slack";
 import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
+import { buildAntiAIVocabBlock, buildPunctuationRulesBlock, buildNaturalnessBlock } from "@/lib/humanisation";
 
 const TONE_GUIDANCE: Record<string, string> = {
   professional: `Tone: Professional. Use polished but natural language. Avoid jargon for jargon's sake.
@@ -44,21 +45,17 @@ ${writingExamples}
 
   return `You are an expert LinkedIn ghostwriter who specializes in making AI-generated posts sound authentically human. You write for a platform where readers are actively looking for AI tells — em dashes, buzzwords, formulaic hooks — and judging accordingly.
 
-ANTI-PATTERN RULES — VOCABULARY:
-- NEVER use these words or phrases: delve, tapestry, moreover, furthermore, comprehensive, robust, utilize, leverage, nuanced, crucial, significant, transformative, testament, authentic, enhance, ever-evolving, in conclusion, additionally, it's worth noting, game-changer, landscape, navigate, realm, embark, foster, facilitate, streamline, underscore, commendable, meticulous, adept
+${buildAntiAIVocabBlock()}
 - Do NOT start consecutive sentences with the same word
 
-ANTI-PATTERN RULES — PUNCTUATION AND FORMATTING:
-- AVOID em dashes (—). Use commas, periods, colons, or parentheses instead. Em dashes are the single most discussed AI writing tell on LinkedIn and social media. If an em dash is absolutely necessary, use at most one in the entire post.
+${buildPunctuationRulesBlock()}
 - Do NOT use bullet points or numbered lists unless the original post has them
 - Do NOT use a formulaic intro-body-conclusion structure
 - Do NOT open with emoji-title-emoji patterns (e.g., 🚀 Big News! 🚀)
-- Do NOT scatter emojis after every sentence or paragraph. If emojis are used, limit to 1-2 total, placed where they feel earned, not decorative. Avoid the "AI emoji trinity": 🚀, ✨, ⭐
+- Avoid the "AI emoji trinity": 🚀, ✨, ⭐
 
-ANTI-PATTERN RULES — LANGUAGE NATURALNESS:
-- USE contractions naturally throughout (it's, don't, can't, I've, we're, you'll). Fully expanded forms like "it is," "do not," "cannot" read as stiff and robotic. Default to contractions unless the tone calls for unusual formality.
-- Vary sentence length dramatically — mix short punchy fragments with longer complex ones. This "burstiness" is the single biggest differentiator between human and AI writing.
-- Write at roughly a 6th-8th grade reading level. Short words beat long words. "Use" beats "utilize." "Help" beats "facilitate." LinkedIn's algorithm penalizes posts above a 10th-grade reading level with 35%+ less reach.
+${buildNaturalnessBlock()}
+- LinkedIn's algorithm penalizes posts above a 10th-grade reading level with 35%+ less reach.
 
 PERSONAL VOICE INJECTION:
 - Where the original post makes a generic claim ("This is important for leaders"), rewrite with first-person stance or subjective framing ("I've watched this trip up even experienced leaders" / "Here's what I think most people miss")

@@ -1,6 +1,21 @@
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { taskContext } from "@trigger.dev/core/v3";
+import { hostname } from "os";
+
+function getEnvironmentLabel(): string {
+  const ctx = taskContext.ctx;
+  if (!ctx) return "unknown";
+
+  const envType = ctx.environment.type; // "PRODUCTION" | "STAGING" | "DEVELOPMENT" | "PREVIEW"
+
+  if (envType === "DEVELOPMENT") {
+    return `Dev (${hostname()})`;
+  }
+
+  return envType.charAt(0) + envType.slice(1).toLowerCase(); // "Production", "Staging", "Preview"
+}
 
 export async function sendSlackNotification(message: { tool: string; userName: string; error: string; runId: string }) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
@@ -9,15 +24,17 @@ export async function sendSlackNotification(message: { tool: string; userName: s
     return;
   }
 
+  const envLabel = getEnvironmentLabel();
+
   const payload = {
-    text: `🚨 *Tool Run Failed*`,
+    text: `🚨 *Tool Run Failed* [${envLabel}]`,
     blocks: [
       {
         type: "section",
         text: {
           type: "mrkdwn",
           text: [
-            `🚨 *Tool Run Failed*`,
+            `🚨 *Tool Run Failed* — \`${envLabel}\``,
             `*Tool:* ${message.tool}`,
             `*User:* ${message.userName}`,
             `*Error:* ${message.error}`,
@@ -56,10 +73,11 @@ export async function sendSlackSuggestionNotification(message: {
     return;
   }
 
+  const envLabel = getEnvironmentLabel();
   const lines =
     message.type === "pr_created"
       ? [
-          `🔧 *Suggestion PR Created*`,
+          `🔧 *Suggestion PR Created* — \`${envLabel}\``,
           `*Tool:* ${message.toolId}`,
           `*Description:* ${message.description}`,
           `*Submitted by:* ${message.userName}`,
@@ -68,7 +86,7 @@ export async function sendSlackSuggestionNotification(message: {
           `*Run ID:* ${message.runId}`,
         ]
       : [
-          `❌ *Suggestion Failed*`,
+          `❌ *Suggestion Failed* — \`${envLabel}\``,
           `*Tool:* ${message.toolId}`,
           `*Description:* ${message.description}`,
           `*Submitted by:* ${message.userName}`,
@@ -116,10 +134,11 @@ export async function sendSlackIdeaNotification(message: {
     return;
   }
 
+  const envLabel = getEnvironmentLabel();
   const lines =
     message.type === "pr_created"
       ? [
-          `*Idea Bot — PR Created*`,
+          `*Idea Bot — PR Created* — \`${envLabel}\``,
           `*Idea:* ${message.idea}`,
           `*Scope:* ${message.scope}`,
           `*Branch:* ${message.branchName}`,
@@ -127,7 +146,7 @@ export async function sendSlackIdeaNotification(message: {
           message.costUsd !== undefined ? `*Cost:* $${message.costUsd.toFixed(4)}` : "",
         ].filter(Boolean)
       : [
-          `*Idea Bot — Failed*`,
+          `*Idea Bot — Failed* — \`${envLabel}\``,
           `*Idea:* ${message.idea}`,
           `*Scope:* ${message.scope}`,
           `*Error:* ${message.error}`,
@@ -219,7 +238,7 @@ export async function sendAnalyticsSlackMessage(
   channelId: string,
   text: string,
   blocks: Record<string, unknown>[],
-  options?: { unfurl_links?: boolean; unfurl_media?: boolean; thread_ts?: string },
+  options?: { unfurl_links?: boolean; unfurl_media?: boolean; thread_ts?: string }
 ): Promise<void> {
   const token = process.env.ANALYTICS_SLACKBOT_TOKEN;
   if (!token) {

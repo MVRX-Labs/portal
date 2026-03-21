@@ -3,7 +3,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { execSync } from "child_process";
 import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
-import { tmpdir } from "os";
+import { tmpdir, hostname } from "os";
+import { taskContext } from "@trigger.dev/core/v3";
 
 function exec(cmd: string, cwd: string): string {
   return execSync(cmd, {
@@ -18,12 +19,19 @@ async function sendSlackNotification(message: string) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) return;
 
+  const ctx = taskContext.ctx;
+  let envLabel = "unknown";
+  if (ctx) {
+    const envType = ctx.environment.type;
+    envLabel = envType === "DEVELOPMENT" ? `Dev (${hostname()})` : envType.charAt(0) + envType.slice(1).toLowerCase();
+  }
+
   await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      text: "Doc Gardening",
-      blocks: [{ type: "section", text: { type: "mrkdwn", text: message } }],
+      text: `Doc Gardening [${envLabel}]`,
+      blocks: [{ type: "section", text: { type: "mrkdwn", text: `${message} — \`${envLabel}\`` } }],
     }),
   });
 }

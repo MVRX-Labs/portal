@@ -22,7 +22,7 @@ export default defineConfig({
     external: ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk", "postgres", "playwright-core"],
     extensions: [
       additionalPackages({
-        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk", "sharp", "cheerio"],
+        packages: ["@seomator/seo-audit", "@anthropic-ai/sdk", "sharp", "cheerio@1.2.0"],
       }),
       playwright({ browsers: ["chromium"] }),
     ],

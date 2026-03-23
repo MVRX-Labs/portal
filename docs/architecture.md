@@ -18,11 +18,10 @@ src/
     api/         # API endpoints (REST)
       tools/     # Endpoints that trigger background jobs
       admin/     # Admin-only endpoints
-      hooks/     # Webhooks (job completion callbacks)
     dashboard/   # Main UI pages
     tools/       # Tool UI pages
     admin/       # Admin UI
-  trigger/       # Trigger.dev background tasks (18 task IDs across 17 task files)
+  trigger/       # Trigger.dev background tasks
   components/    # React components
   lib/           # Shared utilities, DB schema, API clients
 scripts/         # Dev scripts (seed, migrations, pre-commit hooks)
@@ -61,7 +60,9 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `users` — Portal users (Google OAuth)
 - `accounts` — Companies being tracked (with MRR, engagement settings)
 - `contacts` — People at companies (linked to accounts)
-- `leads` — LinkedIn profiles from engagement scraping
+- `leads` — LinkedIn profiles discovered via engagement scraping (with tier, scoring, enrichment fields)
+- `leadCsvs` — CSV snapshots of leads per profile/scrape-window, stored as text
+- `icpDefinitions` — Ideal Customer Profile definitions per account (titles, industries, company sizes, signals)
 - `toolRuns` — Record of all background job executions
 - `accountActions` — Action items per account
 - `calendarSyncState`, `calendarEvents`, `calendarEventAccounts`, `calendarEventContacts` — Calendar automation
@@ -72,6 +73,15 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `linkedinPostEngagements` — Reactions and reposts on posts, used for lead discovery
 - `linkedinSyncRuns` — Sync job execution records per profile
 - `analyticsReports` — Generated weekly analytics reports, with PDF URL and Slack message TS
+- `apifyCache` — Deduplication cache for Apify actor results (keyed by actor + input hash, with TTL)
+- `secretTypes` — Credential type registry (e.g. "Apollo API Key", "HeyReach Token")
+- `secrets` — Stored credentials per account/contact, linked to a secret type
+- `knowledgeChannels` — Slack channel to account mapping (shared vs. internal, with channel category)
+- `knowledgeSyncState` — Per-channel Slack sync cursor (last message timestamp)
+- `knowledgeEvents` — Append-only log of raw events from all knowledge sources (Slack, Drive, etc.)
+- `knowledgeUnits` — LLM-extracted, typed knowledge items (action_item, decision, context_update, request, feedback, deliverable, blocker)
+- `knowledgeState` — Per-account living state documents (brief, open_items, activity_log); one row per type per account
+- `knowledgeDigestMessages` — Tracks Slack DM digest messages per unit/recipient for done/undone marking
 
 ID scheme: CUID2 with prefixes (`user_`, `acct_`, `contact_`, `lead_`, `run_`, etc.) — see `src/lib/ids.ts`.
 
@@ -84,8 +94,14 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 - `linkedin-audit-generation` — Profile analysis + DOCX report
 - `linkedin-post-generator` — AI content creation with voice matching
 - `linkedin-humanizer` — Tone refinement
+- `linkedin-to-twitter` — Repurposes LinkedIn posts into Twitter threads via Claude Agent SDK
 - `sentiment-analysis-generation` — Company perception research
 - `gtm-strategy-generation` — Go-to-market strategy document
+- `outbound-sequence-generation` — LinkedIn outbound sequence playbook with A/B/C variants and optional capacity planning
+- `seo-audit-generation` — Technical SEO audit via Seomator, produces DOCX report
+- `geo-audit` — GEO (Generative Engine Optimization) audit; scores a site across 6 AI-visibility dimensions, produces DOCX report
+- `growth-report-generation` — Full growth report: traffic, SEO, social, competitive benchmarking; multi-phase Apify + Claude orchestrator
+- `ingest-skill` — Reads a third-party SKILL.md, implements it as a native portal tool, and opens a GitHub PR
 - `implement-suggestion` — Creates GitHub PRs from user suggestions
 
 **Automation tasks** (triggered via API or scheduled):
@@ -96,14 +112,24 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 - `account-enrichment` — Company data enrichment via web search
 - `weekly-analytics` — Scrapes a single managed client LinkedIn profile, generates a weekly performance report, sends to Slack (triggered by `weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
 - `track-post` — Scrapes live LinkedIn post metrics (likes/comments/reposts) after a delay, saves snapshots, and reports performance in the originating Slack thread
+- `post-categoriser` — AI-classifies uncategorised LinkedIn posts by topic (thought_leadership, case_study, domain_knowledge, etc.) using Claude Haiku; fanned out daily by `post-categoriser-scheduler`
+- `knowledge-slack-ingest-channel` — Polls a single Slack channel for new messages and stores raw events in `knowledge_events`; fanned out every 30 min by `knowledge-slack-ingest-scheduled`
+- `knowledge-resolve-media` — Fetches/transcribes media referenced in knowledge events (Google Drive links, voice notes)
+- `knowledge-normalise-channel` / `knowledge-normalise-all` — LLM extracts typed knowledge units (action items, decisions, context updates, etc.) from raw events
+- `knowledge-state-synthesis-on-demand` — Updates per-account living state documents (brief, open items, activity log) from knowledge units; fanned out weekly by `knowledge-state-synthesis-schedule`
+- `knowledge-digest-on-demand` — Generates and sends knowledge digest as Slack DMs to relevant users; fanned out daily by `knowledge-digest-schedule`
 
 **Scheduled tasks:**
 
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
-- `calendar-meeting-notifier` — Meeting prep notifications
-- `linkedin-sync-scheduler` — Every 30 min: fans out `linkedin-sync-profile` for all active LinkedIn profiles
+- `calendar-meeting-notifier` — Meeting prep notifications (every 30 min, 6am–9pm London)
+- `linkedin-sync-scheduler` — Every 2 hours: fans out `linkedin-sync-profile` for all active LinkedIn profiles
 - `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every analytics-enabled LinkedIn profile
-- `idea-generator` — Hourly AI-driven idea bot: generates a product idea, implements it, opens a PR (Mon–Fri, 9am–5pm London)
+- `post-categoriser-scheduler` — Daily 7 AM London: fans out `post-categoriser` for all uncategorised posts
+- `knowledge-slack-ingest-scheduled` — Every 30 min (Mon–Fri, 8am–10pm London): fans out `knowledge-slack-ingest-channel` for all active channels
+- `knowledge-state-synthesis-schedule` — Monday 8 AM London: fans out `knowledge-state-synthesis-on-demand` for all active accounts
+- `knowledge-digest-schedule` — Mon–Fri 9 AM London: fans out `knowledge-digest-on-demand` per user
+- `idea-generator` — Daily 9 AM London (Mon–Fri) AI-driven idea bot: generates a product idea, implements it, opens a PR (currently disabled)
 - `code-quality-scan` — Weekly doc gardening: Claude audits docs vs code, opens PR for drift
 
 **Patterns:**

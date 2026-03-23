@@ -1,4 +1,5 @@
 import { BANNED_PHRASES, CHAR_LIMITS } from "./constants";
+import { AI_TELL_VOCABULARY } from "@/lib/humanisation";
 
 export function buildReviewPrompt(senderName: string): string {
   const bannedList = BANNED_PHRASES.map((p) => `  - "${p}"`).join("\n");
@@ -23,6 +24,7 @@ REVIEW CHECKLIST
 ${bannedList}
 
    Also check for:
+   - AI-tell vocabulary (these words scream "AI wrote this"): ${AI_TELL_VOCABULARY.join(", ")}
    - Corporate buzzwords: optimize, synergy, seamless, empower, ecosystem
    - AI-sounding patterns: "I noticed that...", "I'd be happy to...", "Would love to explore..."
    - Starting 2+ sentences with "I" in the same message

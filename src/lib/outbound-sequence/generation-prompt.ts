@@ -1,4 +1,5 @@
 import { BANNED_PHRASES, CHAR_LIMITS, REFERENCE_SEQUENCE_EXAMPLE, TONE_BY_STEP } from "./constants";
+import { AI_TELL_VOCABULARY } from "@/lib/humanisation";
 
 interface GenerationPromptInputs {
   senderName: string;
@@ -210,6 +211,9 @@ COPY QUALITY RULES (NON-NEGOTIABLE)
 
 2. BANNED PHRASES — If any of these appear in your output, the entire generation fails:
 ${bannedList}
+
+   Also banned (AI-tell vocabulary — these words scream "AI wrote this"):
+   ${AI_TELL_VOCABULARY.join(", ")}
 
 3. TONE CALIBRATION PER STEP:
 ${toneTable}

@@ -13,6 +13,7 @@ import { resolveModel, MODEL_MAP } from "@/lib/audit-utils";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId, createGoogleDoc } from "@/lib/gdrive";
 import { getRandomHookTemplates, formatHookTemplatesForPrompt } from "./linkedin-hook-templates";
 import { LINKEDIN_POST_PROMPT_PRESETS, resolveLinkedInPromptTemplate } from "@/lib/linkedin-post-prompts";
+import { buildAntiAIVocabBlock, buildHumanisationPassBlock } from "@/lib/humanisation";
 
 interface LinkedInPostGeneratorPayload {
   runId: string;
@@ -204,10 +205,7 @@ The post must read as ${posterName} sharing a genuine insight, story, or lesson.
 - GOOD: The company/product only appears as a natural part of telling the story ("while we were rebuilding our pipeline..." not "our product can rebuild your pipeline")
 - If the source material is promotional, extract the underlying insight or story and lead with THAT. Strip the sales wrapper entirely.
 
-### BANNED VOCABULARY
-Never use: delve, tapestry, moreover, furthermore, comprehensive, robust, utilize, leverage, nuanced, crucial, significant, transformative, testament, enhance, ever-evolving, game-changer, landscape, navigate, realm, embark, foster, facilitate, streamline, underscore, commendable, meticulous, adept, pivotal, vital, vibrant, intricate, multifaceted, profound, compelling, poignant, visceral, palpable, enduring, seemingly, arguably, notably, importantly, ultimately, fundamentally, inherently, undeniably.
-
-Also banned: "something shifted", "the weight of it", "a need he/she couldn't name", "for a moment", "and then, something changed".
+### ${buildAntiAIVocabBlock()}
 
 ${resolvedStyle}
 
@@ -237,11 +235,7 @@ Do not present output that violates rules 1-7. These are hard failures.
 ## STEP 5: HUMANIZATION PASS (mandatory for Body B, strongly recommended for Body A)
 
 After the self-edit:
-1. Replace the two most "correct" word choices with more unexpected ones.
-2. Add at least one very short sentence (5 words or fewer) and one longer flowing one per body.
-3. Add one moment of genuine hedging where it feels natural.
-4. Find the most abstract sentence and rewrite it with a detail from the source material.
-5. Check the ending: if the last two lines feel like a conclusion, cut or rewrite. End on a small specific detail or an open question.
+${buildHumanisationPassBlock()}
 6. Body B length recheck: humanization must not re-inflate Body B. If adding texture pushes it over 250 words, swap rather than add (replace a weaker sentence with the more human one). The word ceiling is non-negotiable.
 
 ## OUTPUT FORMAT

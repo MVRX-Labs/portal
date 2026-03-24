@@ -10,20 +10,12 @@ import { knowledgeState } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const accountId = req.nextUrl.searchParams.get("accountId");
   if (!accountId) {
     return NextResponse.json({ error: "accountId query parameter required" }, { status: 400 });
   }
 
-  const docs = await db
-    .select()
-    .from(knowledgeState)
-    .where(eq(knowledgeState.accountId, accountId));
+  const docs = await db.select().from(knowledgeState).where(eq(knowledgeState.accountId, accountId));
 
   return NextResponse.json({ docs });
 }

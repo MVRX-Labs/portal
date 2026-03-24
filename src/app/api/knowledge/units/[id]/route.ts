@@ -12,11 +12,6 @@ import { parseBody } from "@/lib/api-schemas/common";
 import { patchUnitBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const { id } = await params;
 
   const { data, error } = await parseBody(req, patchUnitBodySchema);
@@ -39,11 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "No update fields provided" }, { status: 400 });
   }
 
-  const [updated] = await db
-    .update(knowledgeUnits)
-    .set(updates)
-    .where(eq(knowledgeUnits.id, id))
-    .returning();
+  const [updated] = await db.update(knowledgeUnits).set(updates).where(eq(knowledgeUnits.id, id)).returning();
 
   if (!updated) {
     return NextResponse.json({ error: "Unit not found" }, { status: 404 });

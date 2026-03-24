@@ -13,11 +13,6 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 import type { CalendarSyncResponse } from "@/lib/api-schemas/admin";
 
 export async function GET(request: NextRequest) {
-  const isAdmin = request.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const { searchParams } = new URL(request.url);
   const view = searchParams.get("view") || "events";
 

@@ -14,9 +14,6 @@ import { parseBody } from "@/lib/api-schemas/common";
 import { updateUnitsBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(request: Request) {
-  const isAdmin = request.headers.get("x-user-admin") === "true";
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   try {
     const handle = await tasks.trigger("knowledge-digest-on-demand", {});
     return NextResponse.json({ triggered: true, runId: handle.id });
@@ -27,9 +24,6 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const isAdmin = request.headers.get("x-user-admin") === "true";
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { data, error } = await parseBody(request, updateUnitsBodySchema);
   if (error) return error;
 

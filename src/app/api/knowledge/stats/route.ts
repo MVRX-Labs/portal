@@ -10,20 +10,11 @@ import { knowledgeEvents, knowledgeUnits } from "@/lib/schema";
 import { eq, sql, desc } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   // Total events
-  const [{ totalEvents }] = await db
-    .select({ totalEvents: sql<number>`count(*)::int` })
-    .from(knowledgeEvents);
+  const [{ totalEvents }] = await db.select({ totalEvents: sql<number>`count(*)::int` }).from(knowledgeEvents);
 
   // Total units + open/done breakdown
-  const [{ totalUnits }] = await db
-    .select({ totalUnits: sql<number>`count(*)::int` })
-    .from(knowledgeUnits);
+  const [{ totalUnits }] = await db.select({ totalUnits: sql<number>`count(*)::int` }).from(knowledgeUnits);
 
   const [{ openUnits }] = await db
     .select({ openUnits: sql<number>`count(*)::int` })

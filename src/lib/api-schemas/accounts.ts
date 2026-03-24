@@ -17,6 +17,8 @@ export const accountSchema = z
     mrrCurrency: z.string(),
     lastMeetingAt: dateStringNullable,
     nextMeetingAt: dateStringNullable,
+    contentCalendarUrl: z.string().nullable(),
+    contractLinks: z.array(z.object({ url: z.string(), label: z.string() })).nullable(),
     engagementSlackChannel: z.string().nullable(),
     analyticsSlackChannel: z.string().nullable(),
     createdAt: dateString,
@@ -78,7 +80,13 @@ export const updateAccountBodySchema = z.object({
   mrr: z.number().optional(),
   mrrCurrency: z.string().optional(),
   hidden: z.boolean().optional(),
+  contentCalendarUrl: z.string().nullable().optional(),
+  contractLinks: z
+    .array(z.object({ url: z.string(), label: z.string() }))
+    .nullable()
+    .optional(),
   engagementSlackChannel: z.string().nullable().optional(),
+  analyticsSlackChannel: z.string().nullable().optional(),
 });
 
 export type UpdateAccountBody = z.infer<typeof updateAccountBodySchema>;

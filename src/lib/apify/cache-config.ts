@@ -16,6 +16,9 @@ export const APIFY_CACHE_TTLS: Record<string, number> = {
   "apimaestro~linkedin-post-comments-replies-engagements-scraper-no-cookies": 5 * 60, // Comments & Replies
   "apimaestro~linkedin-post-reshares": 5 * 60, // Reshares/Reposts
 
+  // --- Alpha feed keyword searches — 1 hour ---
+  "apimaestro~linkedin-posts-search-scraper-no-cookies": 60 * 60, // Post Search (alpha feed)
+
   // --- Everything else — 30 days (default) ---
   // Actors below are listed for documentation; they all use the default.
   // Uncomment and set a custom value to override.

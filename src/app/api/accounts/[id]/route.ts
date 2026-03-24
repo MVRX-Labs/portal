@@ -65,7 +65,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (data.mrr !== undefined) updates.mrr = data.mrr;
   if (data.mrrCurrency !== undefined) updates.mrrCurrency = data.mrrCurrency;
   if (data.hidden !== undefined) updates.hidden = data.hidden;
+  if (data.contentCalendarUrl !== undefined) updates.contentCalendarUrl = data.contentCalendarUrl;
+  if (data.contractLinks !== undefined) updates.contractLinks = data.contractLinks;
   if (data.engagementSlackChannel !== undefined) updates.engagementSlackChannel = data.engagementSlackChannel;
+  if (data.analyticsSlackChannel !== undefined) updates.analyticsSlackChannel = data.analyticsSlackChannel;
 
   const [account] = await db.update(accounts).set(updates).where(eq(column, id)).returning();
 

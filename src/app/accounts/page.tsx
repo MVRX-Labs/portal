@@ -1,44 +1,17 @@
 "use client";
 
 import React, { Suspense, useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import type { AccountListItem, GetAccountsResponse } from "@/lib/api-schemas/accounts";
-import type { Action, GetActionsResponse } from "@/lib/api-schemas/actions";
-import type { Contact, GetAccountContactsResponse } from "@/lib/api-schemas/contacts";
 import type { User } from "@/lib/api-schemas/admin";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import { getAccountsResponseSchema, updateAccountResponseSchema } from "@/lib/api-schemas/accounts";
-import { getAccountContactsResponseSchema } from "@/lib/api-schemas/contacts";
-import {
-  getActionsResponseSchema,
-  createActionResponseSchema,
-  updateActionResponseSchema,
-  deleteActionResponseSchema,
-} from "@/lib/api-schemas/actions";
-import { updateContactBodySchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
 import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
-import { NotesField } from "@/components/notes-field";
 import { CreateAccountModal } from "@/components/create-account-modal";
-import { CreateContactModal } from "@/components/create-contact-modal";
-import type { LinkedinProfile } from "@/lib/api-schemas/linkedin-profiles";
-import {
-  getLinkedinProfilesResponseSchema,
-  patchLinkedinProfileResponseSchema,
-} from "@/lib/api-schemas/linkedin-profiles";
-import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
-import {
-  getIcpDefinitionsResponseSchema,
-  createIcpDefinitionResponseSchema,
-  patchIcpDefinitionResponseSchema,
-} from "@/lib/api-schemas/icp-definitions";
 
 function formatMrr(cents: number, currency: string = "$"): string {
-  const locale = currency === "£" ? "en-GB" : "en-US";
+  const locale = currency === "\u00A3" ? "en-GB" : "en-US";
   return `${currency}${(cents / 100).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "No data";
-  return new Date(iso).toLocaleDateString();
 }
 
 function relativeDate(iso: string | null): string {
@@ -62,933 +35,9 @@ function relativeDate(iso: string | null): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
-function dueDateStyle(iso: string): string {
-  const due = new Date(iso);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  return due < now ? "text-(--destructive)" : "text-(--muted)";
-}
-
-function ExpandedView({
-  account,
-  users,
-  editMode,
-  onSave,
-}: {
-  account: AccountListItem;
-  users: User[];
-  editMode: boolean;
-  onSave: (updated: AccountListItem) => void;
-}) {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [actions, setActions] = useState<Action[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(true);
-  const [loadingActions, setLoadingActions] = useState(true);
-  const [newActionTitle, setNewActionTitle] = useState("");
-  const [newActionDueDate, setNewActionDueDate] = useState("");
-  const [addingAction, setAddingAction] = useState(false);
-
-  // Editable fields
-  const [name, setName] = useState(account.name || "");
-  const [industry, setIndustry] = useState(account.industry || "");
-  const [website, setWebsite] = useState(account.website || "");
-  const [linkedinUrl, setLinkedinUrl] = useState(account.linkedinUrl || "");
-  const [engagementSlackChannel, setEngagementSlackChannel] = useState(account.engagementSlackChannel || "");
-  const [notes, setNotes] = useState(account.notes || "");
-  const [contentVoiceGuidance, setContentVoiceGuidance] = useState(account.contentVoiceGuidance || "");
-  const [ownerId, setOwnerId] = useState(account.ownerId || "");
-  const [mrr, setMrr] = useState(String(account.mrr / 100));
-  const [mrrCurrency, setMrrCurrency] = useState(account.mrrCurrency || "$");
-  const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-
-  // LinkedIn profiles
-  const [linkedinProfiles, setLinkedinProfiles] = useState<LinkedinProfile[]>([]);
-  const [loadingProfiles, setLoadingProfiles] = useState(true);
-
-  // ICP definitions
-  const [icpDefs, setIcpDefs] = useState<IcpDefinition[]>([]);
-  const [loadingIcps, setLoadingIcps] = useState(true);
-  const [showCreateIcp, setShowCreateIcp] = useState(false);
-  const [newIcpName, setNewIcpName] = useState("");
-  const [newIcpDescription, setNewIcpDescription] = useState("");
-  const [newIcpTitles, setNewIcpTitles] = useState("");
-  const [newIcpIndustries, setNewIcpIndustries] = useState("");
-  const [newIcpCompanySizes, setNewIcpCompanySizes] = useState("");
-  const [newIcpSignals, setNewIcpSignals] = useState("");
-  const [creatingIcp, setCreatingIcp] = useState(false);
-
-  // Contact editing
-  const [editingContactId, setEditingContactId] = useState<string | null>(null);
-  const [contactEdits, setContactEdits] = useState<Partial<Contact>>({});
-  const [savingContact, setSavingContact] = useState(false);
-  const [showCreateContact, setShowCreateContact] = useState(false);
-
-  // Reset editable fields when account changes
-  useEffect(() => {
-    setName(account.name || "");
-    setIndustry(account.industry || "");
-    setWebsite(account.website || "");
-    setLinkedinUrl(account.linkedinUrl || "");
-    setEngagementSlackChannel(account.engagementSlackChannel || "");
-    setNotes(account.notes || "");
-    setContentVoiceGuidance(account.contentVoiceGuidance || "");
-    setOwnerId(account.ownerId || "");
-    setMrr(String(account.mrr / 100));
-    setMrrCurrency(account.mrrCurrency || "$");
-    setDirty(false);
-  }, [
-    account.id,
-    account.name,
-    account.industry,
-    account.website,
-    account.linkedinUrl,
-    account.engagementSlackChannel,
-    account.notes,
-    account.contentVoiceGuidance,
-    account.ownerId,
-    account.mrr,
-    account.mrrCurrency,
-  ]);
-
-  const fetchContacts = useCallback(async () => {
-    setLoadingContacts(true);
-    try {
-      const data = await apiFetch(`/api/accounts/${account.id}/contacts`, getAccountContactsResponseSchema);
-      setContacts(data.contacts);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingContacts(false);
-    }
-  }, [account.id]);
-
-  const fetchActions = useCallback(async () => {
-    setLoadingActions(true);
-    try {
-      const data = await apiFetch(`/api/accounts/${account.id}/actions`, getActionsResponseSchema);
-      setActions(data.actions);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingActions(false);
-    }
-  }, [account.id]);
-
-  const fetchProfiles = useCallback(async () => {
-    setLoadingProfiles(true);
-    try {
-      const data = await apiFetch(`/api/accounts/${account.id}/linkedin-profiles`, getLinkedinProfilesResponseSchema);
-      setLinkedinProfiles(data.profiles);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingProfiles(false);
-    }
-  }, [account.id]);
-
-  const fetchIcpDefs = useCallback(async () => {
-    setLoadingIcps(true);
-    try {
-      const data = await apiFetch(`/api/accounts/${account.id}/icp-definitions`, getIcpDefinitionsResponseSchema);
-      setIcpDefs(data.icpDefinitions);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingIcps(false);
-    }
-  }, [account.id]);
-
-  useEffect(() => {
-    fetchContacts();
-    fetchActions();
-    fetchProfiles();
-    fetchIcpDefs();
-  }, [fetchContacts, fetchActions, fetchProfiles, fetchIcpDefs]);
-
-  const handleToggleFlag = async (
-    profileId: string,
-    flag: "inboundEnabled" | "analyticsEnabled" | "outboundEnabled",
-    value: boolean
-  ) => {
-    setLinkedinProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, [flag]: value } : p)));
-    try {
-      await apiMutate(
-        `/api/accounts/${account.id}/linkedin-profiles/${profileId}`,
-        patchLinkedinProfileResponseSchema,
-        { method: "PATCH", body: { [flag]: value } }
-      );
-    } catch {
-      setLinkedinProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, [flag]: !value } : p)));
-    }
-  };
-
-  const handleAddAction = async () => {
-    if (!newActionTitle.trim() || addingAction) return;
-    setAddingAction(true);
-    try {
-      await apiMutate(`/api/accounts/${account.id}/actions`, createActionResponseSchema, {
-        method: "POST",
-        body: { title: newActionTitle.trim(), dueDate: newActionDueDate || null },
-      });
-      setNewActionTitle("");
-      setNewActionDueDate("");
-      await fetchActions();
-    } catch {
-      // ignore
-    } finally {
-      setAddingAction(false);
-    }
-  };
-
-  const handleCompleteAction = async (actionId: string) => {
-    try {
-      await apiMutate(`/api/accounts/${account.id}/actions/${actionId}`, updateActionResponseSchema, {
-        method: "PUT",
-        body: { status: "completed" },
-      });
-      await fetchActions();
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleDeleteAction = async (actionId: string) => {
-    try {
-      await apiMutate(`/api/accounts/${account.id}/actions/${actionId}`, deleteActionResponseSchema, {
-        method: "DELETE",
-      });
-      await fetchActions();
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const mrrCents = Math.round(parseFloat(mrr || "0") * 100);
-      await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
-        method: "PUT",
-        body: {
-          name: name || account.name,
-          industry: industry || null,
-          website: website || null,
-          linkedinUrl: linkedinUrl || null,
-          engagementSlackChannel: engagementSlackChannel || null,
-          notes: notes || null,
-          contentVoiceGuidance: contentVoiceGuidance || null,
-          ownerId: ownerId || null,
-          mrr: mrrCents,
-          mrrCurrency,
-        },
-      });
-      const ownerUser = users.find((u) => u.id === ownerId);
-      onSave({
-        ...account,
-        name: name || account.name,
-        industry: industry || null,
-        website: website || null,
-        linkedinUrl: linkedinUrl || null,
-        engagementSlackChannel: engagementSlackChannel || null,
-        notes: notes || null,
-        contentVoiceGuidance: contentVoiceGuidance || null,
-        ownerId: ownerId || null,
-        ownerName: ownerUser?.name || null,
-        mrr: mrrCents,
-        mrrCurrency,
-      });
-      setDirty(false);
-    } catch {
-      // ignore
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleStartEditContact = (contact: Contact) => {
-    setEditingContactId(contact.id);
-    setContactEdits({
-      name: contact.name,
-      accountEmail: contact.accountEmail,
-      personalEmail: contact.personalEmail,
-      linkedinUrl: contact.linkedinUrl,
-      contentVoiceGuidance: contact.contentVoiceGuidance,
-      notes: contact.notes,
-    });
-  };
-
-  const handleSaveContact = async () => {
-    if (!editingContactId) return;
-    setSavingContact(true);
-    try {
-      await apiMutate(`/api/contacts/${editingContactId}`, updateContactResponseSchema, {
-        method: "PUT",
-        body: {
-          name: contactEdits.name,
-          accountEmail: contactEdits.accountEmail || null,
-          personalEmail: contactEdits.personalEmail || null,
-          linkedinUrl: contactEdits.linkedinUrl || null,
-          contentVoiceGuidance: contactEdits.contentVoiceGuidance || null,
-          notes: contactEdits.notes || null,
-        },
-      });
-      setContacts((prev) => prev.map((c) => (c.id === editingContactId ? { ...c, ...contactEdits } : c)));
-      setEditingContactId(null);
-      setContactEdits({});
-    } catch {
-      // ignore
-    } finally {
-      setSavingContact(false);
-    }
-  };
-
-  const handleToggleIcp = async (icpId: string, active: boolean) => {
-    setIcpDefs((prev) => prev.map((d) => (d.id === icpId ? { ...d, active } : d)));
-    try {
-      await apiMutate(`/api/accounts/${account.id}/icp-definitions/${icpId}`, patchIcpDefinitionResponseSchema, {
-        method: "PATCH",
-        body: { active },
-      });
-    } catch {
-      setIcpDefs((prev) => prev.map((d) => (d.id === icpId ? { ...d, active: !active } : d)));
-    }
-  };
-
-  const handleCreateIcp = async () => {
-    if (!newIcpName.trim() || !newIcpDescription.trim() || creatingIcp) return;
-    setCreatingIcp(true);
-    try {
-      const splitCsv = (s: string) =>
-        s
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean);
-      await apiMutate(`/api/accounts/${account.id}/icp-definitions`, createIcpDefinitionResponseSchema, {
-        method: "POST",
-        body: {
-          name: newIcpName.trim(),
-          description: newIcpDescription.trim(),
-          targetTitles: splitCsv(newIcpTitles),
-          targetIndustries: splitCsv(newIcpIndustries),
-          targetCompanySizes: splitCsv(newIcpCompanySizes),
-          targetSignals: splitCsv(newIcpSignals),
-        },
-      });
-      setNewIcpName("");
-      setNewIcpDescription("");
-      setNewIcpTitles("");
-      setNewIcpIndustries("");
-      setNewIcpCompanySizes("");
-      setNewIcpSignals("");
-      setShowCreateIcp(false);
-      await fetchIcpDefs();
-    } catch {
-      // ignore
-    } finally {
-      setCreatingIcp(false);
-    }
-  };
-
-  return (
-    <div className="p-4">
-      {/* Contacts and Actions columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Left: Contacts */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide">
-              Contacts ({loadingContacts ? "..." : contacts.length})
-            </h3>
-            <button
-              onClick={() => setShowCreateContact(true)}
-              className="text-xs text-(--muted) hover:text-(--foreground) hover:underline"
-            >
-              + Add Contact
-            </button>
-          </div>
-          {loadingContacts ? (
-            <p className="text-sm text-(--muted)">Loading...</p>
-          ) : contacts.length === 0 ? (
-            <p className="text-sm text-(--muted)">No contacts yet</p>
-          ) : (
-            <div className="space-y-2">
-              {contacts.map((contact) => (
-                <div key={contact.id}>
-                  <div className="flex items-center justify-between py-2 px-3 rounded bg-(--input) border border-(--border)">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                        {contact.name}
-                        {contact.autoCreated && (
-                          <span
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
-                            title="Auto-created from calendar sync"
-                          >
-                            Auto
-                          </span>
-                        )}
-                      </p>
-                      {contact.accountEmail && (
-                        <p className="text-xs text-(--muted) truncate">{contact.accountEmail}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 ml-2 shrink-0">
-                      <span className="badge badge-neutral whitespace-nowrap">
-                        {contact.lastMeetingAt ? relativeDate(contact.lastMeetingAt) : "No meetings"}
-                      </span>
-                      <span
-                        className={`badge whitespace-nowrap ${contact.nextMeetingAt ? "badge-running" : "badge-neutral"}`}
-                      >
-                        {contact.nextMeetingAt ? relativeDate(contact.nextMeetingAt) : "None scheduled"}
-                      </span>
-                      {editMode && (
-                        <button
-                          onClick={() =>
-                            editingContactId === contact.id
-                              ? setEditingContactId(null)
-                              : handleStartEditContact(contact)
-                          }
-                          className="text-xs text-(--muted) hover:underline"
-                        >
-                          {editingContactId === contact.id ? "Cancel" : "Edit"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {editMode && editingContactId === contact.id && (
-                    <div className="mt-1 p-3 rounded bg-(--card) border border-(--border) space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs text-(--muted) mb-1">Name</label>
-                          <input
-                            type="text"
-                            value={contactEdits.name || ""}
-                            onChange={(e) => setContactEdits((prev) => ({ ...prev, name: e.target.value }))}
-                            className="w-full text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-(--muted) mb-1">LinkedIn URL</label>
-                          <input
-                            type="text"
-                            value={contactEdits.linkedinUrl || ""}
-                            onChange={(e) => setContactEdits((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
-                            placeholder="https://linkedin.com/in/username"
-                            className="w-full text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs text-(--muted) mb-1">Work Email</label>
-                          <input
-                            type="email"
-                            value={contactEdits.accountEmail || ""}
-                            onChange={(e) => setContactEdits((prev) => ({ ...prev, accountEmail: e.target.value }))}
-                            className="w-full text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-(--muted) mb-1">Personal Email</label>
-                          <input
-                            type="email"
-                            value={contactEdits.personalEmail || ""}
-                            onChange={(e) => setContactEdits((prev) => ({ ...prev, personalEmail: e.target.value }))}
-                            className="w-full text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex-1 pr-3">
-                          <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
-                          <textarea
-                            value={contactEdits.contentVoiceGuidance || ""}
-                            onChange={(e) =>
-                              setContactEdits((prev) => ({ ...prev, contentVoiceGuidance: e.target.value }))
-                            }
-                            placeholder="e.g. US spelling. No abbreviations. Avoid vague claims."
-                            rows={3}
-                            className="w-full text-sm"
-                          />
-                        </div>
-                      </div>
-                      <NotesField
-                        value={contactEdits.notes || ""}
-                        onChange={(v) => setContactEdits((prev) => ({ ...prev, notes: v }))}
-                      />
-                      <div className="flex items-center justify-end pt-1">
-                        <button onClick={handleSaveContact} disabled={savingContact} className="btn-primary text-sm">
-                          {savingContact ? "Saving..." : "Save Contact"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right: Actions */}
-        <div>
-          <h3 className="text-sm font-semibold mb-3 text-(--muted) uppercase tracking-wide">
-            Pending Actions ({loadingActions ? "..." : actions.length})
-          </h3>
-          {loadingActions ? (
-            <p className="text-sm text-(--muted)">Loading...</p>
-          ) : (
-            <>
-              {actions.length === 0 && <p className="text-sm text-(--muted) mb-3">No pending actions</p>}
-              <div className="space-y-2 mb-3">
-                {actions.map((action) => (
-                  <div
-                    key={action.id}
-                    className="flex items-center gap-2 py-2 px-3 rounded bg-(--input) border border-(--border)"
-                  >
-                    <span className="text-sm flex-1 truncate">{action.title}</span>
-                    {action.dueDate && (
-                      <span className={`text-xs ${dueDateStyle(action.dueDate)} whitespace-nowrap`}>
-                        Due {relativeDate(action.dueDate)}
-                      </span>
-                    )}
-                    <span className="badge badge-pending">{action.status}</span>
-                    <button
-                      onClick={() => handleCompleteAction(action.id)}
-                      className="text-xs text-(--success) hover:underline shrink-0"
-                    >
-                      Done
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAction(action.id)}
-                      className="text-xs text-(--destructive) hover:underline shrink-0"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-[1fr_7rem_auto] gap-2">
-                <input
-                  type="text"
-                  value={newActionTitle}
-                  onChange={(e) => setNewActionTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
-                  placeholder="Add an action..."
-                  className="min-w-0"
-                />
-                <input
-                  type="date"
-                  value={newActionDueDate}
-                  onChange={(e) => setNewActionDueDate(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
-                  className="text-sm min-w-0 max-w-full"
-                  title="Due date (optional)"
-                />
-                <button
-                  onClick={handleAddAction}
-                  disabled={!newActionTitle.trim() || addingAction}
-                  className="btn-primary text-sm whitespace-nowrap"
-                >
-                  Add
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {showCreateContact && (
-        <CreateContactModal
-          accountId={account.id}
-          onCreated={() => {
-            setShowCreateContact(false);
-            fetchContacts();
-          }}
-          onClose={() => setShowCreateContact(false)}
-        />
-      )}
-
-      {/* LinkedIn Profiles */}
-      {linkedinProfiles.length > 0 && (
-        <div className="border-t border-(--border) pt-4 mb-4">
-          <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide mb-3">
-            LinkedIn Profiles ({loadingProfiles ? "..." : linkedinProfiles.length})
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-(--border) text-left text-(--muted)">
-                  <th className="px-3 py-1.5 font-medium">Name</th>
-                  <th className="px-3 py-1.5 font-medium">LinkedIn URL</th>
-                  <th className="px-3 py-1.5 font-medium">Source</th>
-                  <th className="px-3 py-1.5 font-medium text-center">Inbound</th>
-                  <th className="px-3 py-1.5 font-medium text-center">Analytics</th>
-                  <th className="px-3 py-1.5 font-medium text-center">Outbound</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linkedinProfiles.map((p) => {
-                  const contactName = p.contactId ? contacts.find((c) => c.id === p.contactId)?.name : null;
-                  return (
-                    <tr key={p.id} className="border-b border-(--border) last:border-0">
-                      <td className="px-3 py-1.5">{p.displayName || contactName || "\u2014"}</td>
-                      <td className="px-3 py-1.5">
-                        <a
-                          href={p.linkedinUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-(--accent) hover:underline truncate block max-w-xs"
-                        >
-                          {p.linkedinUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\//, "")}
-                        </a>
-                      </td>
-                      <td className="px-3 py-1.5 text-(--muted)">
-                        {p.sourceType === "company" ? "Company" : "Personal"}
-                      </td>
-                      <td className="px-3 py-1.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={p.inboundEnabled}
-                          onChange={(e) => handleToggleFlag(p.id, "inboundEnabled", e.target.checked)}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={p.analyticsEnabled}
-                          onChange={(e) => handleToggleFlag(p.id, "analyticsEnabled", e.target.checked)}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={p.outboundEnabled}
-                          onChange={(e) => handleToggleFlag(p.id, "outboundEnabled", e.target.checked)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ICP Definitions */}
-      <div className="border-t border-(--border) pt-4 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-(--muted) uppercase tracking-wide">
-            ICP Definitions ({loadingIcps ? "..." : icpDefs.length})
-          </h3>
-          <button
-            onClick={() => setShowCreateIcp(!showCreateIcp)}
-            className="text-xs text-(--muted) hover:text-(--foreground) hover:underline"
-          >
-            {showCreateIcp ? "Cancel" : "+ New ICP"}
-          </button>
-        </div>
-        {loadingIcps ? (
-          <p className="text-sm text-(--muted)">Loading...</p>
-        ) : icpDefs.length === 0 && !showCreateIcp ? (
-          <p className="text-sm text-(--muted)">No ICP definitions yet — create one to start scoring leads.</p>
-        ) : (
-          <div className="space-y-2">
-            {icpDefs.map((icp) => (
-              <div
-                key={icp.id}
-                className={`py-2 px-3 rounded bg-(--input) border border-(--border) ${!icp.active ? "opacity-50" : ""}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      {icp.name}
-                      <span className={`badge ${icp.active ? "badge-completed" : "badge-neutral"}`}>
-                        {icp.active ? "Active" : "Paused"}
-                      </span>
-                    </p>
-                    <p className="text-xs text-(--muted) mt-0.5">{icp.description}</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggleIcp(icp.id, !icp.active)}
-                    className={`text-xs hover:underline shrink-0 ml-3 ${icp.active ? "text-(--warning)" : "text-(--success)"}`}
-                  >
-                    {icp.active ? "Pause" : "Resume"}
-                  </button>
-                </div>
-                {(icp.targetTitles.length > 0 ||
-                  icp.targetIndustries.length > 0 ||
-                  icp.targetCompanySizes.length > 0 ||
-                  icp.targetSignals.length > 0) && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {icp.targetTitles.map((t) => (
-                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-(--accent)/20 text-(--accent)">
-                        {t}
-                      </span>
-                    ))}
-                    {icp.targetIndustries.map((t) => (
-                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                        {t}
-                      </span>
-                    ))}
-                    {icp.targetCompanySizes.map((t) => (
-                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                        {t} employees
-                      </span>
-                    ))}
-                    {icp.targetSignals.map((t) => (
-                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {showCreateIcp && (
-          <div className="mt-3 p-3 rounded bg-(--card) border border-(--border) space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={newIcpName}
-                  onChange={(e) => setNewIcpName(e.target.value)}
-                  placeholder="e.g. Enterprise SaaS"
-                  className="w-full text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Target Titles (comma-separated)</label>
-                <input
-                  type="text"
-                  value={newIcpTitles}
-                  onChange={(e) => setNewIcpTitles(e.target.value)}
-                  placeholder="VP Marketing, Head of Growth, CMO"
-                  className="w-full text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Description *</label>
-              <textarea
-                value={newIcpDescription}
-                onChange={(e) => setNewIcpDescription(e.target.value)}
-                placeholder="B2B SaaS companies with 50-500 employees, Series A-C, with a marketing leader who owns outbound..."
-                rows={2}
-                className="w-full text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Industries (comma-separated)</label>
-                <input
-                  type="text"
-                  value={newIcpIndustries}
-                  onChange={(e) => setNewIcpIndustries(e.target.value)}
-                  placeholder="SaaS, Fintech, Healthcare"
-                  className="w-full text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Company Sizes (comma-separated)</label>
-                <input
-                  type="text"
-                  value={newIcpCompanySizes}
-                  onChange={(e) => setNewIcpCompanySizes(e.target.value)}
-                  placeholder="20-200, 200-1000"
-                  className="w-full text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Signals (comma-separated)</label>
-                <input
-                  type="text"
-                  value={newIcpSignals}
-                  onChange={(e) => setNewIcpSignals(e.target.value)}
-                  placeholder="Recently funded, Hiring SDRs"
-                  className="w-full text-sm"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end pt-1">
-              <button
-                onClick={handleCreateIcp}
-                disabled={!newIcpName.trim() || !newIcpDescription.trim() || creatingIcp}
-                className="btn-primary text-sm"
-              >
-                {creatingIcp ? "Creating..." : "Create ICP"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Editable fields — only shown in edit mode */}
-      {editMode && (
-        <div className="border-t border-(--border) pt-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="Account name"
-                className="w-full text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Industry</label>
-              <input
-                type="text"
-                value={industry}
-                onChange={(e) => {
-                  setIndustry(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="e.g. SaaS, Healthcare"
-                className="w-full text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Website</label>
-              <input
-                type="url"
-                value={website}
-                onChange={(e) => {
-                  setWebsite(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="https://example.com"
-                className="w-full text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">LinkedIn URL</label>
-              <input
-                type="url"
-                value={linkedinUrl}
-                onChange={(e) => {
-                  setLinkedinUrl(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="https://linkedin.com/company/..."
-                className="w-full text-sm"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <NotesField
-                value={notes}
-                onChange={(v) => {
-                  setNotes(v);
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">Owner</label>
-                <select
-                  value={ownerId}
-                  onChange={(e) => {
-                    setOwnerId(e.target.value);
-                    setDirty(true);
-                  }}
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-(--muted) mb-1">MRR</label>
-                <div className="flex">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMrrCurrency(mrrCurrency === "$" ? "£" : "$");
-                      setDirty(true);
-                    }}
-                    className="shrink-0 w-8 text-center border border-r-0 border-(--border) rounded-l bg-(--input) text-sm hover:bg-(--border) transition-colors"
-                    title="Click to toggle currency"
-                  >
-                    {mrrCurrency}
-                  </button>
-                  <input
-                    type="number"
-                    value={mrr}
-                    onChange={(e) => {
-                      setMrr(e.target.value);
-                      setDirty(true);
-                    }}
-                    placeholder="0"
-                    min="0"
-                    step="1"
-                    className="rounded-l-none flex-1 min-w-0"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Content Voice Guidance</label>
-              <textarea
-                value={contentVoiceGuidance}
-                onChange={(e) => {
-                  setContentVoiceGuidance(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="Default instructions for generated LinkedIn posts for this account."
-                rows={3}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-(--muted) mb-1">Engagement Slack Channel</label>
-              <input
-                type="text"
-                value={engagementSlackChannel}
-                onChange={(e) => {
-                  setEngagementSlackChannel(e.target.value);
-                  setDirty(true);
-                }}
-                placeholder="#channel-name"
-                className="w-full text-sm"
-              />
-            </div>
-          </div>
-          {dirty && (
-            <div className="mt-3 flex justify-end">
-              <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AccountsContent() {
   const [accounts, setAccounts] = useState<AccountListItem[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -996,12 +45,8 @@ function AccountsContent() {
     setLoading(true);
     try {
       const params = showHidden ? "?includeHidden=true" : "";
-      const [acctData, userData] = await Promise.all([
-        apiFetch(`/api/accounts${params}`, getAccountsResponseSchema),
-        apiFetch("/api/admin/users", getUsersResponseSchema),
-      ]);
-      setAccounts(acctData.accounts);
-      setUsers(userData.users);
+      const data = await apiFetch(`/api/accounts${params}`, getAccountsResponseSchema);
+      setAccounts(data.accounts);
     } catch {
       // ignore
     } finally {
@@ -1013,11 +58,9 @@ function AccountsContent() {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  const handleSave = (updated: AccountListItem) => {
-    setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-  };
-
-  const handleToggleHidden = async (account: AccountListItem) => {
+  const handleToggleHidden = async (e: React.MouseEvent, account: AccountListItem) => {
+    e.preventDefault();
+    e.stopPropagation();
     const newHidden = !account.hidden;
     try {
       await apiMutate(`/api/accounts/${account.id}`, updateAccountResponseSchema, {
@@ -1026,7 +69,6 @@ function AccountsContent() {
       });
       if (!showHidden && newHidden) {
         setAccounts((prev) => prev.filter((a) => a.id !== account.id));
-        if (expandedId === account.id) setExpandedId(null);
       } else {
         setAccounts((prev) => prev.map((a) => (a.id === account.id ? { ...a, hidden: newHidden } : a)));
       }
@@ -1038,7 +80,6 @@ function AccountsContent() {
   const visibleCount = accounts.filter((a) => !a.hidden).length;
   const hiddenCount = accounts.filter((a) => a.hidden).length;
 
-  // Sum MRR by currency (only visible accounts)
   const mrrTotals = accounts
     .filter((a) => !a.hidden && a.mrr > 0)
     .reduce<Record<string, number>>((acc, a) => {
@@ -1052,25 +93,17 @@ function AccountsContent() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">Accounts</h1>
         <div className="flex items-center gap-3">
-          {editMode && (
-            <label className="flex items-center gap-2 text-sm text-(--muted) cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showHidden}
-                onChange={(e) => setShowHidden(e.target.checked)}
-                className="w-4 h-auto"
-              />
-              Show hidden ({hiddenCount})
-            </label>
-          )}
+          <label className="flex items-center gap-2 text-sm text-(--muted) cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showHidden}
+              onChange={(e) => setShowHidden(e.target.checked)}
+              className="w-4 h-auto"
+            />
+            Show hidden ({hiddenCount})
+          </label>
           <button onClick={() => setShowCreateModal(true)} className="btn-primary text-sm">
             + Create Account
-          </button>
-          <button
-            onClick={() => setEditMode(!editMode)}
-            className={editMode ? "btn-primary text-sm" : "btn-secondary text-sm"}
-          >
-            {editMode ? "Done Editing" : "Edit"}
           </button>
         </div>
       </div>
@@ -1098,38 +131,36 @@ function AccountsContent() {
               <th className="px-3 py-2 font-medium text-right">MRR</th>
               <th className="px-3 py-2 font-medium">Last Meeting</th>
               <th className="px-3 py-2 font-medium">Next Meeting</th>
-              {editMode && <th className="px-3 py-2 font-medium w-20"></th>}
+              <th className="px-3 py-2 font-medium w-16"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
+                <td colSpan={7} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
             ) : accounts.length === 0 ? (
               <tr>
-                <td colSpan={editMode ? 7 : 6} className="py-8 text-center text-(--muted)">
+                <td colSpan={7} className="py-8 text-center text-(--muted)">
                   No accounts found
                 </td>
               </tr>
             ) : (
               accounts.map((account) => (
-                <React.Fragment key={account.id}>
-                  <tr
-                    onClick={() => setExpandedId(expandedId === account.id ? null : account.id)}
-                    className={`border-b border-(--border) cursor-pointer transition-colors hover:bg-(--input) ${
-                      expandedId === account.id ? "bg-(--input)" : ""
-                    } ${account.hidden ? "opacity-50" : ""}`}
-                  >
-                    <td className="px-3 py-1.5">
+                <tr
+                  key={account.id}
+                  className={`border-b border-(--border) transition-colors hover:bg-(--input) ${account.hidden ? "opacity-50" : ""}`}
+                >
+                  <td className="px-3 py-1.5">
+                    <Link href={`/accounts/${account.slug}`} className="block">
                       <div className="font-medium flex items-center gap-1.5">
                         {account.name}
                         {account.autoCreated && (
                           <span
                             className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium leading-none"
-                            title="Auto-created from calendar sync — review details"
+                            title="Auto-created from calendar sync"
                           >
                             Auto
                           </span>
@@ -1149,52 +180,40 @@ function AccountsContent() {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-3 py-1.5 max-w-xs">
-                      <span className="text-(--muted) truncate block">{account.notes || "\u2014"}</span>
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      {account.ownerName || <span className="text-(--muted)">Unassigned</span>}
-                    </td>
-                    <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
-                      {account.mrr > 0 ? (
-                        formatMrr(account.mrr, account.mrrCurrency)
-                      ) : (
-                        <span className="text-(--muted)">{account.mrrCurrency || "$"}0</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}>
-                        {relativeDate(account.lastMeetingAt)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span className={`badge ${account.nextMeetingAt ? "badge-running" : "badge-neutral"}`}>
-                        {account.nextMeetingAt ? relativeDate(account.nextMeetingAt) : "None scheduled"}
-                      </span>
-                    </td>
-                    {editMode && (
-                      <td className="px-3 py-1.5 whitespace-nowrap">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleHidden(account);
-                          }}
-                          className={`text-xs hover:underline ${account.hidden ? "text-(--success)" : "text-(--muted)"}`}
-                        >
-                          {account.hidden ? "Show" : "Hide"}
-                        </button>
-                      </td>
+                    </Link>
+                  </td>
+                  <td className="px-3 py-1.5 max-w-xs">
+                    <span className="text-(--muted) truncate block">{account.notes || "\u2014"}</span>
+                  </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    {account.ownerName || <span className="text-(--muted)">Unassigned</span>}
+                  </td>
+                  <td className="px-3 py-1.5 text-right whitespace-nowrap font-medium">
+                    {account.mrr > 0 ? (
+                      formatMrr(account.mrr, account.mrrCurrency)
+                    ) : (
+                      <span className="text-(--muted)">{account.mrrCurrency || "$"}0</span>
                     )}
-                  </tr>
-                  {expandedId === account.id && (
-                    <tr>
-                      <td colSpan={editMode ? 7 : 6} className="border-b border-(--border) bg-(--card)">
-                        <ExpandedView account={account} users={users} editMode={editMode} onSave={handleSave} />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                  </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    <span className={`badge ${account.lastMeetingAt ? "badge-completed" : "badge-neutral"}`}>
+                      {relativeDate(account.lastMeetingAt)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    <span className={`badge ${account.nextMeetingAt ? "badge-running" : "badge-neutral"}`}>
+                      {account.nextMeetingAt ? relativeDate(account.nextMeetingAt) : "None scheduled"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    <button
+                      onClick={(e) => handleToggleHidden(e, account)}
+                      className={`text-xs hover:underline ${account.hidden ? "text-(--success)" : "text-(--muted)"}`}
+                    >
+                      {account.hidden ? "Show" : "Hide"}
+                    </button>
+                  </td>
+                </tr>
               ))
             )}
           </tbody>

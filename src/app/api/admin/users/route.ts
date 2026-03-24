@@ -13,7 +13,6 @@ export async function GET() {
       id: users.id,
       name: users.name,
       email: users.email,
-      isAdmin: users.isAdmin,
       createdAt: users.createdAt,
     })
     .from(users);
@@ -26,16 +25,12 @@ export async function POST(request: NextRequest) {
   if (error) return error;
 
   try {
-    const [user] = await db
-      .insert(users)
-      .values({ name: data.name, email: data.email, isAdmin: data.isAdmin || false })
-      .returning({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        isAdmin: users.isAdmin,
-        createdAt: users.createdAt,
-      });
+    const [user] = await db.insert(users).values({ name: data.name, email: data.email }).returning({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      createdAt: users.createdAt,
+    });
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
@@ -53,13 +48,11 @@ export async function PUT(request: NextRequest) {
   const updates: Record<string, unknown> = {};
   if (data.name !== undefined) updates.name = data.name;
   if (data.email !== undefined) updates.email = data.email;
-  if (data.isAdmin !== undefined) updates.isAdmin = data.isAdmin;
 
   const [user] = await db.update(users).set(updates).where(eq(users.id, data.id)).returning({
     id: users.id,
     name: users.name,
     email: users.email,
-    isAdmin: users.isAdmin,
     createdAt: users.createdAt,
   });
 

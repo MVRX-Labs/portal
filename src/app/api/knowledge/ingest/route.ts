@@ -12,20 +12,14 @@ import { triggerIngestBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
   try {
-    const isAdmin = req.headers.get("x-user-admin") === "true";
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
     const { data } = await parseBodyOptional(req, triggerIngestBodySchema);
     const { channelDbId } = data;
 
     if (channelDbId) {
       // Trigger single channel ingestion via Trigger.dev
-      const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
-        "knowledge-slack-ingest-channel",
-        { channelDbId },
-      );
+      const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>("knowledge-slack-ingest-channel", {
+        channelDbId,
+      });
 
       return NextResponse.json({
         message: `Ingestion triggered for channel ${channelDbId}`,

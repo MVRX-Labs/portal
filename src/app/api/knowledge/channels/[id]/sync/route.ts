@@ -10,17 +10,11 @@ import type { knowledgeSlackIngestChannel } from "@/trigger/knowledge-slack-inge
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const isAdmin = req.headers.get("x-user-admin") === "true";
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
     const { id } = await params;
 
-    const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>(
-      "knowledge-slack-ingest-channel",
-      { channelDbId: id },
-    );
+    const handle = await tasks.trigger<typeof knowledgeSlackIngestChannel>("knowledge-slack-ingest-channel", {
+      channelDbId: id,
+    });
 
     return NextResponse.json({ runId: handle.id });
   } catch (err) {

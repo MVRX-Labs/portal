@@ -45,6 +45,7 @@ const PREFIXES = {
   lcsv: "lcsv",
   acache: "acache",
   icp: "icp",
+  afeed: "afeed",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -83,6 +84,7 @@ export type LinkedinPostEngagementId = `leng_${string}`;
 export type LeadCsvId = `lcsv_${string}`;
 export type ApifyCacheId = `acache_${string}`;
 export type IcpDefinitionId = `icp_${string}`;
+export type AlphaFeedId = `afeed_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -117,7 +119,8 @@ export type ObjectId =
   | LinkedinPostEngagementId
   | LeadCsvId
   | ApifyCacheId
-  | IcpDefinitionId;
+  | IcpDefinitionId
+  | AlphaFeedId;
 
 type PrefixToId = {
   user: UserId;
@@ -154,6 +157,7 @@ type PrefixToId = {
   lcsv: LeadCsvId;
   acache: ApifyCacheId;
   icp: IcpDefinitionId;
+  afeed: AlphaFeedId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -207,6 +211,7 @@ export function prefixForTable(table: string): Prefix {
     lead_csvs: "lcsv",
     apify_cache: "acache",
     icp_definitions: "icp",
+    alpha_feeds: "afeed",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

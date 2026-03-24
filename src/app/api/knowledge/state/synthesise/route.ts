@@ -12,17 +12,11 @@ import { triggerSynthesisBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
   try {
-    const isAdmin = req.headers.get("x-user-admin") === "true";
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
     const { data } = await parseBodyOptional(req, triggerSynthesisBodySchema);
 
-    const handle = await tasks.trigger<typeof knowledgeStateSynthesisOnDemand>(
-      "knowledge-state-synthesis-on-demand",
-      { accountId: data.accountId },
-    );
+    const handle = await tasks.trigger<typeof knowledgeStateSynthesisOnDemand>("knowledge-state-synthesis-on-demand", {
+      accountId: data.accountId,
+    });
 
     return NextResponse.json({ runId: handle.id });
   } catch (err) {

@@ -28,7 +28,6 @@ export default auth((request) => {
     headers.set("x-user-id", agentUserId);
     headers.set("x-user-name", process.env.AGENT_USER_NAME || "Agent");
     headers.set("x-user-email", process.env.AGENT_USER_EMAIL || "agent@mvrxlabs.com");
-    headers.set("x-user-admin", "true");
     return NextResponse.next({ request: { headers } });
   }
 
@@ -44,25 +43,14 @@ export default auth((request) => {
     request.headers.get("next-router-prefetch") === "1" || request.headers.get("purpose") === "prefetch";
   if (isPrefetch) {
     const prefetchHeaders = new Headers(request.headers);
-    prefetchHeaders.delete("x-user-admin");
     prefetchHeaders.delete("x-user-id");
     return NextResponse.next({ request: { headers: prefetchHeaders } });
-  }
-
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (!session.user.isAdmin) {
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
   }
 
   const headers = new Headers(request.headers);
   headers.set("x-user-id", session.user.id);
   headers.set("x-user-name", session.user.name || "");
   headers.set("x-user-email", session.user.email || "");
-  headers.set("x-user-admin", String(session.user.isAdmin ?? false));
 
   return NextResponse.next({ request: { headers } });
 });

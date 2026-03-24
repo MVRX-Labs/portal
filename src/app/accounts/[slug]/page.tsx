@@ -93,8 +93,8 @@ function AccountOverviewContent() {
           accountId={account.id}
           initialVoice={account.contentVoiceGuidance}
           initialNotes={account.notes}
-          initialCalendarUrl={account.contentCalendarUrl}
-          initialContractLinks={account.contractLinks}
+          initialCalendarUrl={account.contentCalendarUrl || null}
+          initialContractLinks={account.contractLinks || []}
           onSaved={handleAccountUpdated}
         />
         <KnowledgeStateSection accountId={account.id} />

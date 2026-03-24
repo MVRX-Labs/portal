@@ -17,8 +17,11 @@ export const accountSchema = z
     mrrCurrency: z.string(),
     lastMeetingAt: dateStringNullable,
     nextMeetingAt: dateStringNullable,
-    contentCalendarUrl: z.string().nullable(),
-    contractLinks: z.array(z.object({ url: z.string(), label: z.string() })).nullable(),
+    contentCalendarUrl: z.string().nullable().optional(),
+    contractLinks: z
+      .array(z.object({ url: z.string(), label: z.string() }))
+      .nullable()
+      .optional(),
     engagementSlackChannel: z.string().nullable(),
     analyticsSlackChannel: z.string().nullable(),
     createdAt: dateString,

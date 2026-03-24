@@ -179,6 +179,22 @@ export function ToolForm({ tool }: ToolFormProps) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [viewingInputRunId, setViewingInputRunId] = useState<string | null>(null);
 
+  const handleRerun = useCallback(
+    (run: ToolRun) => {
+      const newValues: Record<string, string> = {};
+      for (const [key, val] of Object.entries(run.inputs)) {
+        if (key === "accountId" || key === "model") continue;
+        newValues[key] = String(val ?? "");
+      }
+      setValues(newValues);
+      if (typeof run.inputs.model === "string" && MODELS.includes(run.inputs.model as typeof MODELS[number])) {
+        setModel(run.inputs.model as string);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    []
+  );
+
   const reconnectToRun = useCallback(async (runId: string, createdAt: string) => {
     try {
       const data = await apiFetch(`/api/runs/${runId}`, runDetailSchema);
@@ -558,12 +574,20 @@ export function ToolForm({ tool }: ToolFormProps) {
                   <div className="flex items-center justify-between mb-1">
                     <span className={`badge badge-${run.status}`}>{run.status}</span>
                     {run.inputs && Object.keys(run.inputs).length > 0 && (
-                      <button
-                        onClick={() => setViewingInputRunId(run.id)}
-                        className="text-(--accent) hover:underline text-xs"
-                      >
-                        View Input
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRerun(run)}
+                          className="text-(--accent) hover:underline text-xs"
+                        >
+                          Re-run
+                        </button>
+                        <button
+                          onClick={() => setViewingInputRunId(run.id)}
+                          className="text-(--accent) hover:underline text-xs"
+                        >
+                          View Input
+                        </button>
+                      </div>
                     )}
                   </div>
                   <div className="text-(--muted) space-y-0.5 mb-1">

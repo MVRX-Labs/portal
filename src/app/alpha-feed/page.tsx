@@ -8,6 +8,8 @@ import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
 import type { AlphaFeed, AlphaFeedEntry } from "@/lib/api-schemas/alpha-feed";
 import { getIcpDefinitionsResponseSchema } from "@/lib/api-schemas/icp-definitions";
 import { getAlphaFeedResponseSchema, collectAlphaFeedResponseSchema } from "@/lib/api-schemas/alpha-feed";
+import { TriggerRunIndicator } from "@/components/trigger-run-indicator";
+import { usePendingRuns } from "@/lib/hooks/use-pending-runs";
 
 function formatPostDate(iso: string | undefined | null): string {
   if (!iso) return "";
@@ -115,7 +117,7 @@ export default function AlphaFeedPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIcp, setSelectedIcp] = useState<string | null>(null);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0); // 0 = most recent
-  const [collecting, setCollecting] = useState<Record<string, boolean>>({});
+  const collectingRuns = usePendingRuns();
 
   const fetchData = useCallback(async () => {
     if (!account) return;
@@ -157,16 +159,15 @@ export default function AlphaFeedPage() {
 
   const collectFeed = async (icpId: string) => {
     if (!account) return;
-    setCollecting((prev) => ({ ...prev, [icpId]: true }));
     try {
-      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${icpId}/collect`, collectAlphaFeedResponseSchema, {
-        method: "POST",
-        body: {},
-      });
+      const { triggerRunId, publicAccessToken } = await apiMutate(
+        `/api/accounts/${account.id}/alpha-feed/${icpId}/collect`,
+        collectAlphaFeedResponseSchema,
+        { method: "POST", body: {} }
+      );
+      collectingRuns.set(icpId, triggerRunId, publicAccessToken);
     } catch {
       // toast handled
-    } finally {
-      setCollecting((prev) => ({ ...prev, [icpId]: false }));
     }
   };
 
@@ -237,15 +238,24 @@ export default function AlphaFeedPage() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold">LinkedIn Alpha Feed</h1>
         <div className="flex items-center gap-2">
-          {selectedIcp && (sages.length > 0 || keywords.length > 0) && (
-            <button
-              onClick={() => collectFeed(selectedIcp)}
-              disabled={collecting[selectedIcp]}
-              className="btn-primary text-sm"
-            >
-              {collecting[selectedIcp] ? "Collecting..." : "Collect Now"}
-            </button>
-          )}
+          {selectedIcp &&
+            (sages.length > 0 || keywords.length > 0) &&
+            (collectingRuns.get(selectedIcp) ? (
+              <TriggerRunIndicator
+                triggerRunId={collectingRuns.get(selectedIcp)!.triggerRunId}
+                publicAccessToken={collectingRuns.get(selectedIcp)!.publicAccessToken}
+                label="Collecting posts..."
+                onComplete={() => {
+                  collectingRuns.clear(selectedIcp);
+                  fetchData();
+                }}
+                onError={() => collectingRuns.clear(selectedIcp)}
+              />
+            ) : (
+              <button onClick={() => collectFeed(selectedIcp)} className="btn-primary text-sm">
+                Collect Now
+              </button>
+            ))}
           <button onClick={fetchData} className="text-sm text-(--muted) hover:text-(--foreground) hover:underline">
             Refresh
           </button>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dateString } from "./common";
+import { dateString, triggerRunResponseSchema } from "./common";
 
 // --- JSONB item schemas ---
 
@@ -105,17 +105,10 @@ export type RemoveAlphaFeedKeywordBody = z.infer<typeof removeAlphaFeedKeywordBo
 
 // --- Spec generation ---
 
-export const generateAlphaFeedSpecResponseSchema = z.object({
-  triggerRunId: z.string(),
-  publicAccessToken: z.string(),
-});
-
+export const generateAlphaFeedSpecResponseSchema = triggerRunResponseSchema;
 export type GenerateAlphaFeedSpecResponse = z.infer<typeof generateAlphaFeedSpecResponseSchema>;
 
 // --- Collection trigger ---
 
-export const collectAlphaFeedResponseSchema = z.object({
-  triggerRunId: z.string(),
-});
-
+export const collectAlphaFeedResponseSchema = triggerRunResponseSchema;
 export type CollectAlphaFeedResponse = z.infer<typeof collectAlphaFeedResponseSchema>;

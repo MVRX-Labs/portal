@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRealtimeRun } from "@trigger.dev/react-hooks";
 import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
 import type { AlphaFeed } from "@/lib/api-schemas/alpha-feed";
 import { apiFetch, apiMutate } from "@/lib/api-client";
@@ -16,36 +15,8 @@ import {
   collectAlphaFeedResponseSchema,
 } from "@/lib/api-schemas/alpha-feed";
 import { SectionCard } from "./section-card";
-
-function GeneratingIndicator({
-  triggerRunId,
-  publicAccessToken,
-  onComplete,
-  onError,
-}: {
-  triggerRunId: string;
-  publicAccessToken: string;
-  onComplete: () => void;
-  onError: () => void;
-}) {
-  const { run, error } = useRealtimeRun(triggerRunId, {
-    accessToken: publicAccessToken,
-    onComplete: () => onComplete(),
-  });
-
-  useEffect(() => {
-    if (error || run?.status === "FAILED" || run?.status === "CANCELED") {
-      onError();
-    }
-  }, [error, run?.status, onError]);
-
-  return (
-    <div className="flex items-center gap-2 text-xs text-(--accent)">
-      <div className="h-3 w-3 rounded-full bg-(--accent) animate-pulse" />
-      <span>Generating spec with AI...</span>
-    </div>
-  );
-}
+import { TriggerRunIndicator } from "@/components/trigger-run-indicator";
+import { usePendingRuns } from "@/lib/hooks/use-pending-runs";
 
 function relativeDate(iso: string | null): string {
   if (!iso) return "No data";
@@ -82,14 +53,12 @@ export function IcpSection({ accountId }: { accountId: string }) {
   // Alpha feed state
   const [alphaFeeds, setAlphaFeeds] = useState<Record<string, AlphaFeed | null>>({});
   const [loadingFeeds, setLoadingFeeds] = useState<Record<string, boolean>>({});
-  const [pendingRuns, setPendingRuns] = useState<Record<string, { triggerRunId: string; publicAccessToken: string }>>(
-    {}
-  );
+  const generatingRuns = usePendingRuns();
+  const collectingRuns = usePendingRuns();
   const [expandedFeed, setExpandedFeed] = useState<string | null>(null);
   const [addSageUrl, setAddSageUrl] = useState("");
   const [addSageName, setAddSageName] = useState("");
   const [addKeywordQuery, setAddKeywordQuery] = useState("");
-  const [collecting, setCollecting] = useState<Record<string, boolean>>({});
 
   const fetchIcps = useCallback(async () => {
     setLoading(true);
@@ -176,31 +145,11 @@ export function IcpSection({ accountId }: { accountId: string }) {
         generateAlphaFeedSpecResponseSchema,
         { method: "POST", body: {} }
       );
-      setPendingRuns((prev) => ({ ...prev, [icpId]: { triggerRunId, publicAccessToken } }));
+      generatingRuns.set(icpId, triggerRunId, publicAccessToken);
     } catch {
       // toast handled by apiMutate
     }
   };
-
-  const handleGenerateComplete = useCallback(
-    (icpId: string) => {
-      setPendingRuns((prev) => {
-        const next = { ...prev };
-        delete next[icpId];
-        return next;
-      });
-      fetchAlphaFeed(icpId);
-    },
-    [fetchAlphaFeed]
-  );
-
-  const handleGenerateError = useCallback((icpId: string) => {
-    setPendingRuns((prev) => {
-      const next = { ...prev };
-      delete next[icpId];
-      return next;
-    });
-  }, []);
 
   const addSage = async (icpId: string) => {
     if (!addSageUrl.trim()) return;
@@ -270,16 +219,15 @@ export function IcpSection({ accountId }: { accountId: string }) {
   };
 
   const collectFeed = async (icpId: string) => {
-    setCollecting((prev) => ({ ...prev, [icpId]: true }));
     try {
-      await apiMutate(`/api/accounts/${accountId}/alpha-feed/${icpId}/collect`, collectAlphaFeedResponseSchema, {
-        method: "POST",
-        body: {},
-      });
+      const { triggerRunId, publicAccessToken } = await apiMutate(
+        `/api/accounts/${accountId}/alpha-feed/${icpId}/collect`,
+        collectAlphaFeedResponseSchema,
+        { method: "POST", body: {} }
+      );
+      collectingRuns.set(icpId, triggerRunId, publicAccessToken);
     } catch {
       // toast handled
-    } finally {
-      setCollecting((prev) => ({ ...prev, [icpId]: false }));
     }
   };
 
@@ -447,7 +395,8 @@ export function IcpSection({ accountId }: { accountId: string }) {
               .map((icp) => {
                 const feed = alphaFeeds[icp.id];
                 const isLoading = loadingFeeds[icp.id];
-                const pendingRun = pendingRuns[icp.id];
+                const pendingGenerate = generatingRuns.get(icp.id);
+                const pendingCollect = collectingRuns.get(icp.id);
                 const isExpanded = expandedFeed === icp.id;
 
                 const handleExpand = () => {
@@ -485,27 +434,40 @@ export function IcpSection({ accountId }: { accountId: string }) {
                         ) : (
                           <>
                             <div className="flex items-center gap-2">
-                              {pendingRun ? (
-                                <GeneratingIndicator
-                                  triggerRunId={pendingRun.triggerRunId}
-                                  publicAccessToken={pendingRun.publicAccessToken}
-                                  onComplete={() => handleGenerateComplete(icp.id)}
-                                  onError={() => handleGenerateError(icp.id)}
+                              {pendingGenerate ? (
+                                <TriggerRunIndicator
+                                  triggerRunId={pendingGenerate.triggerRunId}
+                                  publicAccessToken={pendingGenerate.publicAccessToken}
+                                  label="Generating spec with AI..."
+                                  onComplete={() => {
+                                    generatingRuns.clear(icp.id);
+                                    fetchAlphaFeed(icp.id);
+                                  }}
+                                  onError={() => generatingRuns.clear(icp.id)}
                                 />
                               ) : (
                                 <button onClick={() => generateSpec(icp.id)} className="btn-primary text-xs">
                                   Generate Spec with AI
                                 </button>
                               )}
-                              {feed && (sages.length > 0 || keywords.length > 0) && (
-                                <button
-                                  onClick={() => collectFeed(icp.id)}
-                                  disabled={collecting[icp.id]}
-                                  className="btn-primary text-xs"
-                                >
-                                  {collecting[icp.id] ? "Collecting..." : "Collect Now"}
-                                </button>
-                              )}
+                              {feed &&
+                                (sages.length > 0 || keywords.length > 0) &&
+                                (pendingCollect ? (
+                                  <TriggerRunIndicator
+                                    triggerRunId={pendingCollect.triggerRunId}
+                                    publicAccessToken={pendingCollect.publicAccessToken}
+                                    label="Collecting posts..."
+                                    onComplete={() => {
+                                      collectingRuns.clear(icp.id);
+                                      fetchAlphaFeed(icp.id);
+                                    }}
+                                    onError={() => collectingRuns.clear(icp.id)}
+                                  />
+                                ) : (
+                                  <button onClick={() => collectFeed(icp.id)} className="btn-primary text-xs">
+                                    Collect Now
+                                  </button>
+                                ))}
                               {!feed && (
                                 <span className="text-xs text-(--muted)">
                                   No spec yet — generate one or add sages/keywords manually.

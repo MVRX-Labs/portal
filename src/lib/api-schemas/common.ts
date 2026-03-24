@@ -47,6 +47,14 @@ export const errorResponseSchema = z.object({
 
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 
+/** Standard response for API routes that trigger a background job. */
+export const triggerRunResponseSchema = z.object({
+  triggerRunId: z.string(),
+  publicAccessToken: z.string(),
+});
+
+export type TriggerRunResponse = z.infer<typeof triggerRunResponseSchema>;
+
 export const paginationSchema = z.object({
   page: z.number(),
   limit: z.number(),

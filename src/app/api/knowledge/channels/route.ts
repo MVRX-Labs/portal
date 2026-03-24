@@ -14,11 +14,6 @@ import { parseBody } from "@/lib/api-schemas/common";
 import { registerChannelBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function POST(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const { data, error } = await parseBody(req, registerChannelBodySchema);
   if (error) return error;
 
@@ -73,11 +68,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const channels = await db
     .select({
       id: knowledgeChannels.id,

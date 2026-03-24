@@ -11,27 +11,28 @@ interface NavItem {
   href: string;
   label: string;
   icon: string;
-  adminOnly?: boolean;
   dev?: boolean;
   beta?: boolean;
 }
 
 const accountItems: NavItem[] = [
+  { href: "/accounts/__SLUG__", label: "Overview", icon: "📋", beta: true },
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
   { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
-  { href: "/tools/linkedin-to-twitter", label: "LinkedIn Post to Tweets", icon: "🐦", beta: true },
+  { href: "/tools/linkedin-to-twitter", label: "LinkedIn Post to Tweets", icon: "🐦" },
   { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
   { href: "/tools/outbound-sequence", label: "Outbound Sequence Playbook", icon: "📨", beta: true },
-  { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊", beta: true },
+  { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊" },
   { href: "/tools/geo-audit", label: "GEO Audit", icon: "🤖", beta: true },
-  { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯", beta: true },
-  { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
+  { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯" },
+  // { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
   // { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true }, NOT NEEDED?
-  { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true, dev: true },
+  // { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true, dev: true },
   { href: "/linkedin-engagement", label: "LinkedIn Engagement Bot", icon: "🤖" },
   { href: "/analytics", label: "LinkedIn Post Analytics", icon: "📈" },
-  { href: "/admin/knowledge", label: "Knowledge Hub", icon: "🧠", adminOnly: true },
+  { href: "/alpha-feed", label: "LinkedIn Alpha Feed", icon: "🔥" },
+  { href: "/admin/knowledge", label: "Knowledge Hub", icon: "🧠" },
 ];
 
 const orgItems: NavItem[] = [
@@ -55,11 +56,30 @@ export function Sidebar() {
   const [highlightSelector, setHighlightSelector] = useState(0);
 
   const user = session?.user;
-  const accountParam = searchParams.get("account");
+  const accountParam = searchParams.get("account") || account?.id || null;
   const qs = accountParam ? `?account=${accountParam}` : "";
 
   const handleDisabledClick = () => {
     setHighlightSelector((c) => c + 1);
+  };
+
+  const resolveHref = (item: NavItem) => {
+    if (item.href.includes("__SLUG__") && account) {
+      return item.href.replace("__SLUG__", account.slug);
+    }
+    return item.href;
+  };
+
+  const isActive = (item: NavItem) => {
+    if (item.href.includes("__SLUG__")) {
+      // Overview link: active when on /accounts/{any-slug}
+      return /^\/accounts\/[^/]+/.test(pathname);
+    }
+    if (item.href === "/accounts") {
+      // Accounts list: only active on exact /accounts path
+      return pathname === "/accounts";
+    }
+    return pathname.startsWith(item.href);
   };
 
   const renderNavItem = (item: NavItem, disabled: boolean) => {
@@ -89,14 +109,15 @@ export function Sidebar() {
       );
     }
 
+    const href = resolveHref(item);
+    const needsQs = !item.href.includes("__SLUG__"); // Overview link doesn't need ?account= qs
+
     return (
       <Link
         key={item.href}
-        href={`${item.href}${qs}`}
+        href={`${href}${needsQs ? qs : ""}`}
         className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
-          pathname.startsWith(item.href)
-            ? "bg-(--input) text-white"
-            : "text-(--muted) hover:text-white hover:bg-(--input)"
+          isActive(item) ? "bg-(--input) text-white" : "text-(--muted) hover:text-white hover:bg-(--input)"
         }`}
       >
         <span className="text-base">{item.icon}</span>
@@ -126,7 +147,7 @@ export function Sidebar() {
               {account ? account.name : "No account selected"}
             </span>
           </div>
-          {accountItems.filter((item) => !item.adminOnly || user?.isAdmin).map((item) => renderNavItem(item, !account))}
+          {accountItems.map((item) => renderNavItem(item, !account))}
         </div>
 
         <div className="border-t border-(--border) mt-2 pt-2">
@@ -134,7 +155,7 @@ export function Sidebar() {
             <span className="text-[10px] uppercase tracking-wider text-(--muted)">Organization</span>
           </div>
           {orgItems.map((item) => renderNavItem(item, false))}
-          {user?.isAdmin && adminItems.map((item) => renderNavItem(item, false))}
+          {adminItems.map((item) => renderNavItem(item, false))}
         </div>
       </nav>
 

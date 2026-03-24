@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import type { Account } from "@/lib/api-schemas/accounts";
 import type { Contact } from "@/lib/api-schemas/contacts";
 import { getAccountResponseSchema } from "@/lib/api-schemas/accounts";
@@ -33,23 +33,16 @@ export function useAccount() {
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
-  const accountId = searchParams.get("account");
+  const pathname = usePathname();
+  const accountIdFromParams = searchParams.get("account");
+
+  // Also detect account from /accounts/{slug} path
+  const slugFromPath = /^\/accounts\/([^/]+)$/.exec(pathname)?.[1] ?? null;
+  const accountId = accountIdFromParams || slugFromPath;
 
   const [account, setAccountState] = useState<Account | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const fetchAccount = useCallback(async (id: string) => {
-    setLoading(true);
-    try {
-      const data = await apiFetch(`/api/accounts/${id}`, getAccountResponseSchema);
-      setAccountState(data.account);
-    } catch {
-      setAccountState(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const fetchContacts = useCallback(async (id: string) => {
     try {
@@ -61,23 +54,45 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshContacts = useCallback(async () => {
-    if (accountId) {
-      await fetchContacts(accountId);
+    if (account) {
+      await fetchContacts(account.id);
     }
-  }, [accountId, fetchContacts]);
+  }, [account, fetchContacts]);
 
   useEffect(() => {
-    if (accountId) {
-      fetchAccount(accountId);
-      fetchContacts(accountId);
-    } else {
+    if (!accountId) {
       setAccountState(null);
       setContacts([]);
+      return;
     }
-  }, [accountId, fetchAccount, fetchContacts]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await apiFetch(`/api/accounts/${accountId}`, getAccountResponseSchema);
+        if (cancelled) return;
+        setAccountState(data.account);
+        // Always use the resolved account ID for sub-resource fetches
+        fetchContacts(data.account.id);
+      } catch {
+        if (!cancelled) {
+          setAccountState(null);
+          setContacts([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, fetchContacts]);
 
   const setAccount = useCallback(
     (newAccountId: string | null) => {
+      // Don't add ?account= on /accounts/{slug} pages — the slug in the path is sufficient
+      if (/^\/accounts\/[^/]+$/.test(window.location.pathname)) return;
+
       const params = new URLSearchParams(searchParams.toString());
       if (newAccountId) {
         params.set("account", newAccountId);

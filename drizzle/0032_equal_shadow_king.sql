@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "content_calendar_url" text;

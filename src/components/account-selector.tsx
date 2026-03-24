@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAccount, type Account } from "./account-provider";
 import { getAccountsResponseSchema } from "@/lib/api-schemas/accounts";
 import type { AccountListItem } from "@/lib/api-schemas/accounts";
@@ -8,6 +9,7 @@ import { apiFetch } from "@/lib/api-client";
 import { CreateAccountModal } from "./create-account-modal";
 
 export function AccountSelector({ highlight }: { highlight?: boolean }) {
+  const router = useRouter();
   const { account, setAccount } = useAccount();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Account[]>([]);
@@ -53,6 +55,7 @@ export function AccountSelector({ highlight }: { highlight?: boolean }) {
     setAccount(acc.id);
     setOpen(false);
     setQuery("");
+    router.push(`/accounts/${acc.slug}`);
   };
 
   const handleClear = () => {
@@ -70,6 +73,7 @@ export function AccountSelector({ highlight }: { highlight?: boolean }) {
     setAccount(created.id);
     setShowCreateModal(false);
     setQuery("");
+    router.push(`/accounts/${created.slug}`);
   };
 
   return (

@@ -11,7 +11,6 @@ declare module "next-auth" {
       id: string;
       name: string;
       email: string;
-      isAdmin: boolean;
     };
   }
 }
@@ -19,7 +18,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     userId?: string;
-    isAdmin?: boolean;
     userVerifiedAt?: number;
   }
 }
@@ -56,7 +54,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (existing) {
           token.userId = existing.id;
-          token.isAdmin = existing.isAdmin;
         } else {
           const [created] = await db
             .insert(users)
@@ -64,11 +61,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               id: createObjectId("user"),
               name: token.name || email.split("@")[0],
               email,
-              isAdmin: false,
             })
             .returning();
           token.userId = created.id;
-          token.isAdmin = false;
         }
         token.userVerifiedAt = Date.now();
       }
@@ -78,7 +73,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.userId) {
         session.user.id = token.userId;
-        session.user.isAdmin = token.isAdmin ?? false;
       }
       return session;
     },

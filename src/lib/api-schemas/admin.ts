@@ -7,7 +7,6 @@ export const userSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
-  isAdmin: z.boolean(),
   createdAt: dateString,
 });
 
@@ -24,7 +23,6 @@ export type GetUsersResponse = z.infer<typeof getUsersResponseSchema>;
 export const createUserBodySchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
-  isAdmin: z.boolean().optional(),
 });
 
 export type CreateUserBody = z.infer<typeof createUserBodySchema>;
@@ -40,7 +38,6 @@ export const updateUserBodySchema = z.object({
   id: z.string().min(1, "User ID is required"),
   name: z.string().optional(),
   email: z.string().optional(),
-  isAdmin: z.boolean().optional(),
 });
 
 export type UpdateUserBody = z.infer<typeof updateUserBodySchema>;

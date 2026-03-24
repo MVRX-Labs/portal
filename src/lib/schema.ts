@@ -7,7 +7,6 @@ export const users = pgTable("users", {
     .$defaultFn(() => createObjectId("user")),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  isAdmin: boolean("is_admin").notNull().default(false),
   slackUserId: text("slack_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -31,6 +30,8 @@ export const accounts = pgTable("accounts", {
   lastMeetingAt: timestamp("last_meeting_at"),
   autoCreated: boolean("auto_created").notNull().default(false),
   hidden: boolean("hidden").notNull().default(false),
+  contentCalendarUrl: text("content_calendar_url"),
+  contractLinks: jsonb("contract_links").$type<{ url: string; label: string }[]>().default([]),
   engagementSlackChannel: text("engagement_slack_channel"),
   analyticsSlackChannel: text("analytics_slack_channel"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -131,6 +132,55 @@ export const icpDefinitions = pgTable("icp_definitions", {
   targetCompanySizes: jsonb("target_company_sizes").$type<string[]>().default([]), // e.g. ["20-200", "200-1000"]
   targetSignals: jsonb("target_signals").$type<string[]>().default([]), // e.g. ["Series A-C", "recently funded"]
   active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// --- Alpha Feed types (JSONB column shapes) ---
+
+export interface AlphaFeedSage {
+  linkedinUrl: string;
+  displayName: string;
+  headline?: string;
+  rationale?: string;
+  active: boolean;
+}
+
+export interface AlphaFeedKeyword {
+  query: string;
+  rationale?: string;
+  active: boolean;
+}
+
+export interface AlphaFeedEntry {
+  postUrl: string;
+  authorName: string;
+  authorLinkedinUrl?: string;
+  authorHeadline?: string;
+  content: string;
+  likesCount: number;
+  commentsCount: number;
+  repostsCount: number;
+  postedAt?: string;
+  engagementScore: number;
+  sourceType: "sage" | "keyword";
+  sourceLabel: string;
+}
+
+export const alphaFeeds = pgTable("alpha_feeds", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("afeed")),
+  icpDefinitionId: text("icp_definition_id")
+    .notNull()
+    .references(() => icpDefinitions.id)
+    .unique(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  sages: jsonb("sages").$type<AlphaFeedSage[]>().default([]),
+  keywords: jsonb("keywords").$type<AlphaFeedKeyword[]>().default([]),
+  dailyEntries: jsonb("daily_entries").$type<Record<string, AlphaFeedEntry[]>>().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

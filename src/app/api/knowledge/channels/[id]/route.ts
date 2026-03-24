@@ -12,11 +12,6 @@ import { parseBody } from "@/lib/api-schemas/common";
 import { patchChannelBodySchema } from "@/lib/api-schemas/knowledge";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const { id } = await params;
 
   const { data, error } = await parseBody(req, patchChannelBodySchema);
@@ -30,11 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "No update fields provided" }, { status: 400 });
   }
 
-  const [updated] = await db
-    .update(knowledgeChannels)
-    .set(updates)
-    .where(eq(knowledgeChannels.id, id))
-    .returning();
+  const [updated] = await db.update(knowledgeChannels).set(updates).where(eq(knowledgeChannels.id, id)).returning();
 
   if (!updated) {
     return NextResponse.json({ error: "Channel not found" }, { status: 404 });

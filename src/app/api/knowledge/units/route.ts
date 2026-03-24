@@ -10,11 +10,6 @@ import { knowledgeUnits, knowledgeChannels } from "@/lib/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
-  const isAdmin = req.headers.get("x-user-admin") === "true";
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
   const params = req.nextUrl.searchParams;
   const accountId = params.get("accountId");
   const unitType = params.get("type");

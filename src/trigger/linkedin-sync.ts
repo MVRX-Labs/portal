@@ -684,11 +684,13 @@ async function sendUnrepliedCommentAlerts(
 
   for (const [postId, comments] of byPost) {
     const post = postMap.get(postId);
-    const snippet = post?.content
+    const rawSnippet = post?.content
       ? post.content.length > 80
         ? post.content.slice(0, 80) + "..."
         : post.content
       : "(post)";
+    // Replace newlines with spaces so Slack _italic_ markers work correctly
+    const snippet = rawSnippet.replace(/\n+/g, " ");
     const postLink = post?.postUrl ? `<${post.postUrl}|View post>` : "";
 
     const commenterLines = comments
@@ -696,9 +698,7 @@ async function sendUnrepliedCommentAlerts(
       .map((c) => {
         const name = c.authorName || "Someone";
         const link = c.authorLinkedinUrl ? `<${c.authorLinkedinUrl}|${name}>` : name;
-        const preview = c.commentText
-          ? ` — "${c.commentText.slice(0, 60)}${c.commentText.length > 60 ? "..." : ""}"`
-          : "";
+        const preview = c.commentText ? ` — "${c.commentText}"` : "";
         const commentLink = c.commentUrl ? ` (<${c.commentUrl}|view>)` : "";
         let line = `  ${link}${preview}${commentLink}`;
 

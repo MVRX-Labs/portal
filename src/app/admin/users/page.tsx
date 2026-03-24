@@ -18,7 +18,6 @@ export default function AdminUsersPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    isAdmin: false,
   });
   const [error, setError] = useState("");
 
@@ -40,7 +39,7 @@ export default function AdminUsersPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", email: "", isAdmin: false });
+    setForm({ name: "", email: "" });
     setError("");
     setShowModal(true);
   };
@@ -50,7 +49,6 @@ export default function AdminUsersPage() {
     setForm({
       name: user.name,
       email: user.email,
-      isAdmin: user.isAdmin,
     });
     setError("");
     setShowModal(true);
@@ -72,7 +70,6 @@ export default function AdminUsersPage() {
             id: editing.id,
             name: form.name,
             email: form.email,
-            isAdmin: form.isAdmin,
           },
         });
       } else {
@@ -121,7 +118,6 @@ export default function AdminUsersPage() {
             <tr className="border-b border-(--border) text-left text-(--muted)">
               <th className="pb-2 pr-4 font-medium">Name</th>
               <th className="pb-2 pr-4 font-medium">Email</th>
-              <th className="pb-2 pr-4 font-medium">Role</th>
               <th className="pb-2 pr-4 font-medium">Created</th>
               <th className="pb-2 font-medium">Actions</th>
             </tr>
@@ -129,7 +125,7 @@ export default function AdminUsersPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-(--muted)">
+                <td colSpan={4} className="py-8 text-center text-(--muted)">
                   Loading...
                 </td>
               </tr>
@@ -138,11 +134,6 @@ export default function AdminUsersPage() {
                 <tr key={user.id} className="border-b border-(--border) last:border-0">
                   <td className="py-2 pr-4">{user.name}</td>
                   <td className="py-2 pr-4">{user.email}</td>
-                  <td className="py-2 pr-4">
-                    <span className={`badge ${user.isAdmin ? "badge-running" : "badge-completed"}`}>
-                      {user.isAdmin ? "Admin" : "User"}
-                    </span>
-                  </td>
                   <td className="py-2 pr-4 text-(--muted)">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">
                     <button onClick={() => openEdit(user)} className="btn-secondary mr-2 text-xs">
@@ -173,19 +164,6 @@ export default function AdminUsersPage() {
                 <label className="block text-sm font-medium mb-1">Email</label>
                 <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isAdmin"
-                  checked={form.isAdmin}
-                  onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="isAdmin" className="text-sm">
-                  Admin
-                </label>
-              </div>
-
               {error && <p className="text-sm text-(--destructive)">{error}</p>}
             </div>
 

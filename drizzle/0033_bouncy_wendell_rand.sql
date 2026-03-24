@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "contract_links" jsonb DEFAULT '[]'::jsonb;

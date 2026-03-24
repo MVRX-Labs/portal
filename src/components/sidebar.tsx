@@ -32,7 +32,7 @@ const accountItems: NavItem[] = [
   { href: "/linkedin-engagement", label: "LinkedIn Engagement Bot", icon: "🤖" },
   { href: "/analytics", label: "LinkedIn Post Analytics", icon: "📈" },
   { href: "/alpha-feed", label: "LinkedIn Alpha Feed", icon: "🔥" },
-  { href: "/admin/knowledge", label: "Knowledge Hub", icon: "🧠" },
+  { href: "/org/knowledge", label: "Knowledge Hub", icon: "🧠" },
 ];
 
 const orgItems: NavItem[] = [
@@ -40,12 +40,9 @@ const orgItems: NavItem[] = [
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
   { href: "/ingest-skill", label: "Ingest Skill", icon: "🧩" },
-];
-
-const adminItems: NavItem[] = [
-  { href: "/admin/calendar", label: "Calendar Sync", icon: "📅" },
-  { href: "/admin/users", label: "User Management", icon: "⚙" },
-  { href: "/admin/secrets", label: "Secrets", icon: "🔑" },
+  { href: "/org/calendar", label: "Calendar Sync", icon: "📅" },
+  { href: "/org/users", label: "User Management", icon: "⚙" },
+  { href: "/org/secrets", label: "Secrets", icon: "🔑" },
 ];
 
 export function Sidebar() {
@@ -155,7 +152,6 @@ export function Sidebar() {
             <span className="text-[10px] uppercase tracking-wider text-(--muted)">Organization</span>
           </div>
           {orgItems.map((item) => renderNavItem(item, false))}
-          {adminItems.map((item) => renderNavItem(item, false))}
         </div>
       </nav>
 

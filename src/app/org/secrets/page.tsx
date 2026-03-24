@@ -8,7 +8,7 @@ import { getSecretsResponseSchema, getSecretTypesResponseSchema } from "@/lib/ap
 import { getAccountsResponseSchema } from "@/lib/api-schemas/accounts";
 import { SecretModal } from "@/components/secret-modal";
 
-export default function AdminSecretsPage() {
+export default function SecretsPage() {
   const [secrets, setSecrets] = useState<Secret[]>([]);
   const [secretTypes, setSecretTypes] = useState<SecretType[]>([]);
   const [accounts, setAccounts] = useState<AccountListItem[]>([]);
@@ -22,7 +22,7 @@ export default function AdminSecretsPage() {
     setLoading(true);
     try {
       const params = filterAccountId ? `?accountId=${filterAccountId}` : "";
-      const data = await apiFetch(`/api/admin/secrets${params}`, getSecretsResponseSchema);
+      const data = await apiFetch(`/api/org/secrets${params}`, getSecretsResponseSchema);
       setSecrets(data.secrets);
     } catch {
       // ignore
@@ -33,7 +33,7 @@ export default function AdminSecretsPage() {
 
   const loadTypes = async () => {
     try {
-      const data = await apiFetch("/api/admin/secret-types", getSecretTypesResponseSchema);
+      const data = await apiFetch("/api/org/secret-types", getSecretTypesResponseSchema);
       setSecretTypes(data.secretTypes);
     } catch {
       // ignore
@@ -61,7 +61,7 @@ export default function AdminSecretsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this secret?")) return;
     try {
-      await apiMutate(`/api/admin/secrets/${id}`, { parse: (v: unknown) => v } as never, { method: "DELETE" });
+      await apiMutate(`/api/org/secrets/${id}`, { parse: (v: unknown) => v } as never, { method: "DELETE" });
       loadSecrets();
     } catch {
       // ignore

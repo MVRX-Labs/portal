@@ -107,6 +107,7 @@ export type RemoveAlphaFeedKeywordBody = z.infer<typeof removeAlphaFeedKeywordBo
 
 export const generateAlphaFeedSpecResponseSchema = z.object({
   triggerRunId: z.string(),
+  publicAccessToken: z.string(),
 });
 
 export type GenerateAlphaFeedSpecResponse = z.infer<typeof generateAlphaFeedSpecResponseSchema>;

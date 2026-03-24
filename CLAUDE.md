@@ -30,6 +30,7 @@ docs/
 - **Do not expect accounts/contacts to always be accurate.** We should handle missing fields gracefully.
 - **NEVER use `console.log` in Trigger tasks** — use `logger` from `@trigger.dev/sdk`. Enforced by `scripts/lint-architecture.sh`.
 - **API routes use Zod schemas** defined in `src/lib/api-schemas/` for request/response validation.
+- **Dont skimp on max_turns for Claude Code calls.** Always use 30 or more turns.
 
 ## Dependency Rules (enforced by lint)
 

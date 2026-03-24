@@ -19,7 +19,7 @@ export const registerChannelBodySchema = z
       const isClient = category === "client_shared" || category === "client_internal";
       return !isClient || !!data.accountId;
     },
-    { message: "accountId required for client channels", path: ["accountId"] },
+    { message: "accountId required for client channels", path: ["accountId"] }
   );
 
 export type RegisterChannelBody = z.infer<typeof registerChannelBodySchema>;
@@ -54,10 +54,14 @@ export type TriggerIngestBody = z.infer<typeof triggerIngestBodySchema>;
 // --- Digest schemas ---
 
 export const updateUnitsBodySchema = z.object({
-  updates: z.array(z.object({
-    unitId: z.string(),
-    status: z.enum(["open", "done", "dismissed"]),
-  })).min(1),
+  updates: z
+    .array(
+      z.object({
+        unitId: z.string(),
+        status: z.enum(["open", "done", "dismissed"]),
+      })
+    )
+    .min(1),
 });
 
 export type UpdateUnitsBody = z.infer<typeof updateUnitsBodySchema>;
@@ -88,7 +92,7 @@ export const getStateResponseSchema = z.object({
 
 export type GetStateResponse = z.infer<typeof getStateResponseSchema>;
 
-// --- Units list schemas (admin) ---
+// --- Units list schemas ---
 
 export const unitSchema = z.object({
   id: z.string(),
@@ -132,7 +136,7 @@ export const patchUnitBodySchema = z.object({
 
 export type PatchUnitBody = z.infer<typeof patchUnitBodySchema>;
 
-// --- Stats schema (admin dashboard) ---
+// --- Stats schema ---
 
 export const knowledgeStatsSchema = z.object({
   totalEvents: z.number(),

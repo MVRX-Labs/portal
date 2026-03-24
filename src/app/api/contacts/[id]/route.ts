@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { contacts } from "@/lib/schema";
+import {
+  contacts,
+  leads,
+  leadCsvs,
+  calendarEventContacts,
+  linkedinProfiles,
+  knowledgeUnits,
+  secrets,
+} from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
 import { updateContactBodySchema } from "@/lib/api-schemas/contacts";
@@ -36,4 +44,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const linkedinUrl = await getContactLinkedinUrl(contact.id);
   return NextResponse.json({ contact: { ...contact, linkedinUrl } });
+}
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  // Verify contact exists
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, id)).limit(1);
+  if (!contact) {
+    return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+  }
+
+  // Clean up foreign key references before deleting
+  await db.delete(calendarEventContacts).where(eq(calendarEventContacts.contactId, id));
+  await db.update(leads).set({ contactId: null }).where(eq(leads.contactId, id));
+  await db.update(leadCsvs).set({ contactId: null }).where(eq(leadCsvs.contactId, id));
+  await db.update(linkedinProfiles).set({ contactId: null }).where(eq(linkedinProfiles.contactId, id));
+  await db.update(knowledgeUnits).set({ assigneeContactId: null }).where(eq(knowledgeUnits.assigneeContactId, id));
+  await db.update(secrets).set({ contactId: null }).where(eq(secrets.contactId, id));
+
+  await db.delete(contacts).where(eq(contacts.id, id));
+
+  return NextResponse.json({ success: true });
 }

@@ -118,10 +118,10 @@ export default function KnowledgeHubPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/admin/knowledge/units${qs}`} className="btn-secondary text-sm">
+          <Link href={`/org/knowledge/units${qs}`} className="btn-secondary text-sm">
             Browse Units
           </Link>
-          <Link href={`/admin/knowledge/state${qs}`} className="btn-secondary text-sm">
+          <Link href={`/org/knowledge/state${qs}`} className="btn-secondary text-sm">
             Account State
           </Link>
         </div>
@@ -184,7 +184,7 @@ export default function KnowledgeHubPage() {
             {brief.content.slice(0, 300)}
             {brief.content.length > 300 ? "..." : ""}
           </p>
-          <Link href={`/admin/knowledge/state${qs}`} className="text-xs text-(--accent) mt-2 inline-block">
+          <Link href={`/org/knowledge/state${qs}`} className="text-xs text-(--accent) mt-2 inline-block">
             View full state →
           </Link>
         </div>

@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { Contact } from "@/lib/api-schemas/contacts";
 import { apiFetch, apiMutate } from "@/lib/api-client";
-import { getAccountContactsResponseSchema, updateContactResponseSchema } from "@/lib/api-schemas/contacts";
+import {
+  getAccountContactsResponseSchema,
+  updateContactResponseSchema,
+  deleteContactResponseSchema,
+} from "@/lib/api-schemas/contacts";
 import { NotesField } from "@/components/notes-field";
 import { CreateContactModal } from "@/components/create-contact-modal";
 import { SectionCard } from "./section-card";
@@ -35,6 +39,8 @@ export function ContactsSection({ accountId }: { accountId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edits, setEdits] = useState<Partial<Contact>>({});
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
@@ -86,6 +92,25 @@ export function ContactsSection({ accountId }: { accountId: string }) {
       // ignore
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deleteContact = async (contactId: string) => {
+    setDeleting(true);
+    try {
+      await apiMutate(`/api/contacts/${contactId}`, deleteContactResponseSchema, {
+        method: "DELETE",
+      });
+      setContacts((prev) => prev.filter((c) => c.id !== contactId));
+      setConfirmDeleteId(null);
+      if (editingId === contactId) {
+        setEditingId(null);
+        setEdits({});
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -196,7 +221,34 @@ export function ContactsSection({ accountId }: { accountId: string }) {
                     />
                   </div>
                   <NotesField value={edits.notes || ""} onChange={(v) => setEdits((prev) => ({ ...prev, notes: v }))} />
-                  <div className="flex items-center justify-end pt-1">
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      {confirmDeleteId === contact.id ? (
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs text-red-400">Are you sure?</span>
+                          <button
+                            onClick={() => deleteContact(contact.id)}
+                            disabled={deleting}
+                            className="text-xs text-red-400 hover:text-red-300 font-medium hover:underline"
+                          >
+                            {deleting ? "Deleting..." : "Yes, remove"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs text-(--muted) hover:underline"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(contact.id)}
+                          className="text-xs text-red-400/70 hover:text-red-400 hover:underline"
+                        >
+                          Remove contact
+                        </button>
+                      )}
+                    </div>
                     <button onClick={saveContact} disabled={saving} className="btn-primary text-sm">
                       {saving ? "Saving..." : "Save Contact"}
                     </button>

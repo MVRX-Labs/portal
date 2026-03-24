@@ -47,7 +47,7 @@ export function SecretModal({ editing, accounts, secretTypes, onClose, onSaved, 
   const handleCreateType = async () => {
     if (!newTypeName.trim()) return;
     try {
-      const res = await apiMutate("/api/admin/secret-types", createSecretTypeResponseSchema, {
+      const res = await apiMutate("/api/org/secret-types", createSecretTypeResponseSchema, {
         method: "POST",
         body: { name: newTypeName.trim() },
       });
@@ -77,12 +77,12 @@ export function SecretModal({ editing, accounts, secretTypes, onClose, onSaved, 
         description: description || undefined,
       };
       if (editing) {
-        await apiMutate(`/api/admin/secrets/${editing.id}`, { parse: (v: unknown) => v } as never, {
+        await apiMutate(`/api/org/secrets/${editing.id}`, { parse: (v: unknown) => v } as never, {
           method: "PUT",
           body,
         });
       } else {
-        await apiMutate("/api/admin/secrets", { parse: (v: unknown) => v } as never, {
+        await apiMutate("/api/org/secrets", { parse: (v: unknown) => v } as never, {
           method: "POST",
           body,
         });

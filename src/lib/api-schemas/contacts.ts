@@ -65,6 +65,13 @@ export const updateContactResponseSchema = z.object({
 
 export type UpdateContactResponse = z.infer<typeof updateContactResponseSchema>;
 
+// DELETE /api/contacts/[id]
+export const deleteContactResponseSchema = z.object({
+  success: z.boolean(),
+});
+
+export type DeleteContactResponse = z.infer<typeof deleteContactResponseSchema>;
+
 // GET /api/accounts/[id]/contacts
 export const getAccountContactsResponseSchema = z.object({
   contacts: z.array(contactSchema),

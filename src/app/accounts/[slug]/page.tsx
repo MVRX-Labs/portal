@@ -3,10 +3,10 @@
 import React, { Suspense, useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import type { Account } from "@/lib/api-schemas/accounts";
-import type { User } from "@/lib/api-schemas/admin";
+import type { User } from "@/lib/api-schemas/org";
 import { apiFetch } from "@/lib/api-client";
 import { getAccountResponseSchema } from "@/lib/api-schemas/accounts";
-import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
+import { getUsersResponseSchema } from "@/lib/api-schemas/org";
 import Link from "next/link";
 
 import { AccountHeader } from "./_components/account-header";
@@ -42,7 +42,7 @@ function AccountOverviewContent() {
       const acctJson = await acctRes.json();
       const acctData = getAccountResponseSchema.parse(acctJson);
 
-      const userData = await apiFetch("/api/admin/users", getUsersResponseSchema);
+      const userData = await apiFetch("/api/org/users", getUsersResponseSchema);
       setAccount(acctData.account);
       setUsers(userData.users);
     } catch {

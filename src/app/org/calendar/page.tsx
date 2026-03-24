@@ -7,13 +7,13 @@ import type {
   CalendarSyncStateResponse,
   CalendarStatsResponse,
   CalendarSyncResponse,
-} from "@/lib/api-schemas/admin";
+} from "@/lib/api-schemas/org";
 import {
   calendarEventsResponseSchema,
   calendarSyncStateResponseSchema,
   calendarStatsResponseSchema,
   calendarSyncResponseSchema,
-} from "@/lib/api-schemas/admin";
+} from "@/lib/api-schemas/org";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 
 interface SyncState {
@@ -111,7 +111,7 @@ function RunProgressInline({
   );
 }
 
-export default function AdminCalendarPage() {
+export default function CalendarPage() {
   const [tab, setTab] = useState<"events" | "sync">("events");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [syncStates, setSyncStates] = useState<SyncState[]>([]);
@@ -125,9 +125,9 @@ export default function AdminCalendarPage() {
     setLoading(true);
     try {
       const [eventsData, syncData, statsData] = await Promise.all([
-        apiFetch("/api/admin/calendar-events?view=events&limit=50", calendarEventsResponseSchema),
-        apiFetch("/api/admin/calendar-events?view=sync-state", calendarSyncStateResponseSchema),
-        apiFetch("/api/admin/calendar-events?view=stats", calendarStatsResponseSchema),
+        apiFetch("/api/org/calendar-events?view=events&limit=50", calendarEventsResponseSchema),
+        apiFetch("/api/org/calendar-events?view=sync-state", calendarSyncStateResponseSchema),
+        apiFetch("/api/org/calendar-events?view=stats", calendarStatsResponseSchema),
       ]);
 
       setEvents((eventsData.events || []) as CalendarEvent[]);
@@ -150,7 +150,7 @@ export default function AdminCalendarPage() {
     setActiveSync(null);
 
     try {
-      const data = await apiMutate("/api/admin/calendar-sync", calendarSyncResponseSchema, {
+      const data = await apiMutate("/api/org/calendar-sync", calendarSyncResponseSchema, {
         method: "POST",
         body: {},
       });

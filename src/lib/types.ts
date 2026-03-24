@@ -1,5 +1,5 @@
 export type { UserId, AccountId, ContactId, RunId, ObjectId } from "./ids";
-export type { User } from "./api-schemas/admin";
+export type { User } from "./api-schemas/org";
 export type { ToolRun } from "./api-schemas/history";
 
 export interface ToolConfig {

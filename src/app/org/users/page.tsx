@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { User } from "@/lib/api-schemas/admin";
+import type { User } from "@/lib/api-schemas/org";
 import {
   getUsersResponseSchema,
   createUserResponseSchema,
   updateUserResponseSchema,
   deleteUserResponseSchema,
-} from "@/lib/api-schemas/admin";
+} from "@/lib/api-schemas/org";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 
-export default function AdminUsersPage() {
+export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch("/api/admin/users", getUsersResponseSchema);
+      const data = await apiFetch("/api/org/users", getUsersResponseSchema);
       setUsers(data.users || []);
     } catch {
       // ignore
@@ -64,7 +64,7 @@ export default function AdminUsersPage() {
 
     try {
       if (editing) {
-        await apiMutate("/api/admin/users", updateUserResponseSchema, {
+        await apiMutate("/api/org/users", updateUserResponseSchema, {
           method: "PUT",
           body: {
             id: editing.id,
@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
           },
         });
       } else {
-        await apiMutate("/api/admin/users", createUserResponseSchema, {
+        await apiMutate("/api/org/users", createUserResponseSchema, {
           method: "POST",
           body: form,
         });
@@ -89,7 +89,7 @@ export default function AdminUsersPage() {
     if (!confirm("Are you sure you want to delete this user?")) return;
 
     try {
-      await apiMutate(`/api/admin/users?id=${id}`, deleteUserResponseSchema, {
+      await apiMutate(`/api/org/users?id=${id}`, deleteUserResponseSchema, {
         method: "DELETE",
       });
       loadUsers();

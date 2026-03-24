@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Account } from "@/lib/api-schemas/accounts";
-import type { User } from "@/lib/api-schemas/admin";
+import type { User } from "@/lib/api-schemas/org";
 import { apiMutate } from "@/lib/api-client";
 import { updateAccountResponseSchema } from "@/lib/api-schemas/accounts";
 

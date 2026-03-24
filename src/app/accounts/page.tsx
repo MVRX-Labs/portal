@@ -3,10 +3,10 @@
 import React, { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { AccountListItem, GetAccountsResponse } from "@/lib/api-schemas/accounts";
-import type { User } from "@/lib/api-schemas/admin";
+import type { User } from "@/lib/api-schemas/org";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import { getAccountsResponseSchema, updateAccountResponseSchema } from "@/lib/api-schemas/accounts";
-import { getUsersResponseSchema } from "@/lib/api-schemas/admin";
+import { getUsersResponseSchema } from "@/lib/api-schemas/org";
 import { CreateAccountModal } from "@/components/create-account-modal";
 
 function formatMrr(cents: number, currency: string = "$"): string {

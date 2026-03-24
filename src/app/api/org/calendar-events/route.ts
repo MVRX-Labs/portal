@@ -10,7 +10,7 @@ import {
   users,
 } from "@/lib/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
-import type { CalendarSyncResponse } from "@/lib/api-schemas/admin";
+import type { CalendarSyncResponse } from "@/lib/api-schemas/org";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

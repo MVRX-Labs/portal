@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
-import { createUserBodySchema, updateUserBodySchema } from "@/lib/api-schemas/admin";
+import { createUserBodySchema, updateUserBodySchema } from "@/lib/api-schemas/org";
 
 export const maxDuration = 300;
 

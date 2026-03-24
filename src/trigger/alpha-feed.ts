@@ -80,7 +80,7 @@ export const alphaFeedGenerateSpecTask = task({
 
       const result = await runClaudeAgent(prompt, sessionDir, {
         allowedTools: ["WebSearch"],
-        maxTurns: 15,
+        maxTurns: 25,
         model: "claude-sonnet-4-6",
       });
 

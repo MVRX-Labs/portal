@@ -12,14 +12,14 @@ export const userSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 
-// GET /api/admin/users
+// GET /api/org/users
 export const getUsersResponseSchema = z.object({
   users: z.array(userSchema),
 });
 
 export type GetUsersResponse = z.infer<typeof getUsersResponseSchema>;
 
-// POST /api/admin/users
+// POST /api/org/users
 export const createUserBodySchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
@@ -33,7 +33,7 @@ export const createUserResponseSchema = z.object({
 
 export type CreateUserResponse = z.infer<typeof createUserResponseSchema>;
 
-// PUT /api/admin/users
+// PUT /api/org/users
 export const updateUserBodySchema = z.object({
   id: z.string().min(1, "User ID is required"),
   name: z.string().optional(),
@@ -48,7 +48,7 @@ export const updateUserResponseSchema = z.object({
 
 export type UpdateUserResponse = z.infer<typeof updateUserResponseSchema>;
 
-// DELETE /api/admin/users
+// DELETE /api/org/users
 export const deleteUserResponseSchema = z.object({
   ok: z.literal(true),
 });
@@ -108,7 +108,7 @@ export const calendarEventSchema = z.object({
   ),
 });
 
-// GET /api/admin/calendar-events responses (depends on ?view=)
+// GET /api/org/calendar-events responses (depends on ?view=)
 export const calendarSyncStateResponseSchema = z.object({
   syncStates: z.array(calendarSyncStateSchema),
 });
@@ -127,7 +127,7 @@ export const calendarEventsResponseSchema = z.object({
 
 export type CalendarEventsResponse = z.infer<typeof calendarEventsResponseSchema>;
 
-// POST /api/admin/calendar-sync
+// POST /api/org/calendar-sync
 export const calendarSyncResponseSchema = z.object({
   triggerRunId: z.string(),
   publicAccessToken: z.string(),

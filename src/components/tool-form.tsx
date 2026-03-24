@@ -304,7 +304,7 @@ export function ToolForm({ tool }: ToolFormProps) {
   const inProgressRuns = activeRuns.filter((r) => r.status === "running" || r.status === "pending");
   const finishedRuns = activeRuns.filter((r) => r.status === "completed" || r.status === "failed");
 
-  if (!account) {
+  if (!account && !tool.accountOptional) {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-1">{tool.name}</h1>

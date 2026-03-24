@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useAccount } from "@/components/account-provider";
 import { apiFetch, apiMutate } from "@/lib/api-client";
-import {
-  getUnitsResponseSchema,
-  getChannelsResponseSchema,
-  patchUnitResponseSchema,
-  type Unit,
-  type Channel,
-} from "@/lib/api-schemas/knowledge";
+import { getUnitsResponseSchema, patchUnitResponseSchema, type Unit } from "@/lib/api-schemas/knowledge";
 
 const TYPE_EMOJI: Record<string, string> = {
   action_item: "🔹",
@@ -24,35 +19,43 @@ const TYPE_EMOJI: Record<string, string> = {
 };
 
 const UNIT_TYPES = [
-  "action_item", "decision", "context_update", "content_draft", "request",
-  "feedback", "deliverable", "blocker", "product_bug", "product_feature",
+  "action_item",
+  "decision",
+  "context_update",
+  "content_draft",
+  "request",
+  "feedback",
+  "deliverable",
+  "blocker",
+  "product_bug",
+  "product_feature",
 ];
 
 interface Filters {
-  accountId: string;
   type: string;
   status: string;
   page: number;
 }
 
 export default function KnowledgeUnitsPage() {
+  const { account } = useAccount();
+
   const [units, setUnits] = useState<Unit[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
-  const [filters, setFilters] = useState<Filters>({ accountId: "", type: "", status: "", page: 1 });
+  const [filters, setFilters] = useState<Filters>({ type: "", status: "", page: 1 });
   const [loading, setLoading] = useState(true);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [editForm, setEditForm] = useState({ content: "", status: "", assignee: "" });
 
-  // Extract unique accounts from channels
-  const accountOptions = [...new Map(
-    channels.filter((c) => c.accountId).map((c) => [c.accountId, c.slackChannelName.replace(/^ext-/, "").replace(/-/g, " ")])
-  ).entries()].map(([id, name]) => ({ id: id!, name }));
-
   const loadUnits = useCallback(async () => {
+    if (!account) {
+      setUnits([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const params = new URLSearchParams();
-    if (filters.accountId) params.set("accountId", filters.accountId);
+    params.set("accountId", account.id);
     if (filters.type) params.set("type", filters.type);
     if (filters.status) params.set("status", filters.status);
     params.set("page", String(filters.page));
@@ -67,19 +70,11 @@ export default function KnowledgeUnitsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [account, filters]);
 
-  const loadChannels = useCallback(async () => {
-    try {
-      const res = await apiFetch("/api/knowledge/channels", getChannelsResponseSchema);
-      setChannels(res.channels);
-    } catch {
-      // handled by toast
-    }
-  }, []);
-
-  useEffect(() => { loadChannels(); }, [loadChannels]);
-  useEffect(() => { loadUnits(); }, [loadUnits]);
+  useEffect(() => {
+    loadUnits();
+  }, [loadUnits]);
 
   const handleStatusChange = async (unitId: string, status: string) => {
     try {
@@ -125,13 +120,22 @@ export default function KnowledgeUnitsPage() {
 
   const fmtDate = (d: string) => new Date(d).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
 
+  if (!account) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-2">Knowledge Units</h1>
+        <p className="text-(--muted)">Select an account to browse knowledge units.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Knowledge Units</h1>
           <p className="text-sm text-(--muted)">
-            {pagination.total} total units
+            {account.name} — {pagination.total} total units
           </p>
         </div>
       </div>
@@ -140,26 +144,13 @@ export default function KnowledgeUnitsPage() {
       <div className="card mb-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs text-(--muted) mb-1">Account</label>
-            <select
-              value={filters.accountId}
-              onChange={(e) => setFilters({ ...filters, accountId: e.target.value, page: 1 })}
-            >
-              <option value="">All accounts</option>
-              {accountOptions.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
             <label className="block text-xs text-(--muted) mb-1">Type</label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({ ...filters, type: e.target.value, page: 1 })}
-            >
+            <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value, page: 1 })}>
               <option value="">All types</option>
               {UNIT_TYPES.map((t) => (
-                <option key={t} value={t}>{TYPE_EMOJI[t]} {t.replace(/_/g, " ")}</option>
+                <option key={t} value={t}>
+                  {TYPE_EMOJI[t]} {t.replace(/_/g, " ")}
+                </option>
               ))}
             </select>
           </div>
@@ -196,11 +187,15 @@ export default function KnowledgeUnitsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-(--muted)">Loading...</td>
+                <td colSpan={8} className="py-8 text-center text-(--muted)">
+                  Loading...
+                </td>
               </tr>
             ) : units.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-(--muted)">No units found</td>
+                <td colSpan={8} className="py-8 text-center text-(--muted)">
+                  No units found
+                </td>
               </tr>
             ) : (
               units.map((unit) => (
@@ -210,7 +205,9 @@ export default function KnowledgeUnitsPage() {
                     <span className="ml-1 text-xs text-(--muted)">{unit.unitType.replace(/_/g, " ")}</span>
                   </td>
                   <td className="py-2 pr-3 max-w-sm">
-                    <p className="truncate" title={unit.content}>{unit.content}</p>
+                    <p className="truncate" title={unit.content}>
+                      {unit.content}
+                    </p>
                   </td>
                   <td className="py-2 pr-3 text-xs whitespace-nowrap">{unit.assignee ?? "-"}</td>
                   <td className="py-2 pr-3">
@@ -308,10 +305,7 @@ export default function KnowledgeUnitsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                >
+                <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                   <option value="open">Open</option>
                   <option value="done">Done</option>
                   <option value="dismissed">Dismissed</option>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAccount } from "@/components/account-provider";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import {
   getChannelsResponseSchema,
@@ -14,77 +16,48 @@ import {
   type StateDoc,
 } from "@/lib/api-schemas/knowledge";
 
-const TYPE_EMOJI: Record<string, string> = {
-  action_item: "🔹",
-  decision: "⚖️",
-  request: "📩",
-  blocker: "🚫",
-  deliverable: "📦",
-  feedback: "💬",
-  context_update: "📝",
-  content_draft: "✍️",
-  product_bug: "🐛",
-  product_feature: "✨",
-};
-
-interface AccountStatePreview {
-  accountId: string;
-  accountName: string;
-  briefSnippet: string;
-  openItemCount: number;
-  lastUpdated: string | null;
-}
-
 export default function KnowledgeHubPage() {
+  const { account } = useAccount();
+  const searchParams = useSearchParams();
+  const qs = searchParams.get("account") ? `?account=${searchParams.get("account")}` : "";
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [stats, setStats] = useState<KnowledgeStats | null>(null);
-  const [accountPreviews, setAccountPreviews] = useState<AccountStatePreview[]>([]);
+  const [docs, setDocs] = useState<StateDoc[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
+    if (!account) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [channelsRes, statsRes] = await Promise.all([
         apiFetch("/api/knowledge/channels", getChannelsResponseSchema),
         apiFetch("/api/knowledge/stats", getStatsResponseSchema),
       ]);
-      setChannels(channelsRes.channels);
+      // Filter channels to the selected account
+      setChannels(channelsRes.channels.filter((c) => c.accountId === account.id));
       setStats(statsRes.stats);
 
-      // Load state previews for accounts with channels
-      const accountIds = [...new Set(channelsRes.channels.map((c) => c.accountId).filter(Boolean))] as string[];
-      const previews: AccountStatePreview[] = [];
-
-      for (const accountId of accountIds) {
-        try {
-          const stateRes = await apiFetch(`/api/knowledge/state?accountId=${accountId}`, getStateResponseSchema);
-          const brief = stateRes.docs.find((d: StateDoc) => d.stateType === "brief");
-          const openItems = stateRes.docs.find((d: StateDoc) => d.stateType === "open_items");
-          const channel = channelsRes.channels.find((c) => c.accountId === accountId);
-
-          // Count open items by counting "- [ ]" markers
-          const openCount = openItems ? (openItems.content.match(/- \[ \]/g) || []).length : 0;
-
-          previews.push({
-            accountId,
-            accountName: channel?.slackChannelName?.replace(/^ext-/, "").replace(/-/g, " ") ?? accountId,
-            briefSnippet: brief ? brief.content.slice(0, 200) + (brief.content.length > 200 ? "..." : "") : "No brief generated yet",
-            openItemCount: openCount,
-            lastUpdated: brief?.updatedAt ?? null,
-          });
-        } catch {
-          // Skip accounts with no state
-        }
+      // Load state docs for the selected account
+      try {
+        const stateRes = await apiFetch(`/api/knowledge/state?accountId=${account.id}`, getStateResponseSchema);
+        setDocs(stateRes.docs);
+      } catch {
+        setDocs([]);
       }
-      setAccountPreviews(previews);
     } catch {
       // errors handled by apiFetch toast
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [account]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleToggleActive = async (channel: Channel) => {
     try {
@@ -113,6 +86,15 @@ export default function KnowledgeHubPage() {
     return new Date(d).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
   };
 
+  if (!account) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-2">Knowledge Hub</h1>
+        <p className="text-(--muted)">Select an account to view knowledge data.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div>
@@ -122,20 +104,24 @@ export default function KnowledgeHubPage() {
     );
   }
 
+  const brief = docs.find((d) => d.stateType === "brief");
+  const openItems = docs.find((d) => d.stateType === "open_items");
+  const openCount = openItems ? (openItems.content.match(/- \[ \]/g) || []).length : 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Knowledge Hub</h1>
           <p className="text-sm text-(--muted)">
-            Slack ingestion, knowledge extraction, and account state synthesis.
+            {account.name} — Slack ingestion, knowledge extraction, and account state synthesis.
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin/knowledge/units" className="btn-secondary text-sm">
+          <Link href={`/admin/knowledge/units${qs}`} className="btn-secondary text-sm">
             Browse Units
           </Link>
-          <Link href="/admin/knowledge/state" className="btn-secondary text-sm">
+          <Link href={`/admin/knowledge/state${qs}`} className="btn-secondary text-sm">
             Account State
           </Link>
         </div>
@@ -184,6 +170,26 @@ export default function KnowledgeHubPage() {
         </div>
       )}
 
+      {/* Account State Summary */}
+      {brief && (
+        <div className="card mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold">Executive Brief</h2>
+            <div className="flex items-center gap-3">
+              {openCount > 0 && <span className="text-xs text-(--warning)">{openCount} open items</span>}
+              <span className="text-xs text-(--muted)">{fmtDate(brief.updatedAt)}</span>
+            </div>
+          </div>
+          <p className="text-sm text-(--muted) leading-relaxed">
+            {brief.content.slice(0, 300)}
+            {brief.content.length > 300 ? "..." : ""}
+          </p>
+          <Link href={`/admin/knowledge/state${qs}`} className="text-xs text-(--accent) mt-2 inline-block">
+            View full state →
+          </Link>
+        </div>
+      )}
+
       {/* Channels */}
       <div className="card mb-6 overflow-x-auto">
         <div className="flex items-center justify-between mb-3">
@@ -204,7 +210,7 @@ export default function KnowledgeHubPage() {
             {channels.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-4 text-center text-(--muted)">
-                  No channels registered
+                  No channels registered for this account
                 </td>
               </tr>
             ) : (
@@ -222,16 +228,10 @@ export default function KnowledgeHubPage() {
                   <td className="py-2 pr-4 text-(--muted) text-xs">{fmtDate(ch.lastSyncedAt)}</td>
                   <td className="py-2 pr-4">{ch.messagesIngested ?? 0}</td>
                   <td className="py-2 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleActive(ch)}
-                      className="btn-secondary text-xs mr-1"
-                    >
+                    <button onClick={() => handleToggleActive(ch)} className="btn-secondary text-xs mr-1">
                       {ch.active ? "Disable" : "Enable"}
                     </button>
-                    <button
-                      onClick={() => handleTriggerSync(ch.id)}
-                      className="btn-primary text-xs"
-                    >
+                    <button onClick={() => handleTriggerSync(ch.id)} className="btn-primary text-xs">
                       Sync
                     </button>
                   </td>
@@ -240,31 +240,6 @@ export default function KnowledgeHubPage() {
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Account State Previews */}
-      <div className="mb-6">
-        <h2 className="text-sm font-semibold mb-3">Account State</h2>
-        {accountPreviews.length === 0 ? (
-          <p className="text-sm text-(--muted)">No account state documents generated yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {accountPreviews.map((preview) => (
-              <Link
-                key={preview.accountId}
-                href={`/admin/knowledge/state?accountId=${preview.accountId}`}
-                className="card hover:border-(--accent) transition-colors"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium capitalize">{preview.accountName}</h3>
-                  <span className="text-xs text-(--muted)">{fmtDate(preview.lastUpdated)}</span>
-                </div>
-                <p className="text-sm text-(--muted) mb-2">{preview.briefSnippet}</p>
-                <p className="text-xs text-(--warning)">{preview.openItemCount} open items</p>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

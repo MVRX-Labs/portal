@@ -31,18 +31,19 @@ const accountItems: NavItem[] = [
   { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true, dev: true },
   { href: "/linkedin-engagement", label: "LinkedIn Engagement Bot", icon: "🤖" },
   { href: "/analytics", label: "LinkedIn Post Analytics", icon: "📈" },
+  { href: "/admin/knowledge", label: "Knowledge Hub", icon: "🧠", adminOnly: true },
 ];
 
 const orgItems: NavItem[] = [
   { href: "/accounts", label: "Accounts", icon: "🏢" },
   { href: "/history", label: "Run History", icon: "📋" },
   { href: "/resources", label: "Resources", icon: "📁" },
+  { href: "/ingest-skill", label: "Ingest Skill", icon: "🧩" },
 ];
 
 const adminItems: NavItem[] = [
   { href: "/admin/calendar", label: "Calendar Sync", icon: "📅" },
   { href: "/admin/users", label: "User Management", icon: "⚙" },
-  { href: "/admin/knowledge", label: "Knowledge Hub", icon: "🧠" },
   { href: "/admin/secrets", label: "Secrets", icon: "🔑" },
 ];
 
@@ -125,7 +126,7 @@ export function Sidebar() {
               {account ? account.name : "No account selected"}
             </span>
           </div>
-          {accountItems.map((item) => renderNavItem(item, !account))}
+          {accountItems.filter((item) => !item.adminOnly || user?.isAdmin).map((item) => renderNavItem(item, !account))}
         </div>
 
         <div className="border-t border-(--border) mt-2 pt-2">

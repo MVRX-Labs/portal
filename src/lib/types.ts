@@ -8,6 +8,8 @@ export interface ToolConfig {
   description: string;
   href: string;
   fields: ToolField[];
+  /** When true, the tool form renders without requiring an account selection */
+  accountOptional?: boolean;
 }
 
 export interface ToolField {
@@ -367,7 +369,8 @@ export const TOOLS: ToolConfig[] = [
     name: "Ingest Skill",
     description:
       "Import a third-party Claude Skill and auto-implement it as a native portal tool. Creates a PR for review.",
-    href: "/tools/ingest-skill",
+    href: "/ingest-skill",
+    accountOptional: true,
     fields: [
       {
         name: "skillUrl",

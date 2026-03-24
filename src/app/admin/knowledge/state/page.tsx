@@ -1,65 +1,44 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useAccount } from "@/components/account-provider";
 import { apiFetch, apiMutate } from "@/lib/api-client";
-import {
-  getChannelsResponseSchema,
-  getStateResponseSchema,
-  triggerSynthesisResponseSchema,
-  type Channel,
-  type StateDoc,
-} from "@/lib/api-schemas/knowledge";
+import { getStateResponseSchema, triggerSynthesisResponseSchema, type StateDoc } from "@/lib/api-schemas/knowledge";
 
 export default function AccountStatePage() {
-  const searchParams = useSearchParams();
-  const preselectedAccountId = searchParams.get("accountId") ?? "";
+  const { account } = useAccount();
 
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState(preselectedAccountId);
   const [docs, setDocs] = useState<StateDoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  // Extract unique accounts from channels
-  const accountOptions = [...new Map(
-    channels.filter((c) => c.accountId).map((c) => [c.accountId, c.slackChannelName.replace(/^ext-/, "").replace(/-/g, " ")])
-  ).entries()].map(([id, name]) => ({ id: id!, name }));
-
-  const loadChannels = useCallback(async () => {
-    try {
-      const res = await apiFetch("/api/knowledge/channels", getChannelsResponseSchema);
-      setChannels(res.channels);
-    } catch {
-      // handled by toast
-    }
-  }, []);
-
   const loadState = useCallback(async () => {
-    if (!selectedAccountId) {
+    if (!account) {
       setDocs([]);
       return;
     }
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/knowledge/state?accountId=${selectedAccountId}`, getStateResponseSchema);
+      const res = await apiFetch(`/api/knowledge/state?accountId=${account.id}`, getStateResponseSchema);
       setDocs(res.docs);
     } catch {
       // handled by toast
     } finally {
       setLoading(false);
     }
-  }, [selectedAccountId]);
+  }, [account]);
 
-  useEffect(() => { loadChannels(); }, [loadChannels]);
-  useEffect(() => { loadState(); }, [loadState]);
+  useEffect(() => {
+    loadState();
+  }, [loadState]);
 
   const handleRegenerate = async () => {
+    if (!account) return;
     setRegenerating(true);
     try {
       await apiMutate("/api/knowledge/state/synthesise", triggerSynthesisResponseSchema, {
         method: "POST",
-        body: { accountId: selectedAccountId || undefined },
+        body: { accountId: account.id },
       });
     } catch {
       // handled by toast
@@ -75,42 +54,35 @@ export default function AccountStatePage() {
   const openItems = getDoc("open_items");
   const activityLog = getDoc("activity_log");
 
+  if (!account) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-2">Account State</h1>
+        <p className="text-(--muted)">Select an account to view state documents.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold">Account State</h1>
           <p className="text-sm text-(--muted)">
-            Living state documents synthesised from knowledge units.
+            {account.name} — Living state documents synthesised from knowledge units.
           </p>
         </div>
-        <button
-          onClick={handleRegenerate}
-          disabled={regenerating}
-          className="btn-primary"
-        >
+        <button onClick={handleRegenerate} disabled={regenerating} className="btn-primary">
           {regenerating ? "Triggering..." : "Regenerate"}
         </button>
       </div>
 
-      {/* Account selector */}
-      <div className="card mb-6">
-        <label className="block text-xs text-(--muted) mb-1">Select Account</label>
-        <select
-          value={selectedAccountId}
-          onChange={(e) => setSelectedAccountId(e.target.value)}
-        >
-          <option value="">Choose an account...</option>
-          {accountOptions.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-      </div>
-
       {loading && <p className="text-(--muted)">Loading state documents...</p>}
 
-      {!loading && selectedAccountId && docs.length === 0 && (
-        <p className="text-(--muted)">No state documents generated for this account yet. Click &quot;Regenerate&quot; to synthesise.</p>
+      {!loading && docs.length === 0 && (
+        <p className="text-(--muted)">
+          No state documents generated for this account yet. Click &quot;Regenerate&quot; to synthesise.
+        </p>
       )}
 
       {!loading && docs.length > 0 && (

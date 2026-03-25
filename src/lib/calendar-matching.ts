@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { accounts, contacts } from "./schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { uniqueSlug } from "./account-utils";
 
 export interface MatchResult {
@@ -127,6 +127,42 @@ export async function matchOrCreateForAttendee(email: string, displayName?: stri
       contactId: newContact.id,
       accountMatchConfidence: "high",
       accountMatchedVia: "email_domain",
+      contactMatchConfidence: "high",
+      contactMatchedVia: "auto_created",
+    };
+  }
+
+  // Step 2.5: Try to match by existing contact's email domain
+  // Catches cases where emailDomain is NULL (pre-migration accounts) or the company
+  // uses multiple email domains (e.g. zalos.io + zalos.ai)
+  const [contactWithSameDomain] = await db
+    .select({ accountId: contacts.accountId })
+    .from(contacts)
+    .where(
+      or(
+        sql`${contacts.accountEmail} LIKE ${"%" + "@" + domainBase}`,
+        sql`${contacts.personalEmail} LIKE ${"%" + "@" + domainBase}`
+      )
+    )
+    .limit(1);
+
+  if (contactWithSameDomain) {
+    const contactName = displayName || emailLower.split("@")[0];
+    const [newContact] = await db
+      .insert(contacts)
+      .values({
+        name: contactName,
+        accountId: contactWithSameDomain.accountId,
+        accountEmail: emailLower,
+        autoCreated: true,
+      })
+      .returning();
+
+    return {
+      accountId: contactWithSameDomain.accountId,
+      contactId: newContact.id,
+      accountMatchConfidence: "high",
+      accountMatchedVia: "contact_domain",
       contactMatchConfidence: "high",
       contactMatchedVia: "auto_created",
     };

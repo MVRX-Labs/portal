@@ -8,11 +8,20 @@
 
 import { task, logger, queue } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
-import { linkedinPostEngagements, linkedinPostComments, linkedinPosts, leads, leadCsvs, accounts } from "@/lib/schema";
+import {
+  linkedinPostEngagements,
+  linkedinPostComments,
+  linkedinPosts,
+  leads,
+  leadCsvs,
+  accounts,
+  icpDefinitions,
+} from "@/lib/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { sendSlackNotification, sendSlackFile } from "@/lib/slack";
 import { escapeCsv } from "@/lib/csv";
 import { parseCompanyFromHeadline, parseTitleFromHeadline, parseDivisionFromTitle } from "@/lib/linkedin-engagement";
+import { scoreLeadsBatch } from "@/lib/lead-enrichment";
 
 const leadUpsertQueue = queue({
   name: "linkedin-lead-upsert",
@@ -78,7 +87,7 @@ function mergeInto(
 export const linkedinLeadUpsertTask = task({
   id: "linkedin-lead-upsert",
   queue: leadUpsertQueue,
-  maxDuration: 120,
+  maxDuration: 600,
   retry: { maxAttempts: 2 },
   run: async (payload: LeadUpsertPayload, { ctx }) => {
     const { profileId, accountId, contactId, scrapeWindow } = payload;
@@ -438,7 +447,91 @@ export const linkedinLeadUpsertTask = task({
         }
       }
 
-      return { leadsFound: allEngagers.length, leadsUpserted: upsertCount, newLeads: newLeads.length };
+      // Score new leads against account ICP definitions
+      let leadsScored = 0;
+      if (newLeads.length > 0 && newLeadIds.length > 0) {
+        try {
+          const activeIcps = await db
+            .select({
+              name: icpDefinitions.name,
+              description: icpDefinitions.description,
+              targetTitles: icpDefinitions.targetTitles,
+              targetIndustries: icpDefinitions.targetIndustries,
+              targetCompanySizes: icpDefinitions.targetCompanySizes,
+              targetSignals: icpDefinitions.targetSignals,
+            })
+            .from(icpDefinitions)
+            .where(and(eq(icpDefinitions.accountId, accountId), eq(icpDefinitions.active, true)));
+
+          if (activeIcps.length === 0) {
+            logger.info(`No active ICP definitions for account ${accountId} — skipping lead scoring`);
+          } else {
+            logger.info(`Scoring ${newLeads.length} new leads against ${activeIcps.length} ICP definition(s)`);
+
+            const SCORING_BATCH_SIZE = 15;
+            let totalCost = 0;
+            const scoringNow = new Date();
+
+            for (let i = 0; i < newLeads.length; i += SCORING_BATCH_SIZE) {
+              const batch = newLeads.slice(i, i + SCORING_BATCH_SIZE);
+              const batchIds = newLeadIds.slice(i, i + SCORING_BATCH_SIZE);
+
+              const leadsForScoring = batch.map((engager, idx) => ({
+                id: batchIds[idx],
+                firstName: engager.firstName,
+                lastName: engager.lastName,
+                headline: engager.headline,
+                company: engager.company,
+                title: parseTitleFromHeadline(engager.headline),
+                division: parseDivisionFromTitle(parseTitleFromHeadline(engager.headline)),
+                engagementTypes: engager.engagementTypes,
+                engagementPostCount: engager.engagementPosts.length,
+              }));
+
+              const { results, cost } = await scoreLeadsBatch(
+                leadsForScoring,
+                activeIcps.map((icp) => ({
+                  name: icp.name,
+                  description: icp.description,
+                  targetTitles: (icp.targetTitles as string[]) || [],
+                  targetIndustries: (icp.targetIndustries as string[]) || [],
+                  targetCompanySizes: (icp.targetCompanySizes as string[]) || [],
+                  targetSignals: (icp.targetSignals as string[]) || [],
+                }))
+              );
+
+              totalCost += cost;
+
+              for (const [leadId, scoring] of results) {
+                await db
+                  .update(leads)
+                  .set({
+                    tier: scoring.tier,
+                    rationale: scoring.rationale,
+                    enrichedAt: scoringNow,
+                    updatedAt: scoringNow,
+                  })
+                  .where(eq(leads.id, leadId));
+                leadsScored++;
+              }
+
+              logger.info(
+                `Scored batch ${Math.floor(i / SCORING_BATCH_SIZE) + 1}/${Math.ceil(newLeads.length / SCORING_BATCH_SIZE)} — ${results.size} results`
+              );
+            }
+
+            logger.info(
+              `ICP scoring complete: ${leadsScored}/${newLeads.length} leads scored, cost $${totalCost.toFixed(4)}`
+            );
+          }
+        } catch (scoringErr) {
+          logger.warn("ICP scoring failed (leads were still upserted successfully)", {
+            error: scoringErr instanceof Error ? scoringErr.message : String(scoringErr),
+          });
+        }
+      }
+
+      return { leadsFound: allEngagers.length, leadsUpserted: upsertCount, newLeads: newLeads.length, leadsScored };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       logger.error("Lead upsert failed", { error: errorMessage });

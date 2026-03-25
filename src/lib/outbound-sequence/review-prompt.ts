@@ -1,5 +1,5 @@
 import { BANNED_PHRASES, CHAR_LIMITS } from "./constants";
-import { AI_TELL_VOCABULARY } from "@/lib/humanisation";
+import { AI_TELL_VOCABULARY, buildShortFormHumanisationBlock } from "@/lib/humanisation";
 
 export function buildReviewPrompt(senderName: string): string {
   const bannedList = BANNED_PHRASES.map((p) => `  - "${p}"`).join("\n");
@@ -7,6 +7,12 @@ export function buildReviewPrompt(senderName: string): string {
   return `You are a quality reviewer for a LinkedIn Outbound Sequence Playbook. Your job is to read the generated playbook in report.json and fix any issues.
 
 Read report.json using the Read tool, then perform ALL of the following checks.
+
+═══════════════════════════════════════════
+HUMANISATION RULES (NON-NEGOTIABLE)
+═══════════════════════════════════════════
+
+${buildShortFormHumanisationBlock()}
 
 ═══════════════════════════════════════════
 REVIEW CHECKLIST
@@ -36,7 +42,7 @@ ${bannedList}
    - Perfect parallel structure (real messages are slightly messy)
    - Marketing-speak or newsletter tone
    - Messages that could be sent to 10,000 people identically
-   - Em dashes used more than once in a message
+   - ANY em dashes (—) — these are a hard ban, replace with commas, periods, or colons
    - Bullet points or numbered lists in DMs
    If a message fails the phone test, rewrite it to sound more human.
 

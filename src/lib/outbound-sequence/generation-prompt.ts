@@ -1,5 +1,5 @@
 import { BANNED_PHRASES, CHAR_LIMITS, REFERENCE_SEQUENCE_EXAMPLE, TONE_BY_STEP } from "./constants";
-import { AI_TELL_VOCABULARY } from "@/lib/humanisation";
+import { AI_TELL_VOCABULARY, buildShortFormHumanisationBlock } from "@/lib/humanisation";
 
 interface GenerationPromptInputs {
   senderName: string;
@@ -201,6 +201,12 @@ capacityModel, leadListInventory, leadTiering, weeklyRollout, statisticalNotes, 
 
 `
 }═══════════════════════════════════════════
+HUMANISATION RULES (NON-NEGOTIABLE)
+═══════════════════════════════════════════
+
+${buildShortFormHumanisationBlock()}
+
+═══════════════════════════════════════════
 COPY QUALITY RULES (NON-NEGOTIABLE)
 ═══════════════════════════════════════════
 

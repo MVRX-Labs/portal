@@ -65,6 +65,7 @@ export function ContactsSection({ accountId }: { accountId: string }) {
       accountEmail: contact.accountEmail,
       personalEmail: contact.personalEmail,
       linkedinUrl: contact.linkedinUrl,
+      twitterUrl: contact.twitterUrl,
       contentVoiceGuidance: contact.contentVoiceGuidance,
       notes: contact.notes,
     });
@@ -81,6 +82,7 @@ export function ContactsSection({ accountId }: { accountId: string }) {
           accountEmail: edits.accountEmail || null,
           personalEmail: edits.personalEmail || null,
           linkedinUrl: edits.linkedinUrl || null,
+          twitterUrl: edits.twitterUrl || null,
           contentVoiceGuidance: edits.contentVoiceGuidance || null,
           notes: edits.notes || null,
         },
@@ -186,6 +188,18 @@ export function ContactsSection({ accountId }: { accountId: string }) {
                         value={edits.linkedinUrl || ""}
                         onChange={(e) => setEdits((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
                         placeholder="https://linkedin.com/in/username"
+                        className="w-full text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-(--muted) mb-1">Twitter/X URL</label>
+                      <input
+                        type="text"
+                        value={edits.twitterUrl || ""}
+                        onChange={(e) => setEdits((prev) => ({ ...prev, twitterUrl: e.target.value }))}
+                        placeholder="https://x.com/username or @username"
                         className="w-full text-sm"
                       />
                     </div>

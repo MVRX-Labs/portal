@@ -17,6 +17,7 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
   const [industry, setIndustry] = useState("");
   const [website, setWebsite] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,6 +37,7 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
           industry: industry.trim() || undefined,
           website: website.trim() || undefined,
           linkedinUrl: linkedinUrl.trim() || undefined,
+          twitterUrl: twitterUrl.trim() || undefined,
         },
       });
       onCreated({
@@ -101,6 +103,16 @@ export function CreateAccountModal({ defaultName, onCreated, onClose }: CreateAc
               value={linkedinUrl}
               onChange={(e) => setLinkedinUrl(e.target.value)}
               placeholder="https://linkedin.com/company/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Twitter/X URL</label>
+            <input
+              type="text"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              placeholder="https://x.com/username or @username"
             />
           </div>
 

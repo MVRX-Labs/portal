@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { accounts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
-import { patchEngagementConfigBodySchema } from "@/lib/api-schemas/engagement";
+import { patchEngagementConfigBodySchema } from "@/lib/api-schemas/linkedin-engagement";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

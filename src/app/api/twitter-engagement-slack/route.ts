@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { tasks } from "@trigger.dev/sdk/v3";
-import type { engagementSlackActionTask } from "@/trigger/engagement-slack-action";
+import type { twitterEngagementSlackActionTask } from "@/trigger/twitter-engagement-slack-action";
 
 function verifySlackSignature(body: string, timestamp: string, signature: string): boolean {
   const secret = process.env.SLACK_SIGNING_SECRET;
@@ -43,31 +43,29 @@ export async function POST(request: NextRequest) {
     return new NextResponse("", { status: 200 });
   }
 
-  // Respond immediately, then process asynchronously via Trigger.dev
   const actions = payload.actions || [];
   const channelId = payload.channel?.id;
 
   let triggerFailed = false;
   for (const action of actions) {
     const actionId: string = action.action_id || "";
-    const match = actionId.match(/^engage_(comment|like|repost|skip):(.+)$/);
+    const match = actionId.match(/^tw_engage_(reply|like|retweet|skip):(.+)$/);
     if (!match || !channelId) continue;
 
     const [, actionName, postId] = match;
 
     try {
-      await tasks.trigger<typeof engagementSlackActionTask>("engagement-slack-action", {
-        actionName: actionName as "comment" | "like" | "repost" | "skip",
+      await tasks.trigger<typeof twitterEngagementSlackActionTask>("twitter-engagement-slack-action", {
+        actionName: actionName as "reply" | "like" | "retweet" | "skip",
         postId,
         channelId,
       });
     } catch (err) {
-      console.error(`Failed to trigger slack action task for post ${postId}:`, err);
+      console.error(`Failed to trigger twitter slack action task for tweet ${postId}:`, err);
       triggerFailed = true;
     }
   }
 
-  // Return 500 if trigger failed so Slack retries the action
   if (triggerFailed) {
     return new NextResponse("", { status: 500 });
   }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
 import type { AlphaFeed } from "@/lib/api-schemas/alpha-feed";
+import type { TwitterAlphaFeed } from "@/lib/api-schemas/twitter-alpha-feed";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 import {
   getIcpDefinitionsResponseSchema,
@@ -14,29 +15,10 @@ import {
   generateAlphaFeedSpecResponseSchema,
   collectAlphaFeedResponseSchema,
 } from "@/lib/api-schemas/alpha-feed";
+import { getTwitterAlphaFeedResponseSchema } from "@/lib/api-schemas/twitter-alpha-feed";
 import { SectionCard } from "./section-card";
 import { TriggerRunIndicator } from "@/components/trigger-run-indicator";
 import { usePendingRuns } from "@/lib/hooks/use-pending-runs";
-
-function relativeDate(iso: string | null): string {
-  if (!iso) return "No data";
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) {
-    const absDays = Math.abs(diffDays);
-    if (absDays === 0) return "Today";
-    if (absDays === 1) return "Tomorrow";
-    if (absDays < 7) return `In ${absDays}d`;
-    return `In ${Math.floor(absDays / 7)}w`;
-  }
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
-}
 
 export function IcpSection({ accountId }: { accountId: string }) {
   const [icpDefs, setIcpDefs] = useState<IcpDefinition[]>([]);
@@ -50,12 +32,14 @@ export function IcpSection({ accountId }: { accountId: string }) {
   const [newCompanySizes, setNewCompanySizes] = useState("");
   const [newSignals, setNewSignals] = useState("");
 
-  // Alpha feed state
-  const [alphaFeeds, setAlphaFeeds] = useState<Record<string, AlphaFeed | null>>({});
-  const [loadingFeeds, setLoadingFeeds] = useState<Record<string, boolean>>({});
+  // Alpha feed state — both platforms
+  const [linkedinFeeds, setLinkedinFeeds] = useState<Record<string, AlphaFeed | null>>({});
+  const [twitterFeeds, setTwitterFeeds] = useState<Record<string, TwitterAlphaFeed | null>>({});
   const generatingRuns = usePendingRuns();
   const collectingRuns = usePendingRuns();
   const [expandedFeed, setExpandedFeed] = useState<string | null>(null);
+
+  // LinkedIn sage/keyword inline-add state
   const [addSageUrl, setAddSageUrl] = useState("");
   const [addSageName, setAddSageName] = useState("");
   const [addKeywordQuery, setAddKeywordQuery] = useState("");
@@ -65,31 +49,54 @@ export function IcpSection({ accountId }: { accountId: string }) {
     try {
       const data = await apiFetch(`/api/accounts/${accountId}/icp-definitions`, getIcpDefinitionsResponseSchema);
       setIcpDefs(data.icpDefinitions);
+      return data.icpDefinitions;
     } catch {
-      // ignore
+      return [];
     } finally {
       setLoading(false);
     }
   }, [accountId]);
 
-  useEffect(() => {
-    fetchIcps();
-  }, [fetchIcps]);
+  const fetchAllFeeds = useCallback(
+    async (icps: IcpDefinition[]) => {
+      const activeIcps = icps.filter((d) => d.active);
+      if (activeIcps.length === 0) return;
 
-  const fetchAlphaFeed = useCallback(
-    async (icpId: string) => {
-      setLoadingFeeds((prev) => ({ ...prev, [icpId]: true }));
-      try {
-        const data = await apiFetch(`/api/accounts/${accountId}/alpha-feed/${icpId}`, getAlphaFeedResponseSchema);
-        setAlphaFeeds((prev) => ({ ...prev, [icpId]: data.alphaFeed }));
-      } catch {
-        // ignore
-      } finally {
-        setLoadingFeeds((prev) => ({ ...prev, [icpId]: false }));
+      const results = await Promise.all(
+        activeIcps.map(async (icp) => {
+          const [li, tw] = await Promise.all([
+            apiFetch(`/api/accounts/${accountId}/alpha-feed/${icp.id}`, getAlphaFeedResponseSchema).catch(
+              () => ({ alphaFeed: null }) as { alphaFeed: AlphaFeed | null }
+            ),
+            apiFetch(
+              `/api/accounts/${accountId}/twitter-alpha-feed/${icp.id}`,
+              getTwitterAlphaFeedResponseSchema
+            ).catch(() => ({ twitterAlphaFeed: null }) as { twitterAlphaFeed: TwitterAlphaFeed | null }),
+          ]);
+          return { icpId: icp.id, linkedin: li.alphaFeed, twitter: tw.twitterAlphaFeed };
+        })
+      );
+
+      const liMap: Record<string, AlphaFeed | null> = {};
+      const twMap: Record<string, TwitterAlphaFeed | null> = {};
+      for (const r of results) {
+        liMap[r.icpId] = r.linkedin;
+        twMap[r.icpId] = r.twitter;
       }
+      setLinkedinFeeds(liMap);
+      setTwitterFeeds(twMap);
     },
     [accountId]
   );
+
+  useEffect(() => {
+    fetchIcps().then((icps) => fetchAllFeeds(icps));
+  }, [fetchIcps, fetchAllFeeds]);
+
+  const refreshFeeds = async () => {
+    const icps = await fetchIcps();
+    await fetchAllFeeds(icps);
+  };
 
   const toggleIcp = async (icpId: string, active: boolean) => {
     setIcpDefs((prev) => prev.map((d) => (d.id === icpId ? { ...d, active } : d)));
@@ -130,7 +137,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
       setNewCompanySizes("");
       setNewSignals("");
       setShowCreate(false);
-      await fetchIcps();
+      await refreshFeeds();
     } catch {
       // ignore
     } finally {
@@ -147,7 +154,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
       );
       generatingRuns.set(icpId, triggerRunId, publicAccessToken);
     } catch {
-      // toast handled by apiMutate
+      // toast handled
     }
   };
 
@@ -160,10 +167,8 @@ export function IcpSection({ accountId }: { accountId: string }) {
       });
       setAddSageUrl("");
       setAddSageName("");
-      fetchAlphaFeed(icpId);
-    } catch {
-      // toast handled
-    }
+      refreshFeeds();
+    } catch {}
   };
 
   const toggleSage = async (icpId: string, linkedinUrl: string, active: boolean) => {
@@ -172,7 +177,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         method: "PATCH",
         body: { linkedinUrl, active },
       });
-      fetchAlphaFeed(icpId);
+      refreshFeeds();
     } catch {}
   };
 
@@ -182,7 +187,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         method: "DELETE",
         body: { linkedinUrl },
       });
-      fetchAlphaFeed(icpId);
+      refreshFeeds();
     } catch {}
   };
 
@@ -194,7 +199,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         body: { query: addKeywordQuery.trim() },
       });
       setAddKeywordQuery("");
-      fetchAlphaFeed(icpId);
+      refreshFeeds();
     } catch {}
   };
 
@@ -204,7 +209,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         method: "PATCH",
         body: { query, active },
       });
-      fetchAlphaFeed(icpId);
+      refreshFeeds();
     } catch {}
   };
 
@@ -214,7 +219,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         method: "DELETE",
         body: { query },
       });
-      fetchAlphaFeed(icpId);
+      refreshFeeds();
     } catch {}
   };
 
@@ -226,9 +231,7 @@ export function IcpSection({ accountId }: { accountId: string }) {
         { method: "POST", body: {} }
       );
       collectingRuns.set(icpId, triggerRunId, publicAccessToken);
-    } catch {
-      // toast handled
-    }
+    } catch {}
   };
 
   return (
@@ -393,35 +396,38 @@ export function IcpSection({ accountId }: { accountId: string }) {
             {icpDefs
               .filter((icp) => icp.active)
               .map((icp) => {
-                const feed = alphaFeeds[icp.id];
-                const isLoading = loadingFeeds[icp.id];
+                const liFeed = linkedinFeeds[icp.id];
+                const twFeed = twitterFeeds[icp.id];
                 const pendingGenerate = generatingRuns.get(icp.id);
                 const pendingCollect = collectingRuns.get(icp.id);
                 const isExpanded = expandedFeed === icp.id;
 
-                const handleExpand = () => {
-                  const next = isExpanded ? null : icp.id;
-                  setExpandedFeed(next);
-                  if (next && !feed && !isLoading) fetchAlphaFeed(icp.id);
-                };
+                const liSages = liFeed?.sages ?? [];
+                const liKeywords = liFeed?.keywords ?? [];
+                const twSages = twFeed?.sages ?? [];
+                const twKeywords = twFeed?.keywords ?? [];
 
-                const sages = feed?.sages ?? [];
-                const keywords = feed?.keywords ?? [];
-                const dailyEntries = feed?.dailyEntries ?? {};
-                const dateKeys = Object.keys(dailyEntries).sort().reverse();
-                const totalEntries = dateKeys.reduce((sum, k) => sum + (dailyEntries[k]?.length ?? 0), 0);
+                const hasAnySpec =
+                  liSages.length > 0 || liKeywords.length > 0 || twSages.length > 0 || twKeywords.length > 0;
 
                 return (
                   <div key={icp.id} className="rounded bg-(--input) border border-(--border)">
                     <button
-                      onClick={handleExpand}
+                      onClick={() => setExpandedFeed(isExpanded ? null : icp.id)}
                       className="w-full flex items-center justify-between py-2 px-3 text-left"
                     >
                       <span className="text-sm font-medium">
                         {icp.name}
                         <span className="text-xs text-(--muted) ml-2">
-                          {sages.length} sages · {keywords.length} keywords
-                          {totalEntries > 0 && ` · ${totalEntries} posts`}
+                          {hasAnySpec ? (
+                            <>
+                              LI: {liSages.length} sages · {liKeywords.length} keywords
+                              {" | "}
+                              X: {twSages.length} sages · {twKeywords.length} keywords
+                            </>
+                          ) : (
+                            "No spec generated"
+                          )}
                         </span>
                       </span>
                       <span className="text-xs text-(--muted)">{isExpanded ? "\u25BC" : "\u25B6"}</span>
@@ -429,60 +435,61 @@ export function IcpSection({ accountId }: { accountId: string }) {
 
                     {isExpanded && (
                       <div className="px-3 pb-3 space-y-3">
-                        {isLoading ? (
-                          <p className="text-sm text-(--muted)">Loading...</p>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2">
-                              {pendingGenerate ? (
-                                <TriggerRunIndicator
-                                  triggerRunId={pendingGenerate.triggerRunId}
-                                  publicAccessToken={pendingGenerate.publicAccessToken}
-                                  label="Generating spec with AI..."
-                                  onComplete={() => {
-                                    generatingRuns.clear(icp.id);
-                                    fetchAlphaFeed(icp.id);
-                                  }}
-                                  onError={() => generatingRuns.clear(icp.id)}
-                                />
-                              ) : (
-                                <button onClick={() => generateSpec(icp.id)} className="btn-primary text-xs">
-                                  Generate Spec with AI
-                                </button>
-                              )}
-                              {feed &&
-                                (sages.length > 0 || keywords.length > 0) &&
-                                (pendingCollect ? (
-                                  <TriggerRunIndicator
-                                    triggerRunId={pendingCollect.triggerRunId}
-                                    publicAccessToken={pendingCollect.publicAccessToken}
-                                    label="Collecting posts..."
-                                    onComplete={() => {
-                                      collectingRuns.clear(icp.id);
-                                      fetchAlphaFeed(icp.id);
-                                    }}
-                                    onError={() => collectingRuns.clear(icp.id)}
-                                  />
-                                ) : (
-                                  <button onClick={() => collectFeed(icp.id)} className="btn-primary text-xs">
-                                    Collect Now
-                                  </button>
-                                ))}
-                              {!feed && (
-                                <span className="text-xs text-(--muted)">
-                                  No spec yet — generate one or add sages/keywords manually.
-                                </span>
-                              )}
-                            </div>
+                        <div className="flex items-center gap-2">
+                          {pendingGenerate ? (
+                            <TriggerRunIndicator
+                              triggerRunId={pendingGenerate.triggerRunId}
+                              publicAccessToken={pendingGenerate.publicAccessToken}
+                              label="Generating spec with AI..."
+                              onComplete={() => {
+                                generatingRuns.clear(icp.id);
+                                refreshFeeds();
+                              }}
+                              onError={() => generatingRuns.clear(icp.id)}
+                            />
+                          ) : (
+                            <button onClick={() => generateSpec(icp.id)} className="btn-primary text-xs">
+                              Generate Spec with AI
+                            </button>
+                          )}
+                          {hasAnySpec &&
+                            (pendingCollect ? (
+                              <TriggerRunIndicator
+                                triggerRunId={pendingCollect.triggerRunId}
+                                publicAccessToken={pendingCollect.publicAccessToken}
+                                label="Collecting posts..."
+                                onComplete={() => {
+                                  collectingRuns.clear(icp.id);
+                                  refreshFeeds();
+                                }}
+                                onError={() => collectingRuns.clear(icp.id)}
+                              />
+                            ) : (
+                              <button onClick={() => collectFeed(icp.id)} className="btn-primary text-xs">
+                                Collect Now
+                              </button>
+                            ))}
+                          {!hasAnySpec && (
+                            <span className="text-xs text-(--muted)">
+                              No spec yet — generate one or add sages/keywords manually.
+                            </span>
+                          )}
+                        </div>
 
+                        {/* LinkedIn section */}
+                        <div>
+                          <p className="text-xs font-semibold text-(--muted) uppercase mb-1">LinkedIn</p>
+                          <div className="ml-2 space-y-2">
                             {/* Sages */}
                             <div>
-                              <p className="text-xs font-semibold text-(--muted) uppercase mb-1">Sages</p>
-                              {sages.length === 0 ? (
-                                <p className="text-xs text-(--muted)">No sages configured.</p>
+                              <p className="text-[10px] font-semibold text-(--muted) uppercase mb-0.5">
+                                Sages ({liSages.length})
+                              </p>
+                              {liSages.length === 0 ? (
+                                <p className="text-xs text-(--muted)">No LinkedIn sages configured.</p>
                               ) : (
                                 <div className="space-y-1">
-                                  {sages.map((sage) => (
+                                  {liSages.map((sage) => (
                                     <div
                                       key={sage.linkedinUrl}
                                       className={`flex items-center justify-between text-xs py-1 px-2 rounded bg-(--card) ${!sage.active ? "opacity-50" : ""}`}
@@ -552,12 +559,14 @@ export function IcpSection({ accountId }: { accountId: string }) {
 
                             {/* Keywords */}
                             <div>
-                              <p className="text-xs font-semibold text-(--muted) uppercase mb-1">Keywords</p>
-                              {keywords.length === 0 ? (
-                                <p className="text-xs text-(--muted)">No keywords configured.</p>
+                              <p className="text-[10px] font-semibold text-(--muted) uppercase mb-0.5">
+                                Keywords ({liKeywords.length})
+                              </p>
+                              {liKeywords.length === 0 ? (
+                                <p className="text-xs text-(--muted)">No LinkedIn keywords configured.</p>
                               ) : (
                                 <div className="space-y-1">
-                                  {keywords.map((kw) => (
+                                  {liKeywords.map((kw) => (
                                     <div
                                       key={kw.query}
                                       className={`flex items-center justify-between text-xs py-1 px-2 rounded bg-(--card) ${!kw.active ? "opacity-50" : ""}`}
@@ -607,61 +616,74 @@ export function IcpSection({ accountId }: { accountId: string }) {
                                 </button>
                               </div>
                             </div>
+                          </div>
+                        </div>
 
-                            {/* Daily entries */}
-                            {dateKeys.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-(--muted) uppercase mb-1">Recent Feed</p>
-                                {dateKeys.map((dateKey) => (
-                                  <div key={dateKey} className="mb-3">
-                                    <p className="text-xs text-(--muted) font-medium mb-1">
-                                      {relativeDate(dateKey)} &mdash; {dateKey}
-                                    </p>
-                                    <div className="space-y-1.5">
-                                      {(dailyEntries[dateKey] ?? []).map((entry, i) => (
-                                        <div key={i} className="py-1.5 px-2 rounded bg-(--card) text-xs">
-                                          <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0 flex-1">
-                                              <p className="font-medium">
-                                                {entry.authorName}
-                                                {entry.authorHeadline && (
-                                                  <span className="text-(--muted) font-normal">
-                                                    {" "}
-                                                    &mdash; {entry.authorHeadline}
-                                                  </span>
-                                                )}
-                                              </p>
-                                              <p className="text-(--muted) mt-0.5 line-clamp-3 whitespace-pre-line">
-                                                {entry.content}
-                                              </p>
-                                            </div>
-                                            <a
-                                              href={entry.postUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-(--accent) hover:underline shrink-0"
-                                            >
-                                              View
-                                            </a>
-                                          </div>
-                                          <div className="flex gap-3 mt-1 text-[10px] text-(--muted)">
-                                            <span>{entry.likesCount} likes</span>
-                                            <span>{entry.commentsCount} comments</span>
-                                            <span>{entry.repostsCount} reposts</span>
-                                            <span className="text-(--accent)">
-                                              via {entry.sourceType === "sage" ? "sage" : "keyword"}:{" "}
-                                              {entry.sourceLabel}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
+                        {/* Twitter section */}
+                        <div>
+                          <p className="text-xs font-semibold text-(--muted) uppercase mb-1">Twitter / X</p>
+                          <div className="ml-2 space-y-2">
+                            <div>
+                              <p className="text-[10px] font-semibold text-(--muted) uppercase mb-0.5">
+                                Sages ({twSages.length})
+                              </p>
+                              {twSages.length === 0 ? (
+                                <p className="text-xs text-(--muted)">No Twitter sages configured.</p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {twSages.map((sage) => (
+                                    <div
+                                      key={sage.twitterUrl}
+                                      className={`flex items-center justify-between text-xs py-1 px-2 rounded bg-(--card) ${!sage.active ? "opacity-50" : ""}`}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <a
+                                          href={sage.twitterUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="font-medium hover:underline"
+                                        >
+                                          {sage.displayName || sage.twitterHandle || sage.twitterUrl}
+                                        </a>
+                                        {sage.twitterHandle && (
+                                          <span className="text-(--muted) ml-1">@{sage.twitterHandle}</span>
+                                        )}
+                                        {sage.rationale && (
+                                          <p className="text-(--muted) text-[10px] mt-0.5">{sage.rationale}</p>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        )}
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-semibold text-(--muted) uppercase mb-0.5">
+                                Keywords ({twKeywords.length})
+                              </p>
+                              {twKeywords.length === 0 ? (
+                                <p className="text-xs text-(--muted)">No Twitter keywords configured.</p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {twKeywords.map((kw) => (
+                                    <div
+                                      key={kw.query}
+                                      className={`flex items-center justify-between text-xs py-1 px-2 rounded bg-(--card) ${!kw.active ? "opacity-50" : ""}`}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-medium font-mono text-[11px]">{kw.query}</span>
+                                        {kw.rationale && (
+                                          <p className="text-(--muted) text-[10px] mt-0.5">{kw.rationale}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -15,23 +15,44 @@ interface NavItem {
   beta?: boolean;
 }
 
-const accountItems: NavItem[] = [
+interface NavSection {
+  label: string;
+  icon: string;
+  collapsible: true;
+  items: NavItem[];
+}
+
+const generalItems: NavItem[] = [
   { href: "/accounts/__SLUG__", label: "Overview", icon: "📋", beta: true },
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/tools/linkedin-audit", label: "LinkedIn Audit", icon: "👤" },
-  { href: "/tools/linkedin-post-generator", label: "LinkedIn Post Generator", icon: "📝" },
-  { href: "/tools/linkedin-to-twitter", label: "LinkedIn Post to Tweets", icon: "🐦" },
-  { href: "/leads", label: "LinkedIn Leads from Engagement", icon: "👥" },
-  { href: "/tools/outbound-sequence", label: "Outbound Sequence Playbook", icon: "📨", beta: true },
+  { href: "/leads", label: "All Leads", icon: "👥" },
+];
+
+const linkedinItems: NavItem[] = [
+  { href: "/tools/linkedin-audit", label: "Profile Audit", icon: "👤" },
+  { href: "/tools/linkedin-post-generator", label: "Post Generator", icon: "📝" },
+  { href: "/tools/linkedin-to-twitter", label: "Post to Tweets", icon: "🐦" },
+  { href: "/linkedin-engagement", label: "Engagement Bot", icon: "🤖" },
+  { href: "/analytics", label: "Post Analytics", icon: "📈" },
+  { href: "/alpha-feed", label: "Alpha Feed", icon: "🔥" },
+  { href: "/linkedin-leads", label: "Leads from Engagement", icon: "👥" },
+  { href: "/tools/outbound-sequence", label: "Outbound Sequence", icon: "📨", beta: true },
+];
+
+const twitterItems: NavItem[] = [
+  { href: "/tools/twitter-audit", label: "Profile Audit", icon: "👤" },
+  { href: "/tools/twitter-post-generator", label: "Post Generator", icon: "📝" },
+  { href: "/tools/twitter-to-linkedin", label: "Thread to LinkedIn", icon: "🔄" },
+  { href: "/twitter-engagement", label: "Engagement Bot", icon: "🤖" },
+  { href: "/twitter-analytics", label: "Post Analytics", icon: "📈" },
+  { href: "/twitter-alpha-feed", label: "Alpha Feed", icon: "🔥" },
+  { href: "/twitter-leads", label: "Leads from Engagement", icon: "👥" },
+];
+
+const otherToolItems: NavItem[] = [
   { href: "/tools/growth-report", label: "SEO & Growth Report", icon: "📊" },
   { href: "/tools/geo-audit", label: "GEO Audit", icon: "🤖", beta: true },
   { href: "/tools/gtm-strategy", label: "GTM Strategy", icon: "🎯" },
-  // { href: "/tools/seo-audit", label: "SEO Audit", icon: "🔍", beta: true, dev: true },
-  // { href: "/tools/linkedin-humanizer", label: "Post Humanizer", icon: "✍", beta: true }, NOT NEEDED?
-  // { href: "/tools/sentiment-analysis", label: "Sentiment Analysis", icon: "📊", beta: true, dev: true },
-  { href: "/linkedin-engagement", label: "LinkedIn Engagement Bot", icon: "🤖" },
-  { href: "/analytics", label: "LinkedIn Post Analytics", icon: "📈" },
-  { href: "/alpha-feed", label: "LinkedIn Alpha Feed", icon: "🔥" },
   { href: "/org/knowledge", label: "Knowledge Hub", icon: "🧠" },
 ];
 
@@ -51,6 +72,8 @@ export function Sidebar() {
   const { data: session } = useSession();
   const { account } = useAccount();
   const [highlightSelector, setHighlightSelector] = useState(0);
+  const [linkedinOpen, setLinkedinOpen] = useState(true);
+  const [twitterOpen, setTwitterOpen] = useState(true);
 
   const user = session?.user;
   const accountParam = searchParams.get("account") || account?.id || null;
@@ -69,15 +92,15 @@ export function Sidebar() {
 
   const isActive = (item: NavItem) => {
     if (item.href.includes("__SLUG__")) {
-      // Overview link: active when on /accounts/{any-slug}
       return /^\/accounts\/[^/]+/.test(pathname);
     }
     if (item.href === "/accounts") {
-      // Accounts list: only active on exact /accounts path
       return pathname === "/accounts";
     }
     return pathname.startsWith(item.href);
   };
+
+  const sectionHasActive = (items: NavItem[]) => items.some((item) => isActive(item));
 
   const renderNavItem = (item: NavItem, disabled: boolean) => {
     if (item.dev || disabled) {
@@ -85,7 +108,7 @@ export function Sidebar() {
         <span
           key={item.href}
           onClick={disabled && !item.dev ? handleDisabledClick : undefined}
-          className={`flex items-center gap-2 px-4 py-2 text-sm text-(--muted) opacity-50 select-none ${
+          className={`flex items-center gap-2 px-4 py-1.5 text-sm text-(--muted) opacity-50 select-none ${
             disabled && !item.dev ? "cursor-pointer" : "cursor-not-allowed"
           }`}
           title={item.dev ? "Under development" : "Select an account first"}
@@ -107,13 +130,15 @@ export function Sidebar() {
     }
 
     const href = resolveHref(item);
-    const needsQs = !item.href.includes("__SLUG__"); // Overview link doesn't need ?account= qs
+    const needsQs = !item.href.includes("__SLUG__");
+    const separator = href.includes("?") ? "&" : "?";
+    const fullQs = accountParam ? `${separator}account=${accountParam}` : "";
 
     return (
       <Link
         key={item.href}
-        href={`${href}${needsQs ? qs : ""}`}
-        className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+        href={`${href}${needsQs ? fullQs : ""}`}
+        className={`flex items-center gap-2 px-4 py-1.5 text-sm transition-colors ${
           isActive(item) ? "bg-(--input) text-white" : "text-(--muted) hover:text-white hover:bg-(--input)"
         }`}
       >
@@ -125,6 +150,39 @@ export function Sidebar() {
           </span>
         )}
       </Link>
+    );
+  };
+
+  const renderCollapsibleSection = (
+    label: string,
+    icon: string,
+    items: NavItem[],
+    isOpen: boolean,
+    toggle: () => void,
+    disabled: boolean,
+    sectionBeta?: boolean
+  ) => {
+    const hasActive = sectionHasActive(items);
+
+    return (
+      <div>
+        <button
+          onClick={toggle}
+          className={`flex items-center gap-2 px-4 py-1.5 text-sm w-full text-left transition-colors ${
+            hasActive ? "text-white" : "text-(--muted) hover:text-white"
+          }`}
+        >
+          <span className="text-base">{icon}</span>
+          <span className="flex-1 font-medium">{label}</span>
+          {sectionBeta && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none whitespace-nowrap shrink-0">
+              BETA
+            </span>
+          )}
+          <span className="text-[10px] text-(--muted) shrink-0">{isOpen ? "\u25B2" : "\u25BC"}</span>
+        </button>
+        {isOpen && <div className="pl-3">{items.map((item) => renderNavItem(item, disabled))}</div>}
+      </div>
     );
   };
 
@@ -144,7 +202,27 @@ export function Sidebar() {
               {account ? account.name : "No account selected"}
             </span>
           </div>
-          {accountItems.map((item) => renderNavItem(item, !account))}
+          {generalItems.map((item) => renderNavItem(item, !account))}
+
+          {renderCollapsibleSection(
+            "LinkedIn",
+            "💼",
+            linkedinItems,
+            linkedinOpen,
+            () => setLinkedinOpen(!linkedinOpen),
+            !account
+          )}
+          {renderCollapsibleSection(
+            "Twitter / X",
+            "𝕏",
+            twitterItems,
+            twitterOpen,
+            () => setTwitterOpen(!twitterOpen),
+            !account,
+            true
+          )}
+
+          {otherToolItems.map((item) => renderNavItem(item, !account))}
         </div>
 
         <div className="border-t border-(--border) mt-2 pt-2">

@@ -7,6 +7,7 @@ import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive"
 import { parseBody } from "@/lib/api-schemas/common";
 import { updateAccountBodySchema } from "@/lib/api-schemas/accounts";
 import { addLinkedinProfile, getAccountCompanyLinkedinUrl } from "@/lib/linkedin-profiles";
+import { addTwitterProfile, getAccountCompanyTwitterUrl } from "@/lib/twitter-profiles";
 
 export const maxDuration = 300;
 
@@ -42,7 +43,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     account = await ensureDriveFolder(account);
 
     const linkedinUrl = await getAccountCompanyLinkedinUrl(account.id);
-    return NextResponse.json({ account: { ...account, linkedinUrl } });
+    const twitterUrl = await getAccountCompanyTwitterUrl(account.id);
+    return NextResponse.json({ account: { ...account, linkedinUrl, twitterUrl } });
   } catch (err) {
     console.error("GET /api/accounts/[id] failed:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -86,6 +88,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
   }
 
+  // Handle twitterUrl → twitter_profiles
+  if (data.twitterUrl !== undefined) {
+    if (data.twitterUrl) {
+      await addTwitterProfile(account.id, data.twitterUrl, {
+        displayName: account.name,
+        sourceType: "company",
+      }).catch(() => {});
+    }
+  }
+
   const linkedinUrl = await getAccountCompanyLinkedinUrl(account.id);
-  return NextResponse.json({ account: { ...account, linkedinUrl } });
+  const twitterUrl = await getAccountCompanyTwitterUrl(account.id);
+  return NextResponse.json({ account: { ...account, linkedinUrl, twitterUrl } });
 }

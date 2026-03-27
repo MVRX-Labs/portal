@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { accounts, users, contacts, accountActions, linkedinProfiles } from "@/lib/schema";
+import { accounts, users, contacts, accountActions, linkedinProfiles, twitterProfiles } from "@/lib/schema";
 import { eq, ilike, and, ne, sql, desc, asc } from "drizzle-orm";
 import { findOrCreateFolder, getGeneratedMaterialsFolderId } from "@/lib/gdrive";
 import { uniqueSlug } from "@/lib/account-utils";
 import { parseBody } from "@/lib/api-schemas/common";
 import { createAccountBodySchema } from "@/lib/api-schemas/accounts";
 import { addLinkedinProfile, getAccountCompanyLinkedinUrl } from "@/lib/linkedin-profiles";
+import { addTwitterProfile, getAccountCompanyTwitterUrl } from "@/lib/twitter-profiles";
 
 export const maxDuration = 300;
 
@@ -30,6 +31,11 @@ export async function GET(request: NextRequest) {
         string | null
       >`(select linkedin_url from ${linkedinProfiles} where ${linkedinProfiles.accountId} = ${accounts.id} and ${linkedinProfiles.sourceType} = 'company' and ${linkedinProfiles.active} = true limit 1)`.as(
         "linkedin_url"
+      ),
+      twitterUrl: sql<
+        string | null
+      >`(select twitter_url from ${twitterProfiles} where ${twitterProfiles.accountId} = ${accounts.id} and ${twitterProfiles.sourceType} = 'company' and ${twitterProfiles.active} = true limit 1)`.as(
+        "twitter_url"
       ),
       googleDriveFolderId: accounts.googleDriveFolderId,
       notes: accounts.notes,
@@ -103,5 +109,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ account: { ...account, linkedinUrl } }, { status: 201 });
+  // Create a twitter_profile if a Twitter URL was provided
+  let twitterUrl: string | null = null;
+  if (data.twitterUrl) {
+    try {
+      const profile = await addTwitterProfile(account.id, data.twitterUrl, {
+        displayName: account.name,
+        sourceType: "company",
+      });
+      twitterUrl = profile.twitterUrl;
+    } catch {
+      // skip invalid URLs silently
+    }
+  }
+
+  return NextResponse.json({ account: { ...account, linkedinUrl, twitterUrl } }, { status: 201 });
 }

@@ -275,7 +275,7 @@ export const linkedinLeadUpsertTask = task({
               .where(and(eq(leads.accountId, accountId), inArray(leads.linkedinUrl, linkedinUrls)))
           : [];
 
-      const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl.replace(/\/$/, ""), l]));
+      const existingMap = new Map(existingLeads.map((l) => [l.linkedinUrl?.replace(/\/$/, "") ?? "", l]));
 
       let upsertCount = 0;
       const newLeads: DedupedEngager[] = [];

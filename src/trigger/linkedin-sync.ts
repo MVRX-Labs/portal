@@ -17,15 +17,15 @@ import {
   linkedinSyncRuns,
 } from "@/lib/schema";
 import { eq, and, or } from "drizzle-orm";
-import { scrapeProfilePosts, extractAuthorName, sendPostToSlack } from "@/lib/engagement-bot";
-import { normalizeApifyPost } from "@/lib/post-ingestion";
+import { scrapeProfilePosts, extractAuthorName, sendPostToSlack } from "@/lib/linkedin-engagement-bot";
+import { normalizeApifyPost } from "@/lib/linkedin-post-ingestion";
 import { scrapePostReactions, scrapePostReshares, scrapePostComments } from "@/lib/linkedin-engagement";
 import { extractLinkedinSlug } from "@/lib/linkedin-profiles";
 import { sendSlackNotification, sendAnalyticsSlackMessage } from "@/lib/slack";
 import { linkedinLeadUpsertTask } from "./linkedin-lead-upsert";
 import { accounts, contacts } from "@/lib/schema";
 import { isNull } from "drizzle-orm";
-import { generateReplySuggestions, type ReplySuggestion } from "@/lib/comment-reply-suggestions";
+import { generateReplySuggestions, type ReplySuggestion } from "@/lib/linkedin-comment-reply-suggestions";
 
 // ---------------------------------------------------------------------------
 // Constants

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useAccount } from "@/components/account-provider";
-import type { EngagementProfile } from "@/lib/api-schemas/engagement";
+import type { EngagementProfile } from "@/lib/api-schemas/linkedin-engagement";
 import {
   engagementConfigResponseSchema,
   engagementProfilesArraySchema,
@@ -11,7 +11,7 @@ import {
   engagementProfilesUploadResponseSchema,
   engagementScrapeResponseSchema,
   deleteEngagementProfileResponseSchema,
-} from "@/lib/api-schemas/engagement";
+} from "@/lib/api-schemas/linkedin-engagement";
 import { apiFetch, apiMutate } from "@/lib/api-client";
 
 // Local interfaces for UI-specific fields (schemas use .passthrough() so extra fields allowed)

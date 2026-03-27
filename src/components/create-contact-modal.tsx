@@ -17,6 +17,7 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
   const [accountEmail, setAccountEmail] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,6 +38,7 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
           accountEmail: accountEmail.trim() || undefined,
           personalEmail: personalEmail.trim() || undefined,
           linkedinUrl: linkedinUrl.trim() || undefined,
+          twitterUrl: twitterUrl.trim() || undefined,
         },
       });
       onCreated(data.contact);
@@ -95,6 +97,16 @@ export function CreateContactModal({ accountId, onCreated, onClose }: CreateCont
               value={linkedinUrl}
               onChange={(e) => setLinkedinUrl(e.target.value)}
               placeholder="https://linkedin.com/in/username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Twitter/X URL</label>
+            <input
+              type="text"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              placeholder="https://x.com/username or @username"
             />
           </div>
 

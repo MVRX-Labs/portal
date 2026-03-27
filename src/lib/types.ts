@@ -41,10 +41,11 @@ export const TOOLS: ToolConfig[] = [
     fields: [],
   },
   {
-    id: "linkedin-audit",
-    name: "LinkedIn Profile Audit",
-    description: "Analyze a LinkedIn profile and generate optimization recommendations.",
-    href: "/tools/linkedin-audit",
+    id: "twitter-audit",
+    name: "Twitter Profile Audit",
+    description:
+      "Analyze a Twitter/X profile and generate optimization recommendations — bio, content strategy, engagement, benchmarks.",
+    href: "/tools/twitter-audit",
     fields: [
       {
         name: "contactId",
@@ -55,36 +56,16 @@ export const TOOLS: ToolConfig[] = [
     ],
   },
   {
-    id: "linkedin-humanizer",
-    name: "LinkedIn Post Humanizer",
-    description: "Rewrite AI-generated LinkedIn posts to sound more authentic and human.",
-    href: "/tools/linkedin-humanizer",
+    id: "linkedin-audit",
+    name: "LinkedIn Profile Audit",
+    description: "Analyze a LinkedIn profile and generate optimization recommendations.",
+    href: "/tools/linkedin-audit",
     fields: [
       {
-        name: "postContent",
-        label: "Post Content",
-        type: "textarea",
-        placeholder: "Paste your LinkedIn post here...",
+        name: "contactId",
+        label: "Contact",
+        type: "contact",
         required: true,
-      },
-      {
-        name: "tone",
-        label: "Tone",
-        type: "select",
-        required: true,
-        options: [
-          { label: "Professional", value: "professional" },
-          { label: "Casual", value: "casual" },
-          { label: "Thought Leader", value: "thought-leader" },
-          { label: "Storytelling", value: "storytelling" },
-        ],
-      },
-      {
-        name: "writingExamples",
-        label: "Writing Style Examples (Optional)",
-        type: "textarea",
-        placeholder:
-          "Paste 3-5 examples of your writing style (e.g., past LinkedIn posts, emails, blog excerpts). The AI will analyze and match your voice.",
       },
     ],
   },
@@ -121,6 +102,64 @@ export const TOOLS: ToolConfig[] = [
         label: "Prompt",
         type: "prompt-select",
         promptPresetsKey: "twitter",
+      },
+    ],
+  },
+  {
+    id: "twitter-post-generator",
+    name: "Twitter Post Generator",
+    description:
+      "Generate a single tweet, thread, and long post in parallel from source material — pick the format that resonates most.",
+    href: "/tools/twitter-post-generator",
+    fields: [
+      {
+        name: "contactId",
+        label: "Who Is Posting",
+        type: "contact",
+        required: true,
+      },
+      {
+        name: "sourceMaterial",
+        label: "Source Material",
+        type: "textarea",
+        placeholder: "Blog link, meeting notes, topic brief, news article, or brain dump of ideas.",
+        required: true,
+      },
+      {
+        name: "voiceContext",
+        label: "Voice Context (Optional)",
+        type: "textarea",
+        placeholder: "Past tweets, style guide, or tone description. The more examples, the better the voice match.",
+      },
+      {
+        name: "customPrompt",
+        label: "Tone & Style",
+        type: "prompt-select",
+        promptPresetsKey: "twitter-post",
+      },
+    ],
+  },
+  {
+    id: "twitter-to-linkedin",
+    name: "Tweet Thread to LinkedIn Post",
+    description: "Convert a Twitter thread or tweet into a LinkedIn post.",
+    href: "/tools/twitter-to-linkedin",
+    fields: [
+      {
+        name: "postContent",
+        label: "Tweet / Thread",
+        type: "textarea",
+        placeholder: "Paste your tweet or thread here...",
+        required: true,
+      },
+      {
+        name: "outputFormat",
+        label: "Length",
+        type: "select",
+        options: [
+          { label: "Full Post (150-300 words)", value: "full" },
+          { label: "Short Post (under 150 words)", value: "short" },
+        ],
       },
     ],
   },

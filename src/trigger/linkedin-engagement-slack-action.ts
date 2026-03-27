@@ -1,5 +1,5 @@
 import { task, logger } from "@trigger.dev/sdk/v3";
-import { generateComment, updateSlackCard } from "@/lib/engagement-bot";
+import { generateComment, updateSlackCard } from "@/lib/linkedin-engagement-bot";
 import { getLinkedinPost, getLinkedinPostProfile, updateLinkedinPostStatus } from "@/lib/linkedin-sync-db";
 import { sendSlackNotification } from "@/lib/slack";
 

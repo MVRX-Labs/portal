@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listLinkedinProfiles, addLinkedinProfile } from "@/lib/linkedin-profiles";
 import { parseBody } from "@/lib/api-schemas/common";
-import { createEngagementProfilesBodySchema } from "@/lib/api-schemas/engagement";
+import { createEngagementProfilesBodySchema } from "@/lib/api-schemas/linkedin-engagement";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

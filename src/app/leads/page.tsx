@@ -11,7 +11,9 @@ interface Lead {
   id: string;
   firstName: string;
   lastName: string | null;
-  linkedinUrl: string;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  twitterHandle: string | null;
   headline: string | null;
   company: string | null;
   profileImageUrl: string | null;
@@ -142,7 +144,7 @@ function LeadsContent() {
   if (!account) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-1">Leads</h1>
+        <h1 className="text-2xl font-bold mb-1">All Leads</h1>
         <p className="text-sm text-(--muted)">Select an account from the sidebar to view leads.</p>
       </div>
     );
@@ -151,7 +153,7 @@ function LeadsContent() {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold">Leads</h1>
+        <h1 className="text-2xl font-bold">All Leads</h1>
         <div className="flex gap-2 items-center">
           <select value={daysBack} onChange={(e) => setDaysBack(Number(e.target.value))} className="text-sm w-32">
             <option value={1}>Last 1 day</option>
@@ -169,7 +171,7 @@ function LeadsContent() {
         </div>
       </div>
       <p className="text-sm text-(--muted) mb-4">
-        People who engaged with {account.name}&apos;s LinkedIn content
+        People who engaged with {account.name}&apos;s content across all platforms
         {pagination ? ` \u2014 ${pagination.total} total` : ""}
       </p>
 
@@ -221,6 +223,7 @@ function LeadsContent() {
               <thead>
                 <tr className="border-b border-(--border) text-left text-(--muted)">
                   <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Platform</th>
                   <th className="px-3 py-2 font-medium">Headline</th>
                   <th className="px-3 py-2 font-medium">Company</th>
                   <th className="px-3 py-2 font-medium">Engagement</th>
@@ -232,49 +235,69 @@ function LeadsContent() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    <td colSpan={8} className="py-8 text-center text-(--muted)">
                       Loading...
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-(--muted)">
+                    <td colSpan={8} className="py-8 text-center text-(--muted)">
                       No leads found
                     </td>
                   </tr>
                 ) : (
-                  leads.map((lead) => (
-                    <tr key={lead.id} className="border-b border-(--border) last:border-0">
-                      <td className="px-3 py-1.5">
-                        <a
-                          href={lead.linkedinUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-(--accent) hover:underline"
-                        >
-                          {lead.firstName}
-                          {lead.lastName ? ` ${lead.lastName}` : ""}
-                        </a>
-                      </td>
-                      <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
-                      <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
-                      <td className="px-3 py-1.5">
-                        <div className="flex gap-1 flex-wrap">
-                          {(lead.engagementTypes || []).map((type) => (
-                            <span
-                              key={type}
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
+                  leads.map((lead) => {
+                    const profileUrl = lead.linkedinUrl || lead.twitterUrl;
+                    const platform = lead.twitterUrl ? "twitter" : "linkedin";
+                    return (
+                      <tr key={lead.id} className="border-b border-(--border) last:border-0">
+                        <td className="px-3 py-1.5">
+                          {profileUrl ? (
+                            <a
+                              href={profileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-(--accent) hover:underline"
                             >
-                              {type}
+                              {lead.firstName}
+                              {lead.lastName ? ` ${lead.lastName}` : ""}
+                            </a>
+                          ) : (
+                            <span>
+                              {lead.firstName}
+                              {lead.lastName ? ` ${lead.lastName}` : ""}
                             </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
-                    </tr>
-                  ))
+                          )}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium leading-none ${
+                              platform === "twitter" ? "bg-sky-500/20 text-sky-400" : "bg-blue-500/20 text-blue-400"
+                            }`}
+                          >
+                            {platform === "twitter" ? "Twitter" : "LinkedIn"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 max-w-xs truncate">{lead.headline || "\u2014"}</td>
+                        <td className="px-3 py-1.5">{lead.company || "\u2014"}</td>
+                        <td className="px-3 py-1.5">
+                          <div className="flex gap-1 flex-wrap">
+                            {(lead.engagementTypes || []).map((type) => (
+                              <span
+                                key={type}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium leading-none"
+                              >
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-3 py-1.5 text-(--muted)">{lead.contactName || "Company Page"}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.firstSeenAt)}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-(--muted)">{formatDate(lead.lastSeenAt)}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -317,13 +340,13 @@ function LeadsContent() {
             <tbody>
               {csvsLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-(--muted)">
+                  <td colSpan={8} className="py-8 text-center text-(--muted)">
                     Loading...
                   </td>
                 </tr>
               ) : csvs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-(--muted)">
+                  <td colSpan={8} className="py-8 text-center text-(--muted)">
                     No CSV reports yet
                   </td>
                 </tr>

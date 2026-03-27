@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { toolRuns } from "@/lib/schema";
+import { toolRuns, accounts, contacts } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { tasks, auth } from "@trigger.dev/sdk/v3";
-import type { linkedinHumanizerTask } from "@/trigger/linkedin-humanizer";
+import type { twitterAuditTask } from "@/trigger/twitter-audit";
 import { parseBody } from "@/lib/api-schemas/common";
-import { linkedinHumanizerBodySchema } from "@/lib/api-schemas/tools";
+import { twitterAuditBodySchema } from "@/lib/api-schemas/tools";
+import { getContactTwitterUrl } from "@/lib/twitter-profiles";
 
 export async function POST(request: NextRequest) {
   const userId = request.headers.get("x-user-id");
@@ -15,32 +16,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: inputs, error } = await parseBody(request, linkedinHumanizerBodySchema);
+  const { data: inputs, error } = await parseBody(request, twitterAuditBodySchema);
   if (error) return error;
+
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, inputs.contactId));
+
+  if (!contact) {
+    return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+  }
+
+  const twitterUrl = await getContactTwitterUrl(contact.id);
+  if (!twitterUrl) {
+    return NextResponse.json({ error: "Selected contact has no Twitter/X URL" }, { status: 400 });
+  }
+
+  const [account] = await db.select().from(accounts).where(eq(accounts.id, inputs.accountId));
+  const companyName = account?.name || "Unknown";
 
   const [run] = await db
     .insert(toolRuns)
     .values({
-      tool: "linkedin-humanizer",
+      tool: "twitter-audit",
       status: "running",
-      inputs,
+      inputs: { ...inputs, twitterUrl, companyName, contactName: contact.name },
       userId,
       accountId: inputs.accountId,
     })
     .returning();
 
-  console.log(`[linkedin-humanizer:route][${run.id}] Run created (tone: ${inputs.tone || "none"}, user: ${userName})`);
+  console.log(
+    `[twitter-audit:route][${run.id}] Run created for "${twitterUrl}" (contact: ${contact.name}, account: ${companyName}, user: ${userName})`
+  );
 
   try {
-    const handle = await tasks.trigger<typeof linkedinHumanizerTask>("linkedin-humanizer", {
+    const handle = await tasks.trigger<typeof twitterAuditTask>("twitter-audit-generation", {
       runId: run.id,
-      postContent: inputs.postContent,
-      tone: inputs.tone || "professional",
-      writingExamples: inputs.writingExamples,
+      twitterUrl,
+      accountName: companyName,
       model: inputs.model,
     });
 
-    console.log(`[linkedin-humanizer:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
+    console.log(`[twitter-audit:route][${run.id}] Trigger.dev task dispatched (handle: ${handle.id})`);
 
     await db
       .update(toolRuns)
@@ -68,7 +84,7 @@ export async function POST(request: NextRequest) {
       .where(eq(toolRuns.id, run.id))
       .catch(() => {});
 
-    console.log(`[linkedin-humanizer:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
+    console.log(`[twitter-audit:route][${run.id}] Failed to dispatch task: ${errorMessage}`);
 
     return NextResponse.json({ id: run.id, error: errorMessage }, { status: 500 });
   }

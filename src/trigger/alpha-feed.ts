@@ -10,17 +10,20 @@ import { schedules, task, logger, queue } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
 import {
   alphaFeeds,
+  twitterAlphaFeeds,
   icpDefinitions,
   accounts,
   type AlphaFeedSage,
   type AlphaFeedKeyword,
   type AlphaFeedEntry,
+  type TwitterAlphaFeedSage,
+  type TwitterAlphaFeedKeyword,
 } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { runClaudeAgent } from "@/lib/claude-agent";
-import { buildSpecGenerationPrompt } from "./alpha-feed-prompts";
+import { buildLinkedInSpecPrompt, buildTwitterSpecPrompt } from "./alpha-feed-prompts";
 import { extractJSON } from "@/lib/audit-utils";
-import { scrapeProfilePosts, normalizePost, extractAuthorName } from "@/lib/engagement-bot";
+import { scrapeProfilePosts, normalizePost, extractAuthorName } from "@/lib/linkedin-engagement-bot";
 import { runApifyActor } from "@/lib/apify";
 import { sendSlackNotification } from "@/lib/slack";
 import { mkdtemp } from "fs/promises";
@@ -46,7 +49,7 @@ const alphaFeedQueue = queue({
 
 export const alphaFeedGenerateSpecTask = task({
   id: "alpha-feed-generate-spec",
-  maxDuration: 600,
+  maxDuration: 900,
   retry: { maxAttempts: 2 },
   run: async (payload: { accountId: string; icpDefinitionId: string }, { ctx }) => {
     const { accountId, icpDefinitionId } = payload;
@@ -59,82 +62,76 @@ export const alphaFeedGenerateSpecTask = task({
       const [account] = await db.select().from(accounts).where(eq(accounts.id, accountId));
       if (!account) throw new Error(`Account not found: ${accountId}`);
 
-      logger.info("Generating alpha feed spec", {
+      logger.info("Generating alpha feed specs (LinkedIn + Twitter in parallel)", {
         account: account.name,
         icp: icp.name,
       });
 
-      // Run Claude agent with web search
-      const sessionDir = await mkdtemp(join(tmpdir(), "alpha-feed-"));
-      const prompt = buildSpecGenerationPrompt(
-        { name: account.name, industry: account.industry, website: account.website },
-        {
-          name: icp.name,
-          description: icp.description,
-          targetTitles: (icp.targetTitles ?? []) as string[],
-          targetIndustries: (icp.targetIndustries ?? []) as string[],
-          targetCompanySizes: (icp.targetCompanySizes ?? []) as string[],
-          targetSignals: (icp.targetSignals ?? []) as string[],
-        }
-      );
-
-      const result = await runClaudeAgent(prompt, sessionDir, {
-        allowedTools: ["WebSearch"],
-        maxTurns: 25,
-        model: "claude-sonnet-4-6",
-      });
-
-      logger.info("Claude agent completed", {
-        costUsd: result.costUsd.toFixed(4),
-        turns: result.turns,
-      });
-
-      // Parse output
-      const jsonStr = extractJSON(result.output);
-      const parsed = JSON.parse(jsonStr) as {
-        sages?: Array<{
-          linkedinUrl: string;
-          displayName?: string;
-          headline?: string;
-          rationale?: string;
-        }>;
-        keywords?: Array<{ query: string; rationale?: string }>;
+      const accountInfo = { name: account.name, industry: account.industry, website: account.website };
+      const icpInfo = {
+        name: icp.name,
+        description: icp.description,
+        targetTitles: (icp.targetTitles ?? []) as string[],
+        targetIndustries: (icp.targetIndustries ?? []) as string[],
+        targetCompanySizes: (icp.targetCompanySizes ?? []) as string[],
+        targetSignals: (icp.targetSignals ?? []) as string[],
       };
 
-      const sages: AlphaFeedSage[] = (parsed.sages ?? []).map((s) => ({
-        linkedinUrl: s.linkedinUrl,
-        displayName: s.displayName || "",
-        headline: s.headline,
-        rationale: s.rationale,
-        active: true,
-      }));
+      // Run LinkedIn and Twitter agent sessions in parallel
+      const [linkedinSessionDir, twitterSessionDir] = await Promise.all([
+        mkdtemp(join(tmpdir(), "alpha-feed-linkedin-")),
+        mkdtemp(join(tmpdir(), "alpha-feed-twitter-")),
+      ]);
 
-      const keywords: AlphaFeedKeyword[] = (parsed.keywords ?? []).map((k) => ({
-        query: k.query,
-        rationale: k.rationale,
-        active: true,
-      }));
+      const agentOpts = { allowedTools: ["WebSearch" as const], maxTurns: 25, model: "claude-sonnet-4-6" as const };
 
-      // Upsert alpha feed row
+      const [linkedinResult, twitterResult] = await Promise.all([
+        runClaudeAgent(buildLinkedInSpecPrompt(accountInfo, icpInfo), linkedinSessionDir, agentOpts),
+        runClaudeAgent(buildTwitterSpecPrompt(accountInfo, icpInfo), twitterSessionDir, agentOpts),
+      ]);
+
+      const totalCost = linkedinResult.costUsd + twitterResult.costUsd;
+      logger.info("Both agent sessions completed", {
+        linkedinCost: linkedinResult.costUsd.toFixed(4),
+        twitterCost: twitterResult.costUsd.toFixed(4),
+        totalCost: totalCost.toFixed(4),
+      });
+
+      // --- Parse and upsert LinkedIn ---
+      const linkedinData = JSON.parse(extractJSON(linkedinResult.output));
+
+      const sages: AlphaFeedSage[] = (linkedinData.sages ?? []).map(
+        (s: { linkedinUrl: string; displayName?: string; headline?: string; rationale?: string }) => ({
+          linkedinUrl: s.linkedinUrl,
+          displayName: s.displayName || "",
+          headline: s.headline,
+          rationale: s.rationale,
+          active: true,
+        })
+      );
+
+      const keywords: AlphaFeedKeyword[] = (linkedinData.keywords ?? []).map(
+        (k: { query: string; rationale?: string }) => ({
+          query: k.query,
+          rationale: k.rationale,
+          active: true,
+        })
+      );
+
       const [existing] = await db.select().from(alphaFeeds).where(eq(alphaFeeds.icpDefinitionId, icpDefinitionId));
 
       if (existing) {
-        // Merge: keep existing sages/keywords that aren't in the new set, add new ones
         const existingSages = (existing.sages ?? []) as AlphaFeedSage[];
         const existingKeywords = (existing.keywords ?? []) as AlphaFeedKeyword[];
 
         const mergedSages = [...existingSages];
         for (const sage of sages) {
-          if (!mergedSages.some((s) => s.linkedinUrl === sage.linkedinUrl)) {
-            mergedSages.push(sage);
-          }
+          if (!mergedSages.some((s) => s.linkedinUrl === sage.linkedinUrl)) mergedSages.push(sage);
         }
 
         const mergedKeywords = [...existingKeywords];
         for (const kw of keywords) {
-          if (!mergedKeywords.some((k) => k.query === kw.query)) {
-            mergedKeywords.push(kw);
-          }
+          if (!mergedKeywords.some((k) => k.query === kw.query)) mergedKeywords.push(kw);
         }
 
         await db
@@ -142,28 +139,70 @@ export const alphaFeedGenerateSpecTask = task({
           .set({ sages: mergedSages, keywords: mergedKeywords, updatedAt: new Date() })
           .where(eq(alphaFeeds.id, existing.id));
 
-        logger.info("Updated existing alpha feed", {
-          sages: mergedSages.length,
-          keywords: mergedKeywords.length,
-        });
+        logger.info("Updated LinkedIn alpha feed", { sages: mergedSages.length, keywords: mergedKeywords.length });
       } else {
-        await db.insert(alphaFeeds).values({
-          accountId,
-          icpDefinitionId,
-          sages,
-          keywords,
-        });
+        await db.insert(alphaFeeds).values({ accountId, icpDefinitionId, sages, keywords });
+        logger.info("Created LinkedIn alpha feed", { sages: sages.length, keywords: keywords.length });
+      }
 
-        logger.info("Created new alpha feed", {
-          sages: sages.length,
-          keywords: keywords.length,
-        });
+      // --- Parse and upsert Twitter ---
+      const twitterData = JSON.parse(extractJSON(twitterResult.output));
+
+      const tSages: TwitterAlphaFeedSage[] = (twitterData.sages ?? []).map(
+        (s: { twitterHandle: string; displayName?: string; bio?: string; rationale?: string }) => ({
+          twitterUrl: `https://x.com/${s.twitterHandle.replace(/^@/, "")}`,
+          twitterHandle: s.twitterHandle.replace(/^@/, ""),
+          displayName: s.displayName || s.twitterHandle,
+          bio: s.bio,
+          rationale: s.rationale,
+          active: true,
+        })
+      );
+
+      const tKeywords: TwitterAlphaFeedKeyword[] = (twitterData.keywords ?? []).map(
+        (k: { query: string; rationale?: string }) => ({
+          query: k.query,
+          rationale: k.rationale,
+          active: true,
+        })
+      );
+
+      const [existingTwitter] = await db
+        .select()
+        .from(twitterAlphaFeeds)
+        .where(eq(twitterAlphaFeeds.icpDefinitionId, icpDefinitionId));
+
+      if (existingTwitter) {
+        const existingTSages = (existingTwitter.sages ?? []) as TwitterAlphaFeedSage[];
+        const existingTKeywords = (existingTwitter.keywords ?? []) as TwitterAlphaFeedKeyword[];
+
+        const mergedTSages = [...existingTSages];
+        for (const sage of tSages) {
+          if (!mergedTSages.some((s) => s.twitterUrl === sage.twitterUrl)) mergedTSages.push(sage);
+        }
+
+        const mergedTKeywords = [...existingTKeywords];
+        for (const kw of tKeywords) {
+          if (!mergedTKeywords.some((k) => k.query === kw.query)) mergedTKeywords.push(kw);
+        }
+
+        await db
+          .update(twitterAlphaFeeds)
+          .set({ sages: mergedTSages, keywords: mergedTKeywords, updatedAt: new Date() })
+          .where(eq(twitterAlphaFeeds.id, existingTwitter.id));
+
+        logger.info("Updated Twitter alpha feed", { sages: mergedTSages.length, keywords: mergedTKeywords.length });
+      } else {
+        await db.insert(twitterAlphaFeeds).values({ accountId, icpDefinitionId, sages: tSages, keywords: tKeywords });
+        logger.info("Created Twitter alpha feed", { sages: tSages.length, keywords: tKeywords.length });
       }
 
       return {
         sagesCount: sages.length,
         keywordsCount: keywords.length,
-        costUsd: result.costUsd,
+        twitterSagesCount: tSages.length,
+        twitterKeywordsCount: tKeywords.length,
+        costUsd: totalCost,
       };
     } catch (err) {
       await sendSlackNotification({

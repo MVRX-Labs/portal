@@ -29,16 +29,14 @@ export const linkedinAuditBodySchema = z.object({
 
 export type LinkedinAuditBody = z.infer<typeof linkedinAuditBodySchema>;
 
-// POST /api/tools/linkedin-humanizer
-export const linkedinHumanizerBodySchema = z.object({
-  postContent: z.string().min(1, "postContent is required"),
-  tone: z.string().optional(),
-  writingExamples: z.string().optional(),
-  model: z.string().optional(),
+// POST /api/tools/twitter-audit
+export const twitterAuditBodySchema = z.object({
+  contactId: z.string().min(1, "A contact is required"),
   accountId: requiredAccountId,
+  model: z.string().optional(),
 });
 
-export type LinkedinHumanizerBody = z.infer<typeof linkedinHumanizerBodySchema>;
+export type TwitterAuditBody = z.infer<typeof twitterAuditBodySchema>;
 
 // POST /api/tools/linkedin-to-twitter
 export const linkedinToTwitterBodySchema = z.object({
@@ -66,6 +64,29 @@ export const linkedinPostGeneratorBodySchema = z.object({
 });
 
 export type LinkedinPostGeneratorBody = z.infer<typeof linkedinPostGeneratorBodySchema>;
+
+// POST /api/tools/twitter-post-generator
+export const twitterPostGeneratorBodySchema = z.object({
+  contactId: z.string().min(1, "contactId is required"),
+  sourceMaterial: z.string().min(1, "sourceMaterial is required"),
+  voiceContext: z.string().optional(),
+  promptStyle: z.enum(["default", "thread", "analytical"]).optional(),
+  customPrompt: z.string().optional(),
+  model: z.string().optional(),
+  accountId: requiredAccountId,
+});
+
+export type TwitterPostGeneratorBody = z.infer<typeof twitterPostGeneratorBodySchema>;
+
+// POST /api/tools/twitter-to-linkedin
+export const twitterToLinkedinBodySchema = z.object({
+  postContent: z.string().min(1, "postContent is required"),
+  outputFormat: z.enum(["full", "short"]).optional(),
+  model: z.string().optional(),
+  accountId: requiredAccountId,
+});
+
+export type TwitterToLinkedinBody = z.infer<typeof twitterToLinkedinBodySchema>;
 
 // POST /api/tools/gtm-strategy
 export const gtmStrategyBodySchema = z.object({

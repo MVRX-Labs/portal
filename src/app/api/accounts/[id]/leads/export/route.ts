@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const values = [
       escapeCsv(row.firstName),
       escapeCsv(row.lastName || ""),
-      escapeCsv(row.linkedinUrl),
+      escapeCsv(row.linkedinUrl || ""),
       escapeCsv(row.email || ""),
       escapeCsv(row.phone || ""),
       escapeCsv(row.headline || ""),

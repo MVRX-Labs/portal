@@ -46,6 +46,13 @@ const PREFIXES = {
   acache: "acache",
   icp: "icp",
   afeed: "afeed",
+  tprof: "tprof",
+  tpost: "tpost",
+  tsnap: "tsnap",
+  tsync: "tsync",
+  trepl: "trepl",
+  teng: "teng",
+  tafeed: "tafeed",
 } as const;
 
 type Prefix = (typeof PREFIXES)[keyof typeof PREFIXES];
@@ -85,6 +92,13 @@ export type LeadCsvId = `lcsv_${string}`;
 export type ApifyCacheId = `acache_${string}`;
 export type IcpDefinitionId = `icp_${string}`;
 export type AlphaFeedId = `afeed_${string}`;
+export type TwitterProfileId = `tprof_${string}`;
+export type TwitterPostId = `tpost_${string}`;
+export type TwitterPostSnapshotId = `tsnap_${string}`;
+export type TwitterSyncRunId = `tsync_${string}`;
+export type TwitterPostReplyId = `trepl_${string}`;
+export type TwitterPostEngagementId = `teng_${string}`;
+export type TwitterAlphaFeedId = `tafeed_${string}`;
 export type ObjectId =
   | UserId
   | AccountId
@@ -120,7 +134,14 @@ export type ObjectId =
   | LeadCsvId
   | ApifyCacheId
   | IcpDefinitionId
-  | AlphaFeedId;
+  | AlphaFeedId
+  | TwitterProfileId
+  | TwitterPostId
+  | TwitterPostSnapshotId
+  | TwitterSyncRunId
+  | TwitterPostReplyId
+  | TwitterPostEngagementId
+  | TwitterAlphaFeedId;
 
 type PrefixToId = {
   user: UserId;
@@ -158,6 +179,13 @@ type PrefixToId = {
   acache: ApifyCacheId;
   icp: IcpDefinitionId;
   afeed: AlphaFeedId;
+  tprof: TwitterProfileId;
+  tpost: TwitterPostId;
+  tsnap: TwitterPostSnapshotId;
+  tsync: TwitterSyncRunId;
+  trepl: TwitterPostReplyId;
+  teng: TwitterPostEngagementId;
+  tafeed: TwitterAlphaFeedId;
 };
 
 export function createObjectId<P extends Prefix>(prefix: P): PrefixToId[P] {
@@ -212,6 +240,13 @@ export function prefixForTable(table: string): Prefix {
     apify_cache: "acache",
     icp_definitions: "icp",
     alpha_feeds: "afeed",
+    twitter_profiles: "tprof",
+    twitter_posts: "tpost",
+    twitter_post_snapshots: "tsnap",
+    twitter_sync_runs: "tsync",
+    twitter_post_replies: "trepl",
+    twitter_post_engagements: "teng",
+    twitter_alpha_feeds: "tafeed",
   };
   const prefix = map[table];
   if (!prefix) throw new Error(`No prefix defined for table: ${table}`);

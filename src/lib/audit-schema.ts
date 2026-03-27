@@ -37,3 +37,14 @@ export interface BulletItem {
   label?: string;
   text: string;
 }
+
+export interface TwitterAuditContent {
+  personName: string;
+  personTitle: string;
+  twitterHandle: string;
+  preparedDate: string;
+  executiveSummary: string[];
+  overallScore: number;
+  scorecard: ScorecardEntry[];
+  sections: AuditSection[];
+}

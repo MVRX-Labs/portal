@@ -7,7 +7,11 @@ import { apiFetch, apiMutate } from "@/lib/api-client";
 import type { IcpDefinition } from "@/lib/api-schemas/icp-definitions";
 import type { AlphaFeed, AlphaFeedEntry } from "@/lib/api-schemas/alpha-feed";
 import { getIcpDefinitionsResponseSchema } from "@/lib/api-schemas/icp-definitions";
-import { getAlphaFeedResponseSchema, collectAlphaFeedResponseSchema } from "@/lib/api-schemas/alpha-feed";
+import {
+  getAlphaFeedResponseSchema,
+  collectAlphaFeedResponseSchema,
+  generateAlphaFeedSpecResponseSchema,
+} from "@/lib/api-schemas/alpha-feed";
 import { TriggerRunIndicator } from "@/components/trigger-run-indicator";
 import { usePendingRuns } from "@/lib/hooks/use-pending-runs";
 
@@ -116,8 +120,18 @@ export default function AlphaFeedPage() {
   const [feeds, setFeeds] = useState<Record<string, AlphaFeed | null>>({});
   const [loading, setLoading] = useState(true);
   const [selectedIcp, setSelectedIcp] = useState<string | null>(null);
-  const [selectedDayIdx, setSelectedDayIdx] = useState(0); // 0 = most recent
+  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const collectingRuns = usePendingRuns();
+  const generatingRuns = usePendingRuns();
+  const [showEdit, setShowEdit] = useState(false);
+
+  // Sage form state
+  const [sageInput, setSageInput] = useState("");
+  const [addingSage, setAddingSage] = useState(false);
+
+  // Keyword form state
+  const [keywordInput, setKeywordInput] = useState("");
+  const [addingKeyword, setAddingKeyword] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!account) return;
@@ -171,6 +185,106 @@ export default function AlphaFeedPage() {
     }
   };
 
+  const generateSpec = async (icpId: string) => {
+    if (!account) return;
+    try {
+      const { triggerRunId, publicAccessToken } = await apiMutate(
+        `/api/accounts/${account.id}/alpha-feed/${icpId}/generate`,
+        generateAlphaFeedSpecResponseSchema,
+        { method: "POST", body: {} }
+      );
+      generatingRuns.set(icpId, triggerRunId, publicAccessToken);
+    } catch {
+      // toast handled
+    }
+  };
+
+  const addSage = async () => {
+    if (!account || !selectedIcp || !sageInput.trim()) return;
+    setAddingSage(true);
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/sages`, getAlphaFeedResponseSchema, {
+        method: "POST",
+        body: { linkedinUrl: sageInput.trim() },
+      });
+      setSageInput("");
+      fetchData();
+    } catch {
+      // ignore — toast handled
+    } finally {
+      setAddingSage(false);
+    }
+  };
+
+  const removeSage = async (linkedinUrl: string) => {
+    if (!account || !selectedIcp) return;
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/sages`, getAlphaFeedResponseSchema, {
+        method: "DELETE",
+        body: { linkedinUrl },
+      });
+      fetchData();
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleSage = async (linkedinUrl: string, active: boolean) => {
+    if (!account || !selectedIcp) return;
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/sages`, getAlphaFeedResponseSchema, {
+        method: "PATCH",
+        body: { linkedinUrl, active },
+      });
+      fetchData();
+    } catch {
+      // ignore
+    }
+  };
+
+  const addKeyword = async () => {
+    if (!account || !selectedIcp || !keywordInput.trim()) return;
+    setAddingKeyword(true);
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/keywords`, getAlphaFeedResponseSchema, {
+        method: "POST",
+        body: { query: keywordInput.trim() },
+      });
+      setKeywordInput("");
+      fetchData();
+    } catch {
+      // ignore
+    } finally {
+      setAddingKeyword(false);
+    }
+  };
+
+  const removeKeyword = async (query: string) => {
+    if (!account || !selectedIcp) return;
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/keywords`, getAlphaFeedResponseSchema, {
+        method: "DELETE",
+        body: { query },
+      });
+      fetchData();
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleKeyword = async (query: string, active: boolean) => {
+    if (!account || !selectedIcp) return;
+    try {
+      await apiMutate(`/api/accounts/${account.id}/alpha-feed/${selectedIcp}/keywords`, getAlphaFeedResponseSchema, {
+        method: "PATCH",
+        body: { query, active },
+      });
+      fetchData();
+    } catch {
+      // ignore
+    }
+  };
+
   if (!account) {
     return (
       <div className="text-center py-12">
@@ -203,29 +317,13 @@ export default function AlphaFeedPage() {
     );
   }
 
-  const anyFeedConfigured = Object.values(feeds).some(
-    (f) => f && ((f.sages?.length ?? 0) > 0 || (f.keywords?.length ?? 0) > 0)
-  );
-
-  if (!anyFeedConfigured) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold mb-1">LinkedIn Alpha Feed</h1>
-        <p className="text-sm text-(--muted) mb-4">
-          No alpha feed configured yet. Generate a spec or add sages and keywords on the account overview page.
-        </p>
-        <Link href={`/accounts/${account.slug}`} className="text-(--accent) hover:underline text-sm">
-          Go to account overview to configure
-        </Link>
-      </div>
-    );
-  }
-
   const currentFeed = selectedIcp ? feeds[selectedIcp] : null;
   const dailyEntries = currentFeed?.dailyEntries ?? {};
   const dateKeys = Object.keys(dailyEntries).sort().reverse();
   const sages = currentFeed?.sages ?? [];
   const keywords = currentFeed?.keywords ?? [];
+
+  const hasSagesOrKeywords = sages.length > 0 || keywords.length > 0;
 
   // Current day's entries
   const currentDateKey = dateKeys[selectedDayIdx] ?? null;
@@ -239,7 +337,24 @@ export default function AlphaFeedPage() {
         <h1 className="text-2xl font-bold">LinkedIn Alpha Feed</h1>
         <div className="flex items-center gap-2">
           {selectedIcp &&
-            (sages.length > 0 || keywords.length > 0) &&
+            (generatingRuns.get(selectedIcp) ? (
+              <TriggerRunIndicator
+                triggerRunId={generatingRuns.get(selectedIcp)!.triggerRunId}
+                publicAccessToken={generatingRuns.get(selectedIcp)!.publicAccessToken}
+                label="Generating spec with AI..."
+                onComplete={() => {
+                  generatingRuns.clear(selectedIcp);
+                  fetchData();
+                }}
+                onError={() => generatingRuns.clear(selectedIcp)}
+              />
+            ) : (
+              <button onClick={() => generateSpec(selectedIcp)} className="btn-secondary text-sm">
+                Generate Spec with AI
+              </button>
+            ))}
+          {selectedIcp &&
+            hasSagesOrKeywords &&
             (collectingRuns.get(selectedIcp) ? (
               <TriggerRunIndicator
                 triggerRunId={collectingRuns.get(selectedIcp)!.triggerRunId}
@@ -266,46 +381,149 @@ export default function AlphaFeedPage() {
       </p>
 
       {/* ICP Tabs */}
-      {icpDefs.filter(
-        (icp) =>
-          feeds[icp.id] && ((feeds[icp.id]?.sages?.length ?? 0) > 0 || (feeds[icp.id]?.keywords?.length ?? 0) > 0)
-      ).length > 1 && (
+      {icpDefs.length > 1 && (
         <div className="flex gap-1 mb-4 border-b border-(--border)">
-          {icpDefs
-            .filter(
-              (icp) =>
-                feeds[icp.id] && ((feeds[icp.id]?.sages?.length ?? 0) > 0 || (feeds[icp.id]?.keywords?.length ?? 0) > 0)
-            )
-            .map((icp) => {
-              const isActive = selectedIcp === icp.id;
-              return (
-                <button
-                  key={icp.id}
-                  onClick={() => setSelectedIcp(icp.id)}
-                  className={`px-3 py-2 text-sm border-b-2 transition-colors ${
-                    isActive
-                      ? "border-(--accent) text-(--foreground) font-medium"
-                      : "border-transparent text-(--muted) hover:text-(--foreground)"
-                  }`}
-                >
-                  {icp.name}
-                </button>
-              );
-            })}
+          {icpDefs.map((icp) => {
+            const isActive = selectedIcp === icp.id;
+            return (
+              <button
+                key={icp.id}
+                onClick={() => {
+                  setSelectedIcp(icp.id);
+                  setSelectedDayIdx(0);
+                }}
+                className={`px-3 py-2 text-sm border-b-2 transition-colors ${
+                  isActive
+                    ? "border-(--accent) text-(--foreground) font-medium"
+                    : "border-transparent text-(--muted) hover:text-(--foreground)"
+                }`}
+              >
+                {icp.name}
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* Feed spec summary */}
-      {currentFeed && (
-        <div className="text-xs text-(--muted) mb-4 flex gap-4">
+      {hasSagesOrKeywords && (
+        <div className="text-xs text-(--muted) mb-4 flex gap-4 items-center">
           <span>{sages.filter((s) => s.active).length} active sages</span>
           <span>{keywords.filter((k) => k.active).length} active keywords</span>
           <span>
             {dateKeys.length} day{dateKeys.length !== 1 ? "s" : ""} of data
           </span>
-          <Link href={`/accounts/${account.slug}`} className="text-(--accent) hover:underline">
-            Edit spec
-          </Link>
+          <button onClick={() => setShowEdit(!showEdit)} className="text-(--accent) hover:underline">
+            {showEdit ? "Hide" : "Edit"}
+          </button>
+        </div>
+      )}
+
+      {/* Sage & Keyword management — only shown when editing */}
+      {selectedIcp && showEdit && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Sages panel */}
+          <div className="card p-4">
+            <h3 className="text-sm font-semibold mb-2">Sages ({sages.length})</h3>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={sageInput}
+                onChange={(e) => setSageInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addSage()}
+                placeholder="LinkedIn profile URL"
+                className="input flex-1 text-sm"
+              />
+              <button onClick={addSage} disabled={addingSage || !sageInput.trim()} className="btn-primary text-sm">
+                {addingSage ? "..." : "Add"}
+              </button>
+            </div>
+            {sages.length > 0 && (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {sages.map((sage) => (
+                  <div
+                    key={sage.linkedinUrl}
+                    className={`flex items-center justify-between text-xs px-2 py-1.5 rounded ${
+                      sage.active ? "bg-(--input)" : "bg-(--input)/50 opacity-60"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">{sage.displayName || sage.linkedinUrl}</span>
+                      {sage.headline && <span className="text-(--muted) ml-1">{sage.headline}</span>}
+                    </div>
+                    <div className="flex items-center gap-1 ml-2 shrink-0">
+                      <button
+                        onClick={() => toggleSage(sage.linkedinUrl, !sage.active)}
+                        className="text-(--muted) hover:text-(--foreground)"
+                        title={sage.active ? "Disable" : "Enable"}
+                      >
+                        {sage.active ? "Pause" : "Resume"}
+                      </button>
+                      <button
+                        onClick={() => removeSage(sage.linkedinUrl)}
+                        className="text-red-400 hover:text-red-300 ml-1"
+                        title="Remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Keywords panel */}
+          <div className="card p-4">
+            <h3 className="text-sm font-semibold mb-2">Keywords ({keywords.length})</h3>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addKeyword()}
+                placeholder="Search query"
+                className="input flex-1 text-sm"
+              />
+              <button
+                onClick={addKeyword}
+                disabled={addingKeyword || !keywordInput.trim()}
+                className="btn-primary text-sm"
+              >
+                {addingKeyword ? "..." : "Add"}
+              </button>
+            </div>
+            {keywords.length > 0 && (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {keywords.map((kw) => (
+                  <div
+                    key={kw.query}
+                    className={`flex items-center justify-between text-xs px-2 py-1.5 rounded ${
+                      kw.active ? "bg-(--input)" : "bg-(--input)/50 opacity-60"
+                    }`}
+                  >
+                    <span className="font-medium truncate">{kw.query}</span>
+                    <div className="flex items-center gap-1 ml-2 shrink-0">
+                      <button
+                        onClick={() => toggleKeyword(kw.query, !kw.active)}
+                        className="text-(--muted) hover:text-(--foreground)"
+                        title={kw.active ? "Disable" : "Enable"}
+                      >
+                        {kw.active ? "Pause" : "Resume"}
+                      </button>
+                      <button
+                        onClick={() => removeKeyword(kw.query)}
+                        className="text-red-400 hover:text-red-300 ml-1"
+                        title="Remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -334,7 +552,15 @@ export default function AlphaFeedPage() {
       )}
 
       {/* Feed entries — two columns */}
-      {dateKeys.length === 0 ? (
+      {!hasSagesOrKeywords ? (
+        <div className="card p-6 text-center">
+          <p className="text-(--muted) mb-2">No sages or keywords configured yet.</p>
+          <p className="text-sm text-(--muted)">
+            Click &ldquo;Generate Spec with AI&rdquo; to automatically discover sages and keyword searches, or add them
+            manually above.
+          </p>
+        </div>
+      ) : dateKeys.length === 0 ? (
         <div className="card p-6 text-center">
           <p className="text-(--muted) mb-2">No feed entries yet.</p>
           <p className="text-sm text-(--muted)">

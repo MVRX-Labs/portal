@@ -16,6 +16,9 @@ export const APIFY_CACHE_TTLS: Record<string, number> = {
   "apimaestro~linkedin-post-comments-replies-engagements-scraper-no-cookies": 5 * 60, // Comments & Replies
   "apimaestro~linkedin-post-reshares": 5 * 60, // Reshares/Reposts
 
+  // --- Twitter engagement data (changes rapidly) — 5 minutes ---
+  "scrape.badger/twitter-tweets-scraper": 5 * 60, // Twitter Tweets (all modes: search, replies, retweeters)
+
   // --- Alpha feed keyword searches — 1 hour ---
   "apimaestro~linkedin-posts-search-scraper-no-cookies": 60 * 60, // Post Search (alpha feed)
 

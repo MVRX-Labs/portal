@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { listLinkedinProfiles } from "@/lib/linkedin-profiles";
-import type { weeklyAnalyticsTask } from "@/trigger/analytics-scrape";
+import type { weeklyAnalyticsTask } from "@/trigger/linkedin-analytics-scrape";
 import { parseBody } from "@/lib/api-schemas/common";
 import { analyticsScrapeBodySchema } from "@/lib/api-schemas/analytics";
 

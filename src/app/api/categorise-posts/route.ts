@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
-import type { postCategoriserTask } from "@/trigger/post-categoriser";
+import type { postCategoriserTask } from "@/trigger/linkedin-post-categoriser";
 
 export async function POST() {
   try {

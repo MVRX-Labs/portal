@@ -1,0 +1,6 @@
+{
+  "mode": "Advanced Search",
+  "query": "from:Starlink",
+  "query_type": "Latest",
+  "max_results": 10
+}

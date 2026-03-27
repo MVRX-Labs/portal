@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leads, contacts } from "@/lib/schema";
-import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
+import { eq, and, desc, ilike, or, sql, isNotNull, isNull } from "drizzle-orm";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await params;
@@ -10,10 +10,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
   const q = searchParams.get("q") || "";
   const contactId = searchParams.get("contactId") || null;
+  const source = searchParams.get("source") || null; // "twitter" | "linkedin"
 
   const offset = (page - 1) * limit;
 
   const conditions = [eq(leads.accountId, accountId)];
+
+  if (source === "twitter") {
+    conditions.push(isNotNull(leads.twitterUrl));
+  } else if (source === "linkedin") {
+    conditions.push(isNotNull(leads.linkedinUrl));
+  }
 
   if (contactId) {
     conditions.push(eq(leads.contactId, contactId));
@@ -39,6 +46,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         firstName: leads.firstName,
         lastName: leads.lastName,
         linkedinUrl: leads.linkedinUrl,
+        twitterUrl: leads.twitterUrl,
+        twitterHandle: leads.twitterHandle,
         headline: leads.headline,
         company: leads.company,
         title: leads.title,

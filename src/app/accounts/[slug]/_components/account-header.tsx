@@ -164,7 +164,7 @@ export function AccountHeader({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-xs text-(--muted) mb-1">Industry</label>
             <InlineEdit
@@ -194,6 +194,17 @@ export function AccountHeader({
               accountId={account.id}
               onSaved={(v) => onAccountUpdated({ linkedinUrl: v || null })}
               placeholder="https://linkedin.com/company/..."
+              type="url"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-(--muted) mb-1">Twitter/X</label>
+            <InlineEdit
+              value={account.twitterUrl || ""}
+              field="twitterUrl"
+              accountId={account.id}
+              onSaved={(v) => onAccountUpdated({ twitterUrl: v || null })}
+              placeholder="https://x.com/username"
               type="url"
             />
           </div>

@@ -4,7 +4,7 @@ import { accounts, linkedinProfiles } from "@/lib/schema";
 import { eq, like, and } from "drizzle-orm";
 import { tasks } from "@trigger.dev/sdk";
 import { sendAnalyticsSlackMessage } from "@/lib/slack";
-import type { trackPostTask } from "@/trigger/post-tracker";
+import type { trackPostTask } from "@/trigger/linkedin-post-tracker";
 
 const LINKEDIN_POST_RE = /https?:\/\/(?:www\.)?linkedin\.com\/(?:posts\/[^\s>|]+|feed\/update\/[^\s>|]+)/gi;
 

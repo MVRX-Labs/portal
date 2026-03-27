@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { linkedinProfiles } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { parseBody } from "@/lib/api-schemas/common";
-import { patchEngagementProfileBodySchema } from "@/lib/api-schemas/engagement";
+import { patchEngagementProfileBodySchema } from "@/lib/api-schemas/linkedin-engagement";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string; profileId: string }> }) {
   const { id, profileId } = await params;

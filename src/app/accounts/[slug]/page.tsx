@@ -13,6 +13,7 @@ import { AccountHeader } from "./_components/account-header";
 import { ContactsSection } from "./_components/contacts-section";
 import { ActionsSection } from "./_components/actions-section";
 import { LinkedinProfilesSection } from "./_components/linkedin-profiles-section";
+import { TwitterProfilesSection } from "./_components/twitter-profiles-section";
 import { IcpSection } from "./_components/icp-section";
 import { IntegrationsSection } from "./_components/integrations-section";
 import { ContentVoiceSection } from "./_components/content-voice-section";
@@ -87,6 +88,7 @@ function AccountOverviewContent() {
 
       <div className="space-y-4">
         <LinkedinProfilesSection accountId={account.id} />
+        <TwitterProfilesSection accountId={account.id} />
         <IcpSection accountId={account.id} />
         <IntegrationsSection account={account} onAccountUpdated={handleAccountUpdated} />
         <ContentVoiceSection

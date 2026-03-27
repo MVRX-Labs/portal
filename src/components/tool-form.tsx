@@ -13,10 +13,12 @@ import { useAccount } from "./account-provider";
 import { RunProgress } from "./run-progress";
 import { TWITTER_PROMPT_PRESETS, type PromptPreset } from "@/lib/twitter-prompts";
 import { LINKEDIN_POST_PROMPT_PRESETS } from "@/lib/linkedin-post-prompts";
+import { TWITTER_POST_PROMPT_PRESETS } from "@/lib/twitter-post-prompts";
 
 const PROMPT_PRESETS_REGISTRY: Record<string, Record<string, PromptPreset>> = {
   twitter: TWITTER_PROMPT_PRESETS,
   "linkedin-post": LINKEDIN_POST_PROMPT_PRESETS,
+  "twitter-post": TWITTER_POST_PROMPT_PRESETS,
 };
 
 function PromptSelectField({
@@ -122,6 +124,11 @@ function PromptSelectField({
                       )
                     )}
                   </>
+                ) : presetsKey === "twitter-post" ? (
+                  <>
+                    Use <code className="bg-(--background) px-1 rounded">{"{{POSTER_NAME}}"}</code> for the poster. This
+                    tone applies to all 3 output formats (single tweet, thread, long post).
+                  </>
                 ) : (
                   <>
                     Use <code className="bg-(--background) px-1 rounded">{"{{POST}}"}</code> as a placeholder for the
@@ -179,21 +186,18 @@ export function ToolForm({ tool }: ToolFormProps) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [viewingInputRunId, setViewingInputRunId] = useState<string | null>(null);
 
-  const handleRerun = useCallback(
-    (run: ToolRun) => {
-      const newValues: Record<string, string> = {};
-      for (const [key, val] of Object.entries(run.inputs)) {
-        if (key === "accountId" || key === "model") continue;
-        newValues[key] = String(val ?? "");
-      }
-      setValues(newValues);
-      if (typeof run.inputs.model === "string" && MODELS.includes(run.inputs.model as typeof MODELS[number])) {
-        setModel(run.inputs.model as string);
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    []
-  );
+  const handleRerun = useCallback((run: ToolRun) => {
+    const newValues: Record<string, string> = {};
+    for (const [key, val] of Object.entries(run.inputs)) {
+      if (key === "accountId" || key === "model") continue;
+      newValues[key] = String(val ?? "");
+    }
+    setValues(newValues);
+    if (typeof run.inputs.model === "string" && MODELS.includes(run.inputs.model as (typeof MODELS)[number])) {
+      setModel(run.inputs.model as string);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const reconnectToRun = useCallback(async (runId: string, createdAt: string) => {
     try {
@@ -575,10 +579,7 @@ export function ToolForm({ tool }: ToolFormProps) {
                     <span className={`badge badge-${run.status}`}>{run.status}</span>
                     {run.inputs && Object.keys(run.inputs).length > 0 && (
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleRerun(run)}
-                          className="text-(--accent) hover:underline text-xs"
-                        >
+                        <button onClick={() => handleRerun(run)} className="text-(--accent) hover:underline text-xs">
                           Re-run
                         </button>
                         <button

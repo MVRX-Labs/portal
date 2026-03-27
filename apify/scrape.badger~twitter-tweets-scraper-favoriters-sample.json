@@ -1,0 +1,9 @@
+[
+  {
+    "_note": "Twitter/X made likes private in 2024. This mode consistently returns empty results for all tweets tested. See TWITTER-ACTORS.md for details.",
+    "status": "empty",
+    "reason": "no_results",
+    "mode": "Get Favoriters",
+    "id": "1921004145487515716"
+  }
+]

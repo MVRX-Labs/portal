@@ -7,7 +7,7 @@ import { task, logger } from "@trigger.dev/sdk";
 import { db } from "@/lib/db";
 import { linkedinPosts, linkedinPostSnapshots } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
-import { scrapeProfilePosts, normalizePost } from "@/lib/engagement-bot";
+import { scrapeProfilePosts, normalizePost } from "@/lib/linkedin-engagement-bot";
 import { sendAnalyticsSlackMessage } from "@/lib/slack";
 import { sendSlackNotification } from "@/lib/slack";
 

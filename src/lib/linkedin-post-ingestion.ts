@@ -1,4 +1,4 @@
-import { normalizePost } from "./engagement-bot";
+import { normalizePost } from "./linkedin-engagement-bot";
 import { extractLinkedinSlug } from "./linkedin-profiles";
 
 interface ApifyPost {

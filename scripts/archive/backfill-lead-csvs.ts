@@ -64,7 +64,7 @@ async function backfill() {
         [
           escapeCsv(lead.firstName),
           escapeCsv(lead.lastName || ""),
-          escapeCsv(lead.linkedinUrl),
+          escapeCsv(lead.linkedinUrl || ""),
           escapeCsv(lead.headline || ""),
           escapeCsv(lead.company || ""),
         ].join(",")

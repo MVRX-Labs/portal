@@ -186,7 +186,12 @@ export async function uploadFile(
   return resp.json();
 }
 
-export async function createGoogleDoc(name: string, textContent: string, parentFolderId: string): Promise<DriveFile> {
+export async function createGoogleDoc(
+  name: string,
+  textContent: string,
+  parentFolderId: string,
+  contentType: "text/plain" | "text/html" = "text/plain"
+): Promise<DriveFile> {
   const token = await getAccessToken();
 
   const boundary = `----trigger${Date.now()}`;
@@ -201,7 +206,7 @@ export async function createGoogleDoc(name: string, textContent: string, parentF
     `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
     fileMetadata,
     `\r\n--${boundary}\r\n`,
-    `Content-Type: text/plain; charset=UTF-8\r\n\r\n`,
+    `Content-Type: ${contentType}; charset=UTF-8\r\n\r\n`,
     textContent,
     `\r\n--${boundary}--`,
   ];
@@ -221,6 +226,96 @@ export async function createGoogleDoc(name: string, textContent: string, parentF
   if (!resp.ok) await throwIfNotOk(resp, "Drive API createGoogleDoc");
 
   return resp.json();
+}
+
+// ---------------------------------------------------------------------------
+// Markdown → HTML conversion for styled Google Docs
+// ---------------------------------------------------------------------------
+
+function applyInlineFormatting(text: string): string {
+  // Bold first (**), then italic (*) on remaining single asterisks
+  let result = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  return result;
+}
+
+/**
+ * Convert markdown-formatted text to HTML that Google Docs will import with
+ * proper headings, bold, italic, lists, and horizontal rules.
+ */
+export function markdownToGoogleDocHtml(md: string): string {
+  const lines = md.split("\n");
+  const html: string[] = [];
+  let inList: "ul" | "ol" | null = null;
+
+  function closePendingList() {
+    if (inList) {
+      html.push(`</${inList}>`);
+      inList = null;
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Detect list items
+    const isUnordered = trimmed.startsWith("- ");
+    const isOrdered = /^\d+\.\s/.test(trimmed);
+
+    // Close list if current line isn't a matching list item
+    if (inList === "ul" && !isUnordered) closePendingList();
+    if (inList === "ol" && !isOrdered) closePendingList();
+
+    // Blank line — close lists, skip
+    if (!trimmed) {
+      closePendingList();
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^-{3,}$/.test(trimmed) || /^\*{3,}$/.test(trimmed)) {
+      closePendingList();
+      html.push("<hr>");
+      continue;
+    }
+
+    // Headings
+    const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+    if (headingMatch) {
+      closePendingList();
+      const level = headingMatch[1].length;
+      html.push(`<h${level}>${applyInlineFormatting(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    // Unordered list
+    if (isUnordered) {
+      if (inList !== "ul") {
+        closePendingList();
+        html.push("<ul>");
+        inList = "ul";
+      }
+      html.push(`<li>${applyInlineFormatting(trimmed.slice(2))}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    if (isOrdered) {
+      if (inList !== "ol") {
+        closePendingList();
+        html.push("<ol>");
+        inList = "ol";
+      }
+      html.push(`<li>${applyInlineFormatting(trimmed.replace(/^\d+\.\s/, ""))}</li>`);
+      continue;
+    }
+
+    // Regular paragraph
+    html.push(`<p>${applyInlineFormatting(trimmed)}</p>`);
+  }
+
+  closePendingList();
+  return `<html><body>${html.join("\n")}</body></html>`;
 }
 
 export function getPreviewUrl(fileId: string, mimeType: string): string {

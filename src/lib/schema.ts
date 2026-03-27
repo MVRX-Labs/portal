@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, jsonb, boolean, unique, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean, unique, uniqueIndex, integer, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createObjectId } from "./ids";
 
 export const users = pgTable("users", {
@@ -34,6 +35,8 @@ export const accounts = pgTable("accounts", {
   contractLinks: jsonb("contract_links").$type<{ url: string; label: string }[]>().default([]),
   engagementSlackChannel: text("engagement_slack_channel"),
   analyticsSlackChannel: text("analytics_slack_channel"),
+  twitterEngagementSlackChannel: text("twitter_engagement_slack_channel"),
+  twitterAnalyticsSlackChannel: text("twitter_analytics_slack_channel"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -68,9 +71,11 @@ export const leads = pgTable(
       .references(() => accounts.id),
     contactId: text("contact_id").references(() => contacts.id),
     leadCsvId: text("lead_csv_id"),
-    linkedinUrl: text("linkedin_url").notNull(),
+    linkedinUrl: text("linkedin_url"),
     linkedinUrnUrl: text("linkedin_urn_url"),
     linkedinSlug: text("linkedin_slug"),
+    twitterUrl: text("twitter_url"),
+    twitterHandle: text("twitter_handle"),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     headline: text("headline"),
@@ -96,7 +101,12 @@ export const leads = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    uniqueAccountLead: unique().on(table.accountId, table.linkedinUrl),
+    uniqueAccountLinkedin: uniqueIndex("leads_account_linkedin_unique")
+      .on(table.accountId, table.linkedinUrl)
+      .where(sql`linkedin_url IS NOT NULL`),
+    uniqueAccountTwitter: uniqueIndex("leads_account_twitter_unique")
+      .on(table.accountId, table.twitterUrl)
+      .where(sql`twitter_url IS NOT NULL`),
   })
 );
 
@@ -167,6 +177,41 @@ export interface AlphaFeedEntry {
   sourceLabel: string;
 }
 
+// --- Twitter Alpha Feed types (JSONB column shapes) ---
+
+export interface TwitterAlphaFeedSage {
+  twitterUrl: string;
+  twitterHandle?: string;
+  displayName: string;
+  bio?: string;
+  rationale?: string;
+  active: boolean;
+}
+
+export interface TwitterAlphaFeedKeyword {
+  query: string;
+  rationale?: string;
+  active: boolean;
+}
+
+export interface TwitterAlphaFeedEntry {
+  tweetUrl: string;
+  authorName: string;
+  authorTwitterUrl?: string;
+  authorTwitterHandle?: string;
+  authorBio?: string;
+  content: string;
+  likesCount: number;
+  retweetsCount: number;
+  repliesCount: number;
+  viewsCount: number;
+  bookmarksCount: number;
+  postedAt?: string;
+  engagementScore: number;
+  sourceType: "sage" | "keyword";
+  sourceLabel: string;
+}
+
 export const alphaFeeds = pgTable("alpha_feeds", {
   id: text("id")
     .primaryKey()
@@ -181,6 +226,24 @@ export const alphaFeeds = pgTable("alpha_feeds", {
   sages: jsonb("sages").$type<AlphaFeedSage[]>().default([]),
   keywords: jsonb("keywords").$type<AlphaFeedKeyword[]>().default([]),
   dailyEntries: jsonb("daily_entries").$type<Record<string, AlphaFeedEntry[]>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const twitterAlphaFeeds = pgTable("twitter_alpha_feeds", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("tafeed")),
+  icpDefinitionId: text("icp_definition_id")
+    .notNull()
+    .references(() => icpDefinitions.id)
+    .unique(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  sages: jsonb("sages").$type<TwitterAlphaFeedSage[]>().default([]),
+  keywords: jsonb("keywords").$type<TwitterAlphaFeedKeyword[]>().default([]),
+  dailyEntries: jsonb("daily_entries").$type<Record<string, TwitterAlphaFeedEntry[]>>().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -721,6 +784,217 @@ export const apifyCache = pgTable(
   },
   (table) => ({
     expiresAtIdx: index("apify_cache_expires_idx").on(table.expiresAt),
+  })
+);
+
+// --- Twitter/X sync tables ---
+
+export const twitterProfiles = pgTable(
+  "twitter_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("tprof")),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    twitterUrl: text("twitter_url").notNull(),
+    twitterHandle: text("twitter_handle"), // e.g. "elonmusk" (no @)
+    displayName: text("display_name").notNull().default(""),
+
+    // Feature flags (a profile can have multiple purposes)
+    analyticsEnabled: boolean("analytics_enabled").notNull().default(false),
+    outboundEnabled: boolean("outbound_enabled").notNull().default(false),
+    inboundEnabled: boolean("inbound_enabled").notNull().default(false),
+
+    // Outbound-specific
+    engagementPersona: text("engagement_persona").notNull().default(""),
+
+    // Inbound-specific
+    sourceType: text("source_type"), // "company" | "personal"
+    contactId: text("contact_id").references(() => contacts.id),
+
+    // Sync state
+    active: boolean("active").notNull().default(true),
+    lastSyncedAt: timestamp("last_synced_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueAccountUrl: unique().on(table.accountId, table.twitterUrl),
+  })
+);
+
+export const twitterPosts = pgTable(
+  "twitter_posts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("tpost")),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => twitterProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    externalTweetId: text("external_tweet_id").notNull(),
+    content: text("content").notNull().default(""),
+    tweetUrl: text("tweet_url").notNull().default(""),
+    tweetType: text("tweet_type").notNull().default("tweet"), // "tweet" | "retweet" | "quote_tweet" | "reply"
+    likesCount: integer("likes_count").notNull().default(0),
+    retweetsCount: integer("retweets_count").notNull().default(0),
+    quotesCount: integer("quotes_count").notNull().default(0),
+    repliesCount: integer("replies_count").notNull().default(0),
+    bookmarksCount: integer("bookmarks_count").notNull().default(0),
+    viewsCount: integer("views_count").notNull().default(0),
+    postedAt: timestamp("posted_at"),
+    discoveredAt: timestamp("discovered_at").defaultNow().notNull(),
+
+    // Outbound engagement workflow (null for non-outbound posts)
+    engagementStatus: text("engagement_status"),
+    slackMessageTs: text("slack_message_ts"),
+    agentComment: text("agent_comment"),
+    engagedAt: timestamp("engaged_at"),
+
+    // Engager scraping windows
+    earlyEngagersScrapedAt: timestamp("early_engagers_scraped_at"),
+    lateEngagersScrapedAt: timestamp("late_engagers_scraped_at"),
+
+    // Content categorisation
+    category: text("category"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueProfileTweet: unique().on(table.profileId, table.externalTweetId),
+  })
+);
+
+export const twitterPostSnapshots = pgTable("twitter_post_snapshots", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("tsnap")),
+  postId: text("post_id")
+    .notNull()
+    .references(() => twitterPosts.id),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => twitterProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  likesCount: integer("likes_count").notNull().default(0),
+  retweetsCount: integer("retweets_count").notNull().default(0),
+  quotesCount: integer("quotes_count").notNull().default(0),
+  repliesCount: integer("replies_count").notNull().default(0),
+  bookmarksCount: integer("bookmarks_count").notNull().default(0),
+  viewsCount: integer("views_count").notNull().default(0),
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+});
+
+export const twitterSyncRuns = pgTable("twitter_sync_runs", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createObjectId("tsync")),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => twitterProfiles.id),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  status: text("status").notNull().default("queued"),
+  postsFound: integer("posts_found").notNull().default(0),
+  postsNew: integer("posts_new").notNull().default(0),
+  errorMessage: text("error_message"),
+  apifyRunId: text("apify_run_id"),
+  triggerRunId: text("trigger_run_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const twitterPostReplies = pgTable(
+  "twitter_post_replies",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("trepl")),
+    postId: text("post_id")
+      .notNull()
+      .references(() => twitterPosts.id),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => twitterProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    tweetId: text("tweet_id").notNull(), // external tweet ID of the reply
+
+    // Author
+    authorName: text("author_name").notNull().default(""),
+    authorHandle: text("author_handle"),
+    authorBio: text("author_bio"),
+    authorTwitterUrl: text("author_twitter_url"),
+
+    // Content
+    replyText: text("reply_text").notNull().default(""),
+    replyUrl: text("reply_url"),
+    repliedAt: timestamp("replied_at"),
+
+    // Threading
+    parentReplyId: text("parent_reply_id"),
+    isReply: boolean("is_reply").notNull().default(false),
+
+    // Owner reply tracking
+    repliedToByOwner: boolean("replied_to_by_owner").notNull().default(false),
+
+    // Notification state
+    notifiedAt: timestamp("notified_at"),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniquePostReply: unique().on(table.postId, table.tweetId),
+  })
+);
+
+export const twitterPostEngagements = pgTable(
+  "twitter_post_engagements",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createObjectId("teng")),
+    postId: text("post_id")
+      .notNull()
+      .references(() => twitterPosts.id),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => twitterProfiles.id),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+
+    // Engager
+    authorName: text("author_name").notNull().default(""),
+    authorHandle: text("author_handle"),
+    authorTwitterUrl: text("author_twitter_url"),
+    authorBio: text("author_bio"),
+    authorCompany: text("author_company"),
+    authorProfileImage: text("author_profile_image"),
+
+    // Engagement
+    engagementType: text("engagement_type").notNull(), // "like" | "retweet" | "quote_tweet"
+    engagedAt: timestamp("engaged_at"),
+
+    // Scrape metadata
+    scrapeWindow: text("scrape_window"), // "early" | "late"
+    capturedAt: timestamp("captured_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniquePostAuthorType: unique("tpe_post_author_type_unique").on(
+      table.postId,
+      table.authorTwitterUrl,
+      table.engagementType
+    ),
   })
 );
 

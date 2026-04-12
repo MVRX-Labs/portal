@@ -2,7 +2,7 @@
 
 ## Context
 
-The MVRX Labs platform has a working LinkedIn Profile Audit tool that scrapes LinkedIn via Apify, sends data to a local-api running Claude Agent SDK, generates structured JSON, builds a .docx via a programmatic builder, and saves it to Google Drive. A GTM Strategy Generator tool already has a stub frontend page and API route but no actual processing. This plan implements the full GTM pipeline following the same proven pattern, with Claude doing real-time web research to produce a comprehensive launch strategy document matching the HelmGuard PDF format.
+The MVRX Labs platform has a working LinkedIn Profile Audit tool that scrapes LinkedIn via Apify, sends data to a local-api running Claude Agent SDK, generates structured JSON, builds a .docx via a programmatic builder, and saves it to Google Drive. A GTM Strategy Generator tool already has a stub frontend page and API route but no actual processing. This plan implements the full GTM pipeline following the same proven pattern, with Claude doing real-time web research to produce a comprehensive launch strategy document matching the fredestar PDF format.
 
 ## Data Flow
 
@@ -119,4 +119,4 @@ Replace the 5-line `createToolHandler` stub. Follow the LinkedIn audit route pat
    - .docx file appears in Google Drive shared folder
    - Callback updates DB record to "completed"
    - Frontend shows completion status with output message
-5. **Open the .docx**: Verify formatting matches the HelmGuard PDF structure (cover page, TOC, scored sections, channel details, roadmap, metrics)
+5. **Open the .docx**: Verify formatting matches the fredestar PDF structure (cover page, TOC, scored sections, channel details, roadmap, metrics)

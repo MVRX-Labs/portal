@@ -134,7 +134,7 @@ export async function matchOrCreateForAttendee(email: string, displayName?: stri
 
   // Step 2.5: Try to match by existing contact's email domain
   // Catches cases where emailDomain is NULL (pre-migration accounts) or the company
-  // uses multiple email domains (e.g. zalos.io + zalos.ai)
+  // uses multiple email domains (e.g. LabLabs.io + LabLabs.ai)
   const [contactWithSameDomain] = await db
     .select({ accountId: contacts.accountId })
     .from(contacts)

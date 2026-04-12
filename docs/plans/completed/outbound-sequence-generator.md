@@ -46,7 +46,6 @@ MVRX Labs needs AI-generated LinkedIn outbound sequences for HeyReach campaigns.
 - Per-step tone calibration (curious peer → thoughtful colleague → direct → lighthearted)
 - Character limits enforced (300 for connection requests, 400 target / 600 max for DMs)
 - "Phone test" — would a real person type this on their phone?
-- Reference sequence from 60x HeyReach doc embedded as few-shot example
 
 ## What's NOT Included (Future Work)
 

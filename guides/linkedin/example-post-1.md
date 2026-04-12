@@ -24,7 +24,7 @@ The human role doesn't disappear, but the entry-level grind does. Humans immedia
 SPACE
 The only question for leaders is: Are you building a ‘co-pilot’ function for efficiency, or an ‘agent’ function for transformation?
 SPACE
-Zalos allows companies to scale, without growing their FinOps functions.
+LabLabs allows companies to scale, without growing their FinOps functions.
 SPACE
 We are leading the change that Rishi Sunak has warned company leaders about.
 SPACE

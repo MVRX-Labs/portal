@@ -11,7 +11,7 @@ import "dotenv/config";
 
 const SLACK_API = "https://slack.com/api";
 const TOKEN = process.env.KNOWLEDGE_SLACKBOT_TOKEN;
-const CHANNEL = process.argv[2] || process.env.KNOWLEDGE_TEST_CHANNEL || "C0A4A5PKUQ5"; // default: mvrx-60x
+const CHANNEL = process.argv[2] || process.env.KNOWLEDGE_TEST_CHANNEL || "foobar";
 
 if (!TOKEN) {
   console.error("KNOWLEDGE_SLACKBOT_TOKEN not set in .env.local");
@@ -71,7 +71,11 @@ async function main() {
 
   // 4. Count content types
   console.log("\n4. Content type analysis (last 10 messages):");
-  let text = 0, voiceNotes = 0, images = 0, gdocs = 0, threads = 0;
+  let text = 0,
+    voiceNotes = 0,
+    images = 0,
+    gdocs = 0,
+    threads = 0;
   for (const msg of history.messages) {
     if (msg.files?.length) {
       for (const f of msg.files) {
@@ -83,7 +87,9 @@ async function main() {
     if (msg.reply_count > 0) threads++;
     if (msg.text?.trim()) text++;
   }
-  console.log(`  Text: ${text} | Voice notes: ${voiceNotes} | Images: ${images} | GDocs: ${gdocs} | Threads: ${threads}`);
+  console.log(
+    `  Text: ${text} | Voice notes: ${voiceNotes} | Images: ${images} | GDocs: ${gdocs} | Threads: ${threads}`
+  );
 
   // 5. Test thread resolution
   const threadMsg = history.messages.find((m: any) => m.reply_count > 0);

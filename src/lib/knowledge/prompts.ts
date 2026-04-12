@@ -22,10 +22,7 @@ export interface OpenItem {
  * Stage 1: Classification prompt for general/cross-account channels.
  * Identifies which account(s) each message group relates to.
  */
-export function buildClassificationPrompt(
-  messages: string,
-  accounts: AccountContext[],
-): string {
+export function buildClassificationPrompt(messages: string, accounts: AccountContext[]): string {
   const accountList = accounts
     .map((a) => `- ${a.slug}: ${a.name} (contacts: ${a.contacts.map((c) => c.name).join(", ") || "none"})`)
     .join("\n");
@@ -50,10 +47,10 @@ Output ONLY a JSON object matching this structure:
   "groups": [
     {
       "messageIndices": [1, 2],
-      "accountSlug": "60x",
+      "accountSlug": "foobar",
       "category": "action_items",
       "worthExtracting": true,
-      "reasoning": "Tarun assigning weekly tasks for 60x"
+      "reasoning": "Tarun assigning weekly tasks for foobar"
     }
   ]
 }`;
@@ -75,21 +72,33 @@ export function buildExtractionPrompt(
   account: AccountContext | null,
   openItems: OpenItem[],
   channelCategory: string,
-  alreadyExtracted?: ExtractedSummary[],
+  alreadyExtracted?: ExtractedSummary[]
 ): string {
   const accountSection = account
     ? `Account: ${account.name} (${account.slug})
-Client contacts: ${account.contacts.filter((c) => c.side === "client").map((c) => `${c.name}${c.role ? ` (${c.role})` : ""}`).join(", ") || "none"}
-MVRX team: ${account.contacts.filter((c) => c.side === "mvrx").map((c) => c.name).join(", ") || "none"}`
+Client contacts: ${
+        account.contacts
+          .filter((c) => c.side === "client")
+          .map((c) => `${c.name}${c.role ? ` (${c.role})` : ""}`)
+          .join(", ") || "none"
+      }
+MVRX team: ${
+        account.contacts
+          .filter((c) => c.side === "mvrx")
+          .map((c) => c.name)
+          .join(", ") || "none"
+      }`
     : `Context: Internal ${channelCategory} channel (no specific client account)`;
 
-  const openItemsSection = openItems.length > 0
-    ? `\nCurrently open items (check if any are now completed):\n${openItems.map((i) => `- [${i.type}] ${i.content}${i.assignee ? ` (assigned: ${i.assignee})` : ""}`).join("\n")}`
-    : "\nNo currently open items.";
+  const openItemsSection =
+    openItems.length > 0
+      ? `\nCurrently open items (check if any are now completed):\n${openItems.map((i) => `- [${i.type}] ${i.content}${i.assignee ? ` (assigned: ${i.assignee})` : ""}`).join("\n")}`
+      : "\nNo currently open items.";
 
-  const alreadyExtractedSection = alreadyExtracted && alreadyExtracted.length > 0
-    ? `\nALREADY EXTRACTED (DO NOT re-extract these — they exist in the database):\n${alreadyExtracted.map((u) => `- [${u.type}] ${u.content.slice(0, 120)}${u.assignee ? ` (${u.assignee})` : ""} [${u.status}]`).join("\n")}`
-    : "";
+  const alreadyExtractedSection =
+    alreadyExtracted && alreadyExtracted.length > 0
+      ? `\nALREADY EXTRACTED (DO NOT re-extract these — they exist in the database):\n${alreadyExtracted.map((u) => `- [${u.type}] ${u.content.slice(0, 120)}${u.assignee ? ` (${u.assignee})` : ""} [${u.status}]`).join("\n")}`
+      : "";
 
   return `You are extracting structured knowledge from Slack messages.
 
@@ -138,18 +147,18 @@ Output ONLY a JSON object:
     {
       "type": "action_item",
       "content": "Review carousel designs for AI pricing post",
-      "assignee": "Charlie Cheesman",
-      "requestedBy": "Tarun Odedra",
+      "assignee": "Fred",
+      "requestedBy": "Tarun",
       "dueDate": null,
       "status": "open",
       "confidence": 85,
       "sourceMessages": [1, 3],
-      "reasoning": "Tarun explicitly assigned this to Charlie in the weekly action items"
+      "reasoning": "Tarun explicitly assigned this to Fred in the weekly action items"
     }
   ],
   "completedItems": [
     {
-      "matchDescription": "Send lead list to 60x",
+      "matchDescription": "Send lead list to foobar",
       "evidence": "Tarun shared the lead list spreadsheet in this batch",
       "sourceMessages": [2, 4]
     }
@@ -179,7 +188,7 @@ export function formatMessagesForPrompt(
     contentType: string;
     threadRef: string | null;
     messageAt: Date;
-  }>,
+  }>
 ): FormattedMessages {
   const indexToEventId = new Map<number, string>();
   let msgIndex = 1;
@@ -234,22 +243,39 @@ export function buildStateSynthesisPrompt(
   openUnits: Array<{ type: string; content: string; assignee: string | null; createdAt: Date }>,
   recentDoneUnits: Array<{ type: string; content: string; assignee: string | null; completedAt?: string }>,
   currentBrief: string | null,
-  currentActivityLog: string | null,
+  currentActivityLog: string | null
 ): string {
-  const contactList = contacts.length > 0
-    ? contacts.map((c) => `- ${c.name}${c.role ? ` (${c.role})` : ""} [${c.side}]`).join("\n")
-    : "No contacts registered";
+  const contactList =
+    contacts.length > 0
+      ? contacts.map((c) => `- ${c.name}${c.role ? ` (${c.role})` : ""} [${c.side}]`).join("\n")
+      : "No contacts registered";
 
-  const openSection = openUnits.length > 0
-    ? openUnits.map((u) => `- [${u.type}] ${u.content}${u.assignee ? ` (assigned: ${u.assignee})` : ""} — created ${u.createdAt.toISOString().slice(0, 10)}`).join("\n")
-    : "No open items";
+  const openSection =
+    openUnits.length > 0
+      ? openUnits
+          .map(
+            (u) =>
+              `- [${u.type}] ${u.content}${u.assignee ? ` (assigned: ${u.assignee})` : ""} — created ${u.createdAt.toISOString().slice(0, 10)}`
+          )
+          .join("\n")
+      : "No open items";
 
-  const doneSection = recentDoneUnits.length > 0
-    ? recentDoneUnits.map((u) => `- [${u.type}] ${u.content}${u.assignee ? ` (${u.assignee})` : ""}${u.completedAt ? ` — completed ${u.completedAt}` : ""}`).join("\n")
-    : "No recently completed items";
+  const doneSection =
+    recentDoneUnits.length > 0
+      ? recentDoneUnits
+          .map(
+            (u) =>
+              `- [${u.type}] ${u.content}${u.assignee ? ` (${u.assignee})` : ""}${u.completedAt ? ` — completed ${u.completedAt}` : ""}`
+          )
+          .join("\n")
+      : "No recently completed items";
 
-  const briefSection = currentBrief ? `\nCurrent brief (update, don't rewrite from scratch unless outdated):\n${currentBrief}` : "\nNo existing brief — create one from scratch.";
-  const activitySection = currentActivityLog ? `\nCurrent activity log (append new activity, trim entries older than 14 days):\n${currentActivityLog}` : "\nNo existing activity log — create one from scratch.";
+  const briefSection = currentBrief
+    ? `\nCurrent brief (update, don't rewrite from scratch unless outdated):\n${currentBrief}`
+    : "\nNo existing brief — create one from scratch.";
+  const activitySection = currentActivityLog
+    ? `\nCurrent activity log (append new activity, trim entries older than 14 days):\n${currentActivityLog}`
+    : "\nNo existing activity log — create one from scratch.";
 
   return `You are synthesising state documents for a client account. These docs are used by the MVRX team to quickly understand the account status.
 
@@ -298,7 +324,7 @@ function formatSingleMessage(
     contentType: string;
     messageAt: Date;
   },
-  index: number,
+  index: number
 ): string {
   const ts = evt.messageAt.toISOString().slice(0, 16);
   const author = evt.authorName ?? "Unknown";

@@ -8,11 +8,11 @@ High quality engineers
    What it is: London’s "elite developer community." It is a network of 850+ top-tier hackers, engineers, and founders.
    Mission: To build the next generation of unicorn companies. They are known for dominating major hackathons (e.g., winning $100k+ at the MLOps "Agents in Production" summit).
    Vibe: Highly technical, competitive, "builder" culture. It feels like a modern, code-first version of the "PayPal Mafia"—a tight-knit group of high-output individuals.
-   Key Visual/Brand Note: The URL is unicrnmafia.com (dropping the 'o'), which hints at a hacker/startup aesthetic.
+   Key Visual/Brand Note: The URL is foobar.com (dropping the 'o'), which hints at a hacker/startup aesthetic.
 2. COMPANY_NAME
    What it is: An AI product studio or venture lab born out of the COMPANY_COMMUNITY_NAME ecosystem. They focus on building autonomous AI agents—"computers that think and take action for you."
-   Location: Great Portland Street, London.
-   Focus: Operationalizing AI. Moving beyond "chat" to "execution" (booking flights, managing workflows, handling complex multi-step tasks). This aligns perfectly with the "Zalos" value prop of fixing operations.
+   Location: Foobar Street, London.
+   Focus: Operationalizing AI. Moving beyond "chat" to "execution" (booking flights, managing workflows, handling complex multi-step tasks). This aligns perfectly with the "Foobar" value prop of fixing operations.
    Style: Pragmatic, future-facing, result-oriented.
 3. Key People
    These are the central figures linking both organizations:
@@ -21,7 +21,7 @@ High quality engineers
    Background: A key figure in the COMPANY_COMMUNITY_NAME community; often leads the winning hackathon teams.
    CUSTOMER_CONTACT_NAME_2:
    Role: Co-Founder @ COMPANY_NAME.
-   Background: Engineering leader, frequently partners with Charlie on agentic AI projects.
+   Background: Engineering leader, frequently partners with Fred on agentic AI projects.
    CUSTOMER_CONTACT_NAME_3:
    Role: Founding Engineer (linked to COMPANY_NAME and COMPANY_COMMUNITY_NAME on GitHub).
    Style Guide Implications for You

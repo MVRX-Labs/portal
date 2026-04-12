@@ -54,7 +54,7 @@ sequenceDiagram
 Add to `[.env.local](.env.local)`:
 
 ```
-APIFY_API_TOKEN=apify_api_0mY6oQbCiXwDHdcfd6cK0mUbgaJIZb2aotxo
+APIFY_API_TOKEN=apify_api_xxx
 APIFY_USER_ID=591cOSrwvLkcXuzbb
 NGROK_BASE_URL=https://waterlike-shelby-zebrine.ngrok-free.dev
 ```

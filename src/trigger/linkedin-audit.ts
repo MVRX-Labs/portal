@@ -29,6 +29,7 @@ STEP 1 — DATA COLLECTION:
 Read the scraped profile data from scraped-profile.json and the posts data from scraped-posts.json.
 Analyse the profile thoroughly.
 
+
 STEP 2 — BENCHMARK RESEARCH:
 Use WebSearch to find 10 benchmark accounts relevant to this person's industry, role, and content niche. Search for "[industry] thought leaders LinkedIn", "best [niche] LinkedIn creators", competitors at peer companies, etc. Use WebFetch to verify accounts are real and active. Each benchmark should be someone this person can learn from or compete with.
 

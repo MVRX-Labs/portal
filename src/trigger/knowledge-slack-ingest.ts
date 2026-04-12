@@ -24,10 +24,8 @@ export const knowledgeSlackIngestScheduled = schedules.task({
   id: "knowledge-slack-ingest-scheduled",
   // Fix 3: maxDuration covers ingest + resolve-media (up to 600s) + normalise-all (up to 600s)
   maxDuration: 1800,
-  cron: {
-    pattern: "*/30 8-22 * * 1-5",
-    timezone: "Europe/London",
-  },
+  // cron: { pattern: "*/30 8-22 * * 1-5", timezone: "Europe/London" }, // DISABLED
+
   run: async (_payload, { ctx }) => {
     logger.info("Starting scheduled knowledge ingestion");
 
@@ -51,7 +49,7 @@ export const knowledgeSlackIngestScheduled = schedules.task({
       }
 
       logger.info(
-        `Ingestion complete: ${totalNew} new events across ${results.length} channels, ${totalErrors} errors`,
+        `Ingestion complete: ${totalNew} new events across ${results.length} channels, ${totalErrors} errors`
       );
 
       // Chain resolve → normalise only when there is new content to process
@@ -106,7 +104,7 @@ export const knowledgeSlackIngestChannel = task({
 
       const totalNew = result.newMessages + result.newThreadReplies;
       logger.info(
-        `Channel #${result.channelName}: ${result.newMessages} messages, ${result.newThreadReplies} thread replies`,
+        `Channel #${result.channelName}: ${result.newMessages} messages, ${result.newThreadReplies} thread replies`
       );
 
       if (result.errors.length > 0) {

@@ -16,7 +16,8 @@ import { sendSlackNotification } from "@/lib/slack";
  */
 export const knowledgeStateSynthesisSchedule = schedules.task({
   id: "knowledge-state-synthesis-schedule",
-  cron: { pattern: "0 8 * * 1", timezone: "Europe/London" },
+  // cron: { pattern: "0 8 * * 1", timezone: "Europe/London" }, // DISABLED
+
   maxDuration: 600,
   run: async (_payload, { ctx }) => {
     logger.info("Running scheduled state synthesis");
@@ -24,7 +25,7 @@ export const knowledgeStateSynthesisSchedule = schedules.task({
     try {
       const result = await synthesiseAllAccounts(logger);
       logger.info(
-        `Synthesis complete: ${result.results.length} accounts, $${result.totalCost.toFixed(4)}, ${result.errors} errors`,
+        `Synthesis complete: ${result.results.length} accounts, $${result.totalCost.toFixed(4)}, ${result.errors} errors`
       );
 
       if (result.errors > 0) {
@@ -58,7 +59,9 @@ export const knowledgeStateSynthesisOnDemand = task({
   id: "knowledge-state-synthesis-on-demand",
   maxDuration: 600,
   run: async (payload: { accountId?: string }, { ctx }) => {
-    logger.info(`Running on-demand state synthesis${payload.accountId ? ` for ${payload.accountId}` : " for all accounts"}`);
+    logger.info(
+      `Running on-demand state synthesis${payload.accountId ? ` for ${payload.accountId}` : " for all accounts"}`
+    );
 
     try {
       if (payload.accountId) {

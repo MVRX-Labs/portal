@@ -58,7 +58,7 @@ const twitterSyncQueue = queue({
 
 export const twitterSyncScheduler = schedules.task({
   id: "twitter-sync-scheduler",
-  cron: "15 */4 * * *",
+  // cron: "15 */4 * * *",
   run: async (_payload, { ctx }) => {
     try {
       const profiles = await db

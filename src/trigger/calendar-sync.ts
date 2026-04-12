@@ -24,10 +24,10 @@ import { accountEnrichmentTask } from "./account-enrichment";
 
 export const calendarSyncTask = schedules.task({
   id: "calendar-sync",
-  cron: {
-    pattern: "*/30 7-22 * * *",
-    timezone: "Europe/London",
-  },
+  // cron: {
+  //   pattern: "*/30 7-22 * * *",
+  //   timezone: "Europe/London",
+  // },
   maxDuration: 600,
   retry: {
     maxAttempts: 2,

@@ -16,7 +16,8 @@ import { sendSlackNotification } from "@/lib/slack";
  */
 export const knowledgeDigestSchedule = schedules.task({
   id: "knowledge-digest-schedule",
-  cron: { pattern: "0 9 * * 1-5", timezone: "Europe/London" },
+  // cron: { pattern: "0 9 * * 1-5", timezone: "Europe/London" }, // DISABLED
+
   maxDuration: 300,
   run: async (_payload, { ctx }) => {
     logger.info("Running scheduled daily digest");

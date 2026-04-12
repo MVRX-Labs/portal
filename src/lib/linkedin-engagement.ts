@@ -347,7 +347,7 @@ export async function scrapePostReactions(
   const allResults = await runApifyActorPaginated(
     REACTIONS_ACTOR_ID,
     { post_urls: [postUrl] },
-    { signal, maxPages: 5, runId, log }
+    { signal, maxPages: 3, runId, log }
   );
 
   if (allResults.length > 0) {
@@ -371,7 +371,7 @@ export async function scrapePostComments(
   const allResults = await runApifyActorPaginated(
     COMMENTS_ACTOR_ID,
     { postIds: [postUrl] },
-    { signal, maxPages: 5, runId, log }
+    { signal, maxPages: 3, runId, log }
   );
 
   if (allResults.length > 0) {
@@ -482,7 +482,7 @@ export async function scrapePostReshares(
   const allResults = await runApifyActorPaginated(
     RESHARES_ACTOR_ID,
     { post_urls: [postUrl] },
-    { signal, maxPages: 5, runId, log }
+    { signal, maxPages: 3, runId, log }
   );
 
   if (allResults.length > 0) {

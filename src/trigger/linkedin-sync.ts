@@ -32,21 +32,21 @@ import { generateReplySuggestions, type ReplySuggestion } from "@/lib/linkedin-c
 // ---------------------------------------------------------------------------
 
 /** Max posts to fetch per profile per sync */
-const MAX_POSTS_PER_SYNC = 7; // Assuming profiles don't make more than 7 posts per week
+const MAX_POSTS_PER_SYNC = 3;
 
 /** Only set engagement_status=pending on posts newer than this for outbound */
 const OUTBOUND_MAX_AGE_DAYS = 1;
 
 /** Only scrape comments on posts newer than this */
-const COMMENT_SCRAPE_MAX_AGE_DAYS = 3;
+const COMMENT_SCRAPE_MAX_AGE_DAYS = 2;
 
-/** Early engager window: 6–7 hours after posting */
-const EARLY_WINDOW_MIN_H = 5;
-const EARLY_WINDOW_MAX_H = 8;
+/** Early engager window: 4–12 hours after posting (wider than sync interval to guarantee a hit) */
+const EARLY_WINDOW_MIN_H = 4;
+const EARLY_WINDOW_MAX_H = 12;
 
-/** Late engager window: 72–73 hours after posting */
-const LATE_WINDOW_MIN_H = 72;
-const LATE_WINDOW_MAX_H = 75;
+/** Late engager window: 68–80 hours after posting (wider than sync interval to guarantee a hit) */
+const LATE_WINDOW_MIN_H = 68;
+const LATE_WINDOW_MAX_H = 80;
 
 const linkedinSyncQueue = queue({
   name: "linkedin-sync",
@@ -59,7 +59,7 @@ const linkedinSyncQueue = queue({
 
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
-  cron: "5 */2 * * *",
+  cron: "5 */6 * * *",
   run: async (_payload, { ctx }) => {
     try {
       const profiles = await db

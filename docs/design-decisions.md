@@ -106,6 +106,14 @@ Key architectural decisions and their rationale. Check here before making change
 
 ---
 
+## Twitter/X as a Parallel Offering
+
+**Decision:** Twitter/X mirrors the full LinkedIn feature set using separate database tables (`twitter_profiles`, `twitter_posts`, etc.) rather than extending the LinkedIn tables.
+
+**Why:** LinkedIn and Twitter use different namespaces (URL vs. handle), different engagement metrics (reposts vs. retweets/quote tweets), and different content structures (single posts vs. threads). Separate tables keep queries simple, avoid schema migrations on heavily-used LinkedIn tables, and contain blast radius per the decoupled systems principle. Feature flags (`analytics_enabled`, `outbound_enabled`, `inbound_enabled`) are replicated identically. Both platforms share `tool_runs`, `leads`, `apify_cache`, `icp_definitions`, and all the `lib/` utilities. See `docs/plans/completed/twitter-parallel.md` for full architecture.
+
+---
+
 ## Skill Ingestion: Shared `runClaudeAgent()` Helper
 
 **Decision:** All tasks that run a Claude Agent loop use a shared `runClaudeAgent()` helper from `src/lib/claude-agent.ts`, not inline implementations.

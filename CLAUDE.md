@@ -4,7 +4,7 @@ Internal portal for MVRX Labs — LinkedIn audits, AI content generation, calend
 
 ## Tech Stack
 
-Next.js (App Router), TypeScript, Drizzle ORM, Trigger.dev v3, Tailwind CSS
+Next.js (App Router), TypeScript, Drizzle ORM, Trigger.dev v4, Tailwind CSS
 
 ## Quick Reference
 

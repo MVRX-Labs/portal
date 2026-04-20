@@ -106,6 +106,14 @@ Key architectural decisions and their rationale. Check here before making change
 
 ---
 
+## Twitter/X as a Full Parallel Offering
+
+**Decision:** Build Twitter/X as a fully-featured parallel to LinkedIn — same profile registry pattern, same sync/analytics/engagement/lead-discovery architecture, mirroring all LinkedIn DB tables and trigger tasks.
+
+**Why:** Clients post on both platforms. Maintaining two separate code paths was rejected in favour of a symmetric design: `twitterProfiles` mirrors `linkedinProfiles` (feature flags: analytics, outbound, inbound), `twitterPosts`/`twitterPostSnapshots`/`twitterPostEngagements`/`twitterPostReplies` mirror the LinkedIn equivalents, and Twitter sync/analytics/engagement/categorisation/lead-upsert tasks follow the same patterns. The alpha feed also has both a LinkedIn variant and a Twitter variant. See `docs/plans/active/twitter-parallel.md` for the implementation plan.
+
+---
+
 ## Skill Ingestion: Shared `runClaudeAgent()` Helper
 
 **Decision:** All tasks that run a Claude Agent loop use a shared `runClaudeAgent()` helper from `src/lib/claude-agent.ts`, not inline implementations.

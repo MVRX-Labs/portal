@@ -106,6 +106,14 @@ Key architectural decisions and their rationale. Check here before making change
 
 ---
 
+## Twitter/X: Parallel System with Separate Tables
+
+**Decision:** Twitter/X features mirror LinkedIn functionality but use entirely separate DB tables (`twitter_profiles`, `twitter_posts`, `twitter_post_snapshots`, `twitter_post_replies`, `twitter_post_engagements`, `twitter_sync_runs`, `twitter_alpha_feeds`) rather than extending the LinkedIn tables.
+
+**Why:** LinkedIn and Twitter have different data shapes (tweet IDs vs Apify post IDs, retweets vs reposts, quote tweets, thread structure, views/bookmarks), different engagement metrics, and different scraping approaches. Separate tables keep queries simple, prevent schema bloat on the heavily-used `linkedin_*` tables, and contain the blast radius of changes to one platform. Shared infrastructure (Apify caching, `tool_runs`, `leads`, Slack, `src/lib/humanisation/`, `src/lib/claude-agent.ts`) is reused as-is. See `docs/plans/active/twitter-parallel.md` for full phase plan (substantially implemented; only `twitter-humanizer` tool remains).
+
+---
+
 ## Skill Ingestion: Shared `runClaudeAgent()` Helper
 
 **Decision:** All tasks that run a Claude Agent loop use a shared `runClaudeAgent()` helper from `src/lib/claude-agent.ts`, not inline implementations.

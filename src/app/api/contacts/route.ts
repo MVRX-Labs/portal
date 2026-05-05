@@ -80,8 +80,11 @@ export async function POST(request: NextRequest) {
         contactId: contact.id,
       });
       linkedinUrl = profile.linkedinUrl;
-    } catch {
-      // skip invalid URLs silently
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Invalid LinkedIn URL" },
+        { status: 400 }
+      );
     }
   }
 
@@ -95,8 +98,11 @@ export async function POST(request: NextRequest) {
         contactId: contact.id,
       });
       twitterUrl = profile.twitterUrl;
-    } catch {
-      // skip invalid URLs silently
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Invalid Twitter URL" },
+        { status: 400 }
+      );
     }
   }
 

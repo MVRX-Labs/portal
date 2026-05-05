@@ -37,20 +37,34 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   // Handle linkedinUrl → linkedin_profiles
   if (data.linkedinUrl !== undefined && data.linkedinUrl) {
-    await addLinkedinProfile(contact.accountId, data.linkedinUrl, {
-      displayName: contact.name,
-      sourceType: "personal",
-      contactId: contact.id,
-    }).catch(() => {});
+    try {
+      await addLinkedinProfile(contact.accountId, data.linkedinUrl, {
+        displayName: contact.name,
+        sourceType: "personal",
+        contactId: contact.id,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Invalid LinkedIn URL" },
+        { status: 400 }
+      );
+    }
   }
 
   // Handle twitterUrl → twitter_profiles
   if (data.twitterUrl !== undefined && data.twitterUrl) {
-    await addTwitterProfile(contact.accountId, data.twitterUrl, {
-      displayName: contact.name,
-      sourceType: "personal",
-      contactId: contact.id,
-    }).catch(() => {});
+    try {
+      await addTwitterProfile(contact.accountId, data.twitterUrl, {
+        displayName: contact.name,
+        sourceType: "personal",
+        contactId: contact.id,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Invalid Twitter URL" },
+        { status: 400 }
+      );
+    }
   }
 
   const linkedinUrl = await getContactLinkedinUrl(contact.id);

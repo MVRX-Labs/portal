@@ -11,9 +11,10 @@ function normalizeLinkedinUrl(linkedinUrl: string): string {
     const parsed = new URL(withProtocol);
     parsed.hash = "";
     parsed.search = "";
-    parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
-    return `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
+    parsed.hostname = parsed.hostname.toLowerCase().replace(/^(?:[a-z]{2}\.)?(?:www\.)?/, "");
+    const pathMatch = parsed.pathname.match(/^\/(in|company)\/([^/?#]+)/i);
+    const cleanPath = pathMatch ? `/${pathMatch[1]}/${pathMatch[2]}` : parsed.pathname.replace(/\/+$/, "");
+    return `${parsed.protocol}//${parsed.hostname}${cleanPath}`;
   } catch {
     return trimmed.replace(/\/+$/, "");
   }
@@ -31,7 +32,7 @@ export function extractLinkedinSlug(linkedinUrl: string): string | null {
 }
 
 function isValidLinkedinUrl(linkedinUrl: string): boolean {
-  return /^https?:\/\/(?:www\.)?linkedin\.com\/(?:in|company)\/[^/?#]+\/?$/i.test(linkedinUrl);
+  return /^https?:\/\/(?:[a-z]{2}\.)?(?:www\.)?linkedin\.com\/(?:in|company)\/[^/?#]+/i.test(linkedinUrl);
 }
 
 export async function addLinkedinProfile(

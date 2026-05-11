@@ -17,9 +17,11 @@ docs/
 ├── @docs/design-decisions.md
 ├── @docs/local-dev.md
 ├── @docs/tech-debt.md
+├── @docs/trigger-task-inventory.md
 └── plans/
     ├── active/
-    └── completed/
+    ├── completed/
+    └── paused/
 ```
 
 ## Core Rules

@@ -60,9 +60,11 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `users` — Portal users (Google OAuth)
 - `accounts` — Companies being tracked (with MRR, engagement settings)
 - `contacts` — People at companies (linked to accounts)
-- `leads` — LinkedIn profiles discovered via engagement scraping (with tier, scoring, enrichment fields)
+- `leads` — Profiles discovered via engagement scraping from LinkedIn or Twitter (tier, scoring, enrichment fields; can have `linkedinUrl` and/or `twitterUrl`)
 - `leadCsvs` — CSV snapshots of leads per profile/scrape-window, stored as text
 - `icpDefinitions` — Ideal Customer Profile definitions per account (titles, industries, company sizes, signals)
+- `alphaFeeds` — LinkedIn Alpha Feed per ICP definition: list of sages, keywords, and daily scraped posts
+- `twitterAlphaFeeds` — Twitter Alpha Feed per ICP definition (same structure as `alphaFeeds`)
 - `toolRuns` — Record of all background job executions
 - `accountActions` — Action items per account
 - `calendarSyncState`, `calendarEvents`, `calendarEventAccounts`, `calendarEventContacts` — Calendar automation
@@ -72,6 +74,12 @@ Schema defined in `src/lib/schema.ts` using Drizzle ORM. Key tables:
 - `linkedinPostComments` — Comments on recent posts, used for unreplied comment alerts
 - `linkedinPostEngagements` — Reactions and reposts on posts, used for lead discovery
 - `linkedinSyncRuns` — Sync job execution records per profile
+- `twitterProfiles` — Unified registry of all tracked Twitter/X profiles (same feature flags as `linkedinProfiles`)
+- `twitterPosts` — Tweets scraped from tracked profiles (dedup key: profileId + externalTweetId)
+- `twitterPostSnapshots` — Periodic engagement snapshots (likes/retweets/quotes/replies/bookmarks/views) per tweet
+- `twitterPostReplies` — Replies to recent tweets, used for unreplied reply alerts
+- `twitterPostEngagements` — Likes/retweets/quote tweets on posts, used for lead discovery
+- `twitterSyncRuns` — Twitter sync job execution records per profile
 - `analyticsReports` — Generated weekly analytics reports, with PDF URL and Slack message TS
 - `apifyCache` — Deduplication cache for Apify actor results (keyed by actor + input hash, with TTL)
 - `secretTypes` — Credential type registry (e.g. "Apollo API Key", "HeyReach Token")
@@ -93,8 +101,11 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 
 - `linkedin-audit-generation` — Profile analysis + DOCX report
 - `linkedin-post-generator` — AI content creation with voice matching
-- `linkedin-humanizer` — Tone refinement
 - `linkedin-to-twitter` — Repurposes LinkedIn posts into Twitter threads via Claude Agent SDK
+- `twitter-post-generator` — AI Twitter/X post generation (parallel to `linkedin-post-generator`)
+- `twitter-audit-generation` — Twitter/X profile audit via Apify + Claude, produces DOCX report
+- `twitter-to-linkedin` — Repurposes Twitter threads into LinkedIn posts
+- `alpha-feed-generate-spec` — AI discovers sages and keywords for an ICP's LinkedIn+Twitter alpha feed
 - `sentiment-analysis-generation` — Company perception research
 - `gtm-strategy-generation` — Go-to-market strategy document
 - `outbound-sequence-generation` — LinkedIn outbound sequence playbook with A/B/C variants and optional capacity planning
@@ -108,11 +119,19 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 
 - `linkedin-sync-profile` — Unified LinkedIn profile scraping (posts, comments, engagers, snapshots)
 - `linkedin-lead-upsert` — Discovers leads from post engagers and comments (no Apify calls)
-- `engagement-slack-action` — Processes Slack button clicks (comment/like/repost/skip) on outbound engagement cards
+- `engagement-slack-action` — Processes Slack button clicks (comment/like/repost/skip) on LinkedIn outbound engagement cards
+- `twitter-sync-profile` — Twitter/X profile scraping (tweets, snapshots, replies, engagers, outbound Slack cards); fanned out every 4 hours by `twitter-sync-scheduler`
+- `twitter-lead-upsert` — Discovers leads from tweet likes/retweets/replies (no Apify calls)
+- `twitter-engagement-slack-action` — Processes Slack button clicks (reply/like/retweet/skip) on Twitter outbound engagement cards
 - `account-enrichment` — Company data enrichment via web search
-- `weekly-analytics` — Scrapes a single managed client LinkedIn profile, generates a weekly performance report, sends to Slack (triggered by `weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
-- `track-post` — Scrapes live LinkedIn post metrics (likes/comments/reposts) after a delay, saves snapshots, and reports performance in the originating Slack thread
+- `weekly-analytics` — Generates a weekly LinkedIn performance report for one profile, sends to Slack (triggered by `weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
+- `twitter-weekly-analytics` — Generates a weekly Twitter performance report for one profile, sends to Slack (triggered by `twitter-weekly-analytics-scheduler`; concurrency-limited to 2 via queue)
+- `track-post` — Scrapes live LinkedIn post metrics after a delay, saves snapshots, reports to originating Slack thread
+- `track-tweet` — Scrapes live tweet metrics after a delay, saves snapshots, reports to originating Slack thread
 - `post-categoriser` — AI-classifies uncategorised LinkedIn posts by topic (thought_leadership, case_study, domain_knowledge, etc.) using Claude Haiku; fanned out daily by `post-categoriser-scheduler`
+- `twitter-post-categoriser` — AI-classifies uncategorised Twitter posts by topic; fanned out daily by `twitter-post-categoriser-scheduler`
+- `alpha-feed-collect-worker` — Scrapes posts from LinkedIn sages and keyword searches for one ICP's alpha feed; fanned out daily by `alpha-feed-collect-scheduler`
+- `twitter-alpha-feed-collect-worker` — Scrapes tweets from Twitter sages and keyword searches for one ICP's Twitter alpha feed; fanned out daily by `twitter-alpha-feed-collect-scheduler`
 - `knowledge-slack-ingest-channel` — Polls a single Slack channel for new messages and stores raw events in `knowledge_events`; fanned out every 30 min by `knowledge-slack-ingest-scheduled`
 - `knowledge-resolve-media` — Fetches/transcribes media referenced in knowledge events (Google Drive links, voice notes)
 - `knowledge-normalise-channel` / `knowledge-normalise-all` — LLM extracts typed knowledge units (action items, decisions, context updates, etc.) from raw events
@@ -124,8 +143,13 @@ All tasks live in `src/trigger/`. See `TRIGGER_DETAILS.md` for SDK patterns.
 - `calendar-sync` — Google Calendar incremental sync (every 30 min, 7am–10pm London)
 - `calendar-meeting-notifier` — Meeting prep notifications (every 30 min, 6am–9pm London)
 - `linkedin-sync-scheduler` — Every 2 hours: fans out `linkedin-sync-profile` for all active LinkedIn profiles
-- `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` tasks for every analytics-enabled LinkedIn profile
-- `post-categoriser-scheduler` — Daily 7 AM London: fans out `post-categoriser` for all uncategorised posts
+- `twitter-sync-scheduler` — Every 4 hours: fans out `twitter-sync-profile` for all active Twitter profiles
+- `weekly-analytics-scheduler` — Monday 7 AM UTC: fans out `weekly-analytics` for every analytics-enabled LinkedIn profile
+- `twitter-weekly-analytics-scheduler` — Monday 7:30 AM UTC: fans out `twitter-weekly-analytics` for every analytics-enabled Twitter profile
+- `post-categoriser-scheduler` — Daily 7 AM London: fans out `post-categoriser` for all uncategorised LinkedIn posts
+- `twitter-post-categoriser-scheduler` — Daily: fans out `twitter-post-categoriser` for all uncategorised Twitter posts
+- `alpha-feed-collect-scheduler` — Daily: fans out `alpha-feed-collect-worker` for all active LinkedIn alpha feeds
+- `twitter-alpha-feed-collect-scheduler` — Daily: fans out `twitter-alpha-feed-collect-worker` for all active Twitter alpha feeds
 - `knowledge-slack-ingest-scheduled` — Every 30 min (Mon–Fri, 8am–10pm London): fans out `knowledge-slack-ingest-channel` for all active channels
 - `knowledge-state-synthesis-schedule` — Monday 8 AM London: fans out `knowledge-state-synthesis-on-demand` for all active accounts
 - `knowledge-digest-schedule` — Mon–Fri 9 AM London: fans out `knowledge-digest-on-demand` per user

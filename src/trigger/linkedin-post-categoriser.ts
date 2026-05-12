@@ -148,10 +148,11 @@ export const postCategoriserTask = task({
 
 export const postCategoriserScheduler = schedules.task({
   id: "post-categoriser-scheduler",
-  cron: {
-    pattern: "15 7 * * *",
-    timezone: "Europe/London",
-  },
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` block below and redeploy.
+  // cron: {
+  //   pattern: "15 7 * * *",
+  //   timezone: "Europe/London",
+  // },
   run: async (_payload, { ctx }) => {
     try {
       const handle = await postCategoriserTask.trigger({});

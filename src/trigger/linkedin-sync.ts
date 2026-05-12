@@ -59,7 +59,8 @@ const linkedinSyncQueue = queue({
 
 export const linkedinSyncScheduler = schedules.task({
   id: "linkedin-sync-scheduler",
-  cron: "5 */6 * * *",
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: "5 */6 * * *",
   run: async (_payload, { ctx }) => {
     try {
       const profiles = await db

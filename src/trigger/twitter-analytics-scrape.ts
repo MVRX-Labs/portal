@@ -169,7 +169,8 @@ export const twitterWeeklyAnalyticsTask = task({
 
 export const twitterWeeklyAnalyticsScheduler = schedules.task({
   id: "twitter-weekly-analytics-scheduler",
-  cron: "30 7 * * 1", // Monday 7:30 AM UTC
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: "30 7 * * 1", // Monday 7:30 AM UTC
   run: async () => {
     logger.info("Starting Twitter weekly analytics scheduler");
 

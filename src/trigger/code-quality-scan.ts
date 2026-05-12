@@ -65,7 +65,8 @@ Rules:
 
 export const codeQualityScanTask = schedules.task({
   id: "code-quality-scan",
-  cron: { pattern: "0 8 * * 1", timezone: "Europe/London" },
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: { pattern: "0 8 * * 1", timezone: "Europe/London" },
   maxDuration: 3600,
   retry: { maxAttempts: 1 },
   run: async () => {

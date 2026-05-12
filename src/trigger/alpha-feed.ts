@@ -222,7 +222,8 @@ export const alphaFeedGenerateSpecTask = task({
 
 export const alphaFeedCollectScheduler = schedules.task({
   id: "alpha-feed-collect-scheduler",
-  cron: "0 7 * * *", // 7 AM UTC daily
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: "0 7 * * *", // 7 AM UTC daily
   run: async () => {
     // Find all alpha feeds that have at least one active sage or keyword
     const feeds = await db.select().from(alphaFeeds);

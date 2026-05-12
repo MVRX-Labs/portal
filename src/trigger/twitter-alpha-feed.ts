@@ -36,7 +36,8 @@ const twitterAlphaFeedQueue = queue({
 
 export const twitterAlphaFeedCollectScheduler = schedules.task({
   id: "twitter-alpha-feed-collect-scheduler",
-  cron: "30 7 * * *", // 7:30 AM UTC daily
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: "30 7 * * *", // 7:30 AM UTC daily
   run: async () => {
     // Find all twitter alpha feeds that have at least one active sage or keyword
     const feeds = await db.select().from(twitterAlphaFeeds);

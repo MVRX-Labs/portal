@@ -62,7 +62,8 @@ export const weeklyAnalyticsTask = task({
 
 export const weeklyAnalyticsScheduler = schedules.task({
   id: "weekly-analytics-scheduler",
-  cron: "0 7 * * 1", // Monday 7 AM UTC
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` line below and redeploy.
+  // cron: "0 7 * * 1", // Monday 7 AM UTC
   run: async () => {
     logger.info("Starting weekly analytics scheduler");
 

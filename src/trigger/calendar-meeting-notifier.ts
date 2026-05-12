@@ -14,10 +14,11 @@ import { resolveSlackUserId, sendSlackDM } from "@/lib/slack";
 
 export const calendarMeetingNotifier = schedules.task({
   id: "calendar-meeting-notifier",
-  cron: {
-    pattern: "25,55 6-21 * * *",
-    timezone: "Europe/London",
-  },
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` block below and redeploy.
+  // cron: {
+  //   pattern: "25,55 6-21 * * *",
+  //   timezone: "Europe/London",
+  // },
   maxDuration: 120,
   retry: {
     maxAttempts: 1,

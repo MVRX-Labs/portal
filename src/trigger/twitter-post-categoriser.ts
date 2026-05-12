@@ -134,10 +134,11 @@ export const twitterPostCategoriserTask = task({
 
 export const twitterPostCategoriserScheduler = schedules.task({
   id: "twitter-post-categoriser-scheduler",
-  cron: {
-    pattern: "30 7 * * *",
-    timezone: "Europe/London",
-  },
+  // CRON DISABLED 2026-05-12 — to re-enable, uncomment the `cron` block below and redeploy.
+  // cron: {
+  //   pattern: "30 7 * * *",
+  //   timezone: "Europe/London",
+  // },
   run: async (_payload, { ctx }) => {
     try {
       const handle = await twitterPostCategoriserTask.trigger({});
